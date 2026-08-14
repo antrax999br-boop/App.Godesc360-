@@ -13,8 +13,9 @@ import {
 } from 'lucide-react';
 
 export const SystemStatusView: React.FC = () => {
-  const { services, toggleServiceStatus, setCurrentScreen } = useApp();
+  const { services, toggleServiceStatus, setCurrentScreen, userSession } = useApp();
 
+  const isTIMember = userSession.isAuthenticated && userSession.role !== 'client';
   const operationalCount = services.filter((s) => s.status === 'Operacional').length;
   const instabilityCount = services.filter((s) => s.status === 'Instabilidade').length;
   const errorCount = services.filter((s) => s.status === 'Erro').length;
@@ -103,7 +104,7 @@ export const SystemStatusView: React.FC = () => {
           <div className="flex items-center justify-between">
             <h3 className="text-base font-bold text-white">Serviços Críticos Monitorados</h3>
             <span className="text-[11px] font-mono text-[#8d90a0]">
-              Clique em um nó para simular testes de latência
+              {isTIMember ? 'Clique em um nó para alterar o status' : 'Monitoramento em tempo real (T.I.)'}
             </span>
           </div>
 
@@ -111,8 +112,11 @@ export const SystemStatusView: React.FC = () => {
             {services.map((srv) => (
               <div
                 key={srv.id}
-                onClick={() => toggleServiceStatus(srv.id)}
-                className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#192029] transition-colors cursor-pointer"
+                onClick={() => isTIMember && toggleServiceStatus(srv.id)}
+                title={isTIMember ? 'Clique para alterar o status deste serviço' : 'Status em tempo real'}
+                className={`p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${
+                  isTIMember ? 'hover:bg-[#192029] cursor-pointer' : 'cursor-default'
+                }`}
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">

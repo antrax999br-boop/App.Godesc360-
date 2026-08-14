@@ -333,8 +333,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return INITIAL_NOTIFICATIONS;
   });
 
-  // Services state
-  const [services, setServices] = useState<ServiceStatus[]>(INITIAL_SERVICES);
+  // Services state with localStorage fallback
+  const [services, setServices] = useState<ServiceStatus[]>(() => {
+    const saved = localStorage.getItem('godesc_services');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) { /* ignore */ }
+    }
+    return INITIAL_SERVICES;
+  });
 
   // Base de Dados state
   const [folders, setFolders] = useState<DatabaseFolder[]>(() => {
@@ -526,6 +535,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     return () => {
       supabase.removeChannel(ticketChannel);
+    };
+  }, []);
+
+  // Synchronize system services across clients in Realtime via Broadcast
+  useEffect(() => {
+    const statusChannel = supabase.channel('system_status_channel');
+
+    statusChannel
+      .on('broadcast', { event: 'service_status_changed' }, (payload) => {
+        if (payload?.payload?.services && Array.isArray(payload.payload.services)) {
+          setServices(payload.payload.services);
+          localStorage.setItem('godesc_services', JSON.stringify(payload.payload.services));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(statusChannel);
     };
   }, []);
 
@@ -1240,8 +1267,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const toggleServiceStatus = (serviceId: string) => {
-    setServices(prev =>
-      prev.map(srv => {
+    // Apenas a equipe de T.I. pode alterar o status de produtos/serviços
+    if (!userSession.isAuthenticated || userSession.role === 'client') {
+      return;
+    }
+
+    setServices(prev => {
+      const nextServices = prev.map(srv => {
         if (srv.id === serviceId) {
           const nextStatus: ServiceStatus['status'] =
             srv.status === 'Operacional'
@@ -1252,8 +1284,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return { ...srv, status: nextStatus };
         }
         return srv;
-      })
-    );
+      });
+
+      localStorage.setItem('godesc_services', JSON.stringify(nextServices));
+
+      // Sincroniza em Tempo Real para todos os navegadores conectados
+      const statusChannel = supabase.channel('system_status_channel');
+      statusChannel.send({
+        type: 'broadcast',
+        event: 'service_status_changed',
+        payload: { services: nextServices }
+      }).catch(err => console.warn('Supabase status broadcast error:', err));
+
+      return nextServices;
+    });
   };
 
   // Base de Dados Management
