@@ -35,7 +35,7 @@ interface AppContextType {
   updateManagedUser: (id: string, updates: Partial<UserAccount>) => void;
   deleteManagedUser: (id: string) => void;
   tickets: Ticket[];
-  addTicket: (ticketData: Omit<Ticket, 'id' | 'ticketNumber' | 'createdAt' | 'updatedAt' | 'messages'>) => Promise<Ticket>;
+  addTicket: (ticketData: Omit<Ticket, 'id' | 'ticketNumber' | 'createdAt' | 'updatedAt' | 'messages'>) => Ticket;
   updateTicketStatus: (ticketId: string, status: Ticket['status'], technicianNote?: string) => void;
   reassignTicket: (ticketId: string, queue?: ServiceQueue, assignedTo?: string, note?: string) => void;
   deleteTicket: (ticketId: string) => void;
@@ -404,12 +404,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             id: item.id,
             ticketNumber: item.ticket_number,
             requesterName: item.client_name,
+            requesterEmail: item.requester_email || item.client_email || '',
             company: item.company,
+            machineName: item.machine_name || '',
+            onlyMeOnComputer: item.only_me_on_computer ?? true,
             category: item.category,
-            subcategory: item.subcategory,
+            subcategory: item.subcategory || 'Geral',
             priority: item.priority as TicketPriority,
             status: item.status as Ticket['status'],
-            subject: item.subject,
+            title: item.subject || item.title || 'Sem título',
             description: item.description,
             createdAt: item.created_at,
             updatedAt: item.updated_at,
@@ -417,17 +420,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             assignedTo: item.assigned_to,
             pausedReason: item.paused_reason,
             pausedAt: item.paused_at,
+            attachments: item.attachments || [],
             messages: item.messages || []
           }));
           setTickets(mapped);
+        } else if (error) {
+          console.error('Supabase fetch error:', error);
         }
       } catch (err) {
-        console.warn('Supabase fetch error:', err);
+        console.warn('Supabase fetch exception:', err);
       }
     };
 
     fetchSupabaseTickets();
-
 
     // 2. Realtime channel subscription
     const ticketChannel = supabase
@@ -442,12 +447,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               id: newItem.id,
               ticketNumber: newItem.ticket_number,
               requesterName: newItem.client_name,
+              requesterEmail: newItem.requester_email || newItem.client_email || '',
               company: newItem.company,
+              machineName: newItem.machine_name || '',
+              onlyMeOnComputer: newItem.only_me_on_computer ?? true,
               category: newItem.category,
-              subcategory: newItem.subcategory,
+              subcategory: newItem.subcategory || 'Geral',
               priority: newItem.priority as TicketPriority,
               status: newItem.status as Ticket['status'],
-              subject: newItem.subject,
+              title: newItem.subject || newItem.title || 'Sem título',
               description: newItem.description,
               createdAt: newItem.created_at,
               updatedAt: newItem.updated_at,
@@ -455,6 +463,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               assignedTo: newItem.assigned_to,
               pausedReason: newItem.paused_reason,
               pausedAt: newItem.paused_at,
+              attachments: newItem.attachments || [],
               messages: newItem.messages || []
             };
             setTickets(prev => {
@@ -468,12 +477,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               id: updated.id,
               ticketNumber: updated.ticket_number,
               requesterName: updated.client_name,
+              requesterEmail: updated.requester_email || updated.client_email || '',
               company: updated.company,
+              machineName: updated.machine_name || '',
+              onlyMeOnComputer: updated.only_me_on_computer ?? true,
               category: updated.category,
-              subcategory: updated.subcategory,
+              subcategory: updated.subcategory || 'Geral',
               priority: updated.priority as TicketPriority,
               status: updated.status as Ticket['status'],
-              subject: updated.subject,
+              title: updated.subject || updated.title || 'Sem título',
               description: updated.description,
               createdAt: updated.created_at,
               updatedAt: updated.updated_at,
@@ -481,6 +493,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               assignedTo: updated.assigned_to,
               pausedReason: updated.paused_reason,
               pausedAt: updated.paused_at,
+              attachments: updated.attachments || [],
               messages: updated.messages || []
             };
             setTickets(prev => prev.map(t => (t.id === updatedTicket.id ? updatedTicket : t)));
@@ -918,9 +931,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     playNotificationSound();
   };
 
-  const addTicket = async (
+  const addTicket = (
     ticketData: Omit<Ticket, 'id' | 'ticketNumber' | 'createdAt' | 'updatedAt' | 'messages'>
-  ): Promise<Ticket> => {
+  ): Ticket => {
     const ticketSeq = tickets.length + 1;
     const formattedNum = `#${String(ticketSeq).padStart(6, '0')}`;
     const newId = `tk-${Date.now()}`;
@@ -956,27 +969,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     // Save to Supabase for Realtime broadcast across clients
-    try {
-      await supabase.from('tickets').insert([{
-        id: newId,
-        ticket_number: formattedNum,
-        client_name: ticketData.requesterName,
-        company: ticketData.company || '',
-        category: ticketData.category,
-        subcategory: ticketData.subcategory || '',
-        priority: ticketData.priority,
-        status: 'Novo',
-        subject: ticketData.subject,
-        description: ticketData.description,
-        created_at: nowFormatted,
-        updated_at: nowFormatted,
-        queue: ticketData.queue || 'N1',
-        assigned_to: ticketData.assignedTo || null,
-        messages: newTicket.messages
-      }]);
-    } catch (err) {
-      console.error('Supabase ticket insert error:', err);
-    }
+    supabase.from('tickets').insert([{
+      id: newId,
+      ticket_number: formattedNum,
+      client_name: ticketData.requesterName,
+      company: ticketData.company || '',
+      category: ticketData.category,
+      subcategory: ticketData.subcategory || '',
+      priority: ticketData.priority,
+      status: 'Novo',
+      subject: ticketData.title || (ticketData as any).subject || 'Sem título',
+      description: ticketData.description,
+      created_at: nowFormatted,
+      updated_at: nowFormatted,
+      queue: ticketData.queue || 'N1',
+      assigned_to: ticketData.assignedTo || null,
+      messages: newTicket.messages
+    }]).then(({ error }) => {
+      if (error) {
+        console.error('Supabase ticket insert error:', error);
+      } else {
+        console.log('Supabase ticket inserted successfully:', newId);
+      }
+    });
 
     return newTicket;
   };
