@@ -33,331 +33,18 @@ import {
   Layers
 } from 'lucide-react';
 
-interface ArticleItem {
-  id: string;
-  title: string;
-  category: string;
-  status: 'Publicado' | 'Rascunho';
-  createdAuthor: string;
-  createdDate: string;
-  updatedAuthor: string;
-  updatedDate: string;
-  content: string;
-}
-
-interface CategoryGroup {
-  name: string;
-  articles: ArticleItem[];
-}
-
-const INITIAL_KB_DATA: CategoryGroup[] = [
-  {
-    name: 'AMABALIS',
-    articles: [
-      {
-        id: 'art-1',
-        title: 'PLANILHA DE ADMINISTRAÇÃO',
-        category: 'AMABALIS',
-        status: 'Publicado',
-        createdAuthor: 'Fernando',
-        createdDate: '23/07/2025',
-        updatedAuthor: 'Fernando',
-        updatedDate: '30/01/2026',
-        content: `(SERVIDOR - GOCLOUD)
-FUNÇÃO: FILE SERVER
-IP: 10.1.1.121
-USUÁRIO: suporte.godesc
-SENHA: SupGo@Desc31072023*
-MAPEAMENTO: \\\\10.1.1.121\\amabilis$
-
---------------------------------------------------------------------------------
-
-(ROTEADOR WI-FI VIVO)
-IP: 192.168.15.1
-ADMIN: admin
-SENHA: 4f5a2451
-SSID: AMABALIS
-SENHA: jgv02051997
-SERVIDOR DHCP
-
---------------------------------------------------------------------------------
-
-(IMPRESSORA)
-MARCA / MODELO: EPSON L14150 SERIES
-IP / COMPARTILHAMENTO: 192.168.15.10
-SENHA: P@ssw0rd
-
---------------------------------------------------------------------------------
-
-(OPERADORA DE INTERNET)
-LINK ÚNICO: VIVO
-NÚMERO: 103 15
-QUANTIDADE DE MEGA: 300 MEGA
-
---------------------------------------------------------------------------------
-
-Amabilis
-
-Link: VIVO
-IP: 192.168.15.1
-Usuário: admin
-Senha: 3ce8a4d4
-
-ROTEADOR TPLINK AC1200 (SALA ROBÓTICA)
-IP: 192.168.15.2
-Usuário: admin
-Senha: adm#C031072023*
-WF: AMABALIS`
-      }
-    ]
-  },
-  {
-    name: 'CASARI IMOVEIS',
-    articles: [
-      {
-        id: 'art-2',
-        title: 'CONFIGURAÇÕES DE REDE E SERVIDORES',
-        category: 'CASARI IMOVEIS',
-        status: 'Publicado',
-        createdAuthor: 'Lucas TI',
-        createdDate: '15/08/2025',
-        updatedAuthor: 'Fernando',
-        updatedDate: '12/01/2026',
-        content: `(SERVIDOR LOCAL)
-FUNÇÃO: ACTIVE DIRECTORY & FILE SERVER
-IP: 192.168.1.10
-DOMÍNIO: casari.local
-USUÁRIO ADMIN: casari\\suporte`
-      }
-    ]
-  },
-  {
-    name: 'CIRCUIT FIRE',
-    articles: [
-      {
-        id: 'art-3',
-        title: 'CREDENCIAS DE ACESSO E CFTV',
-        category: 'CIRCUIT FIRE',
-        status: 'Publicado',
-        createdAuthor: 'Carlos TI',
-        createdDate: '10/09/2025',
-        updatedAuthor: 'Carlos TI',
-        updatedDate: '05/02/2026',
-        content: `(DVR INTELBRAS 16 CH)
-IP: 192.168.2.200
-PORTA HTTP: 8080
-PORTA SERVIÇO: 37777`
-      }
-    ]
-  },
-  {
-    name: 'COBRANDS',
-    articles: [
-      {
-        id: 'art-4',
-        title: 'CONTAS DE EMAIL E HOSPEDAGEM',
-        category: 'COBRANDS',
-        status: 'Publicado',
-        createdAuthor: 'Laércio TI',
-        createdDate: '01/10/2025',
-        updatedAuthor: 'Fernando',
-        updatedDate: '20/01/2026',
-        content: `(PAINEL DESCMAIL)
-DOMÍNIO: cobrands.com.br
-SERVIDORES IMAP: mail.desccloud.com (993)
-SMTP: mail.desccloud.com (465)`
-      }
-    ]
-  },
-  {
-    name: 'CONCEITO ZOE',
-    articles: [
-      {
-        id: 'art-5',
-        title: 'MAPEAMENTO DE REDE E IMPRESSORAS',
-        category: 'CONCEITO ZOE',
-        status: 'Publicado',
-        createdAuthor: 'Fernando',
-        createdDate: '12/11/2025',
-        updatedAuthor: 'Fernando',
-        updatedDate: '28/01/2026',
-        content: `(IMPRESSORA HP M428fdw)
-IP: 192.168.0.50
-FILA DE IMPRESSÃO: \\\\SERVER-ZOE\\HP-M428`
-      }
-    ]
-  },
-  {
-    name: 'CONCILIATO',
-    articles: [
-      {
-        id: 'art-6',
-        title: 'ROTEADORES E GATEWAYS DE INTERNET',
-        category: 'CONCILIATO',
-        status: 'Publicado',
-        createdAuthor: 'Lucas TI',
-        createdDate: '05/12/2025',
-        updatedAuthor: 'Lucas TI',
-        updatedDate: '15/01/2026',
-        content: `(MIKROTIK CHR PROD)
-IP INTERNO: 10.0.0.1
-GATEWAY SECUNDÁRIO: 10.0.0.254`
-      }
-    ]
-  },
-  {
-    name: 'DE MOURA E PROT...',
-    articles: [
-      {
-        id: 'art-7',
-        title: 'INFRAESTRUTURA DE BACKUP',
-        category: 'DE MOURA E PROT...',
-        status: 'Publicado',
-        createdAuthor: 'Carlos TI',
-        createdDate: '20/12/2025',
-        updatedAuthor: 'Carlos TI',
-        updatedDate: '10/02/2026',
-        content: `(NAS SYNOLOGY BACKUP)
-IP: 192.168.10.250
-VOLUME TOTAL: 12 TB RAID 5`
-      }
-    ]
-  },
-  {
-    name: 'DISCOVERY CHEM',
-    articles: [
-      {
-        id: 'art-8',
-        title: 'SENHAS DE APLICAÇÃO E BANCO DE DADOS',
-        category: 'DISCOVERY CHEM',
-        status: 'Publicado',
-        createdAuthor: 'Fernando',
-        createdDate: '02/01/2026',
-        updatedAuthor: 'Fernando',
-        updatedDate: '02/01/2026',
-        content: `(POSTGRESQL DB)
-HOST: 10.2.0.15
-PORT: 5432
-DB: discovery_db`
-      }
-    ]
-  },
-  {
-    name: 'DR ACARO',
-    articles: [
-      {
-        id: 'art-9',
-        title: 'PLANO DE MANUTENÇÃO E WI-FI',
-        category: 'DR ACARO',
-        status: 'Publicado',
-        createdAuthor: 'Laércio TI',
-        createdDate: '10/01/2026',
-        updatedAuthor: 'Laércio TI',
-        updatedDate: '10/01/2026',
-        content: `(ROTEADOR UNIFI UNIFI-AP-6)
-IP: 192.168.3.10
-SSID CORPORATIVO: DrAcaro_Corp`
-      }
-    ]
-  },
-  {
-    name: 'DR MARCELO DI M...',
-    articles: [
-      {
-        id: 'art-10',
-        title: 'PRONTUÁRIO E SERVIDOR DE ARQUIVOS',
-        category: 'DR MARCELO DI M...',
-        status: 'Publicado',
-        createdAuthor: 'Fernando',
-        createdDate: '15/01/2026',
-        updatedAuthor: 'Fernando',
-        updatedDate: '15/01/2026',
-        content: `(SERVIDOR CLINICA)
-IP: 192.168.15.50
-MAPEAMENTO: \\\\192.168.15.50\\prontuarios$`
-      }
-    ]
-  },
-  {
-    name: 'FENIX CONTABIL',
-    articles: [
-      {
-        id: 'art-11',
-        title: 'CONFIGURAÇÕES FISCAIS E DOMÍNIO',
-        category: 'FENIX CONTABIL',
-        status: 'Publicado',
-        createdAuthor: 'Lucas TI',
-        createdDate: '18/01/2026',
-        updatedAuthor: 'Lucas TI',
-        updatedDate: '18/01/2026',
-        content: `(SERVIDORES DE SISTEMA CONTÁBIL)
-IP: 10.5.0.20
-SISTEMA: Domínio Sistemas`
-      }
-    ]
-  },
-  {
-    name: 'FIT CONTABIL',
-    articles: []
-  },
-  {
-    name: 'FMD',
-    articles: []
-  },
-  {
-    name: 'FOCO EM SEGUROS',
-    articles: []
-  },
-  {
-    name: 'GODESC',
-    articles: [
-      {
-        id: 'art-12',
-        title: 'INFRAESTRUTURA INTERNA GODESC 360',
-        category: 'GODESC',
-        status: 'Publicado',
-        createdAuthor: 'Administrador TI',
-        createdDate: '01/01/2025',
-        updatedAuthor: 'Fernando',
-        updatedDate: '10/02/2026',
-        content: `(SERVIDORES GODESC CLOUD)
-KUBERNETES MASTER: 10.0.0.100
-CLUSTER REDUNDANTE SÃO PAULO / RIO DE JANEIRO`
-      }
-    ]
-  },
-  {
-    name: 'INTELECT',
-    articles: []
-  },
-  {
-    name: 'JMAZZETTO',
-    articles: []
-  },
-  {
-    name: 'MONILOG',
-    articles: []
-  },
-  {
-    name: 'MSO',
-    articles: []
-  },
-  {
-    name: 'PETROCABOS',
-    articles: []
-  }
-];
+import { ArticleItem, CategoryGroup } from '../types';
 
 export const KnowledgeBase: React.FC = () => {
-  const { setCurrentScreen } = useApp();
-  const [categoriesData, setCategoriesData] = useState<CategoryGroup[]>(INITIAL_KB_DATA);
+  const { setCurrentScreen, kbCategories, updateKBCategories } = useApp();
+  const categoriesData = kbCategories;
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
     AMABALIS: true
   });
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedArticle, setSelectedArticle] = useState<ArticleItem | null>(
-    INITIAL_KB_DATA[0].articles[0]
-  );
+  const [selectedArticle, setSelectedArticle] = useState<ArticleItem | null>(() => {
+    return categoriesData[0]?.articles[0] || null;
+  });
   const [isEditing, setIsEditing] = useState(false);
   const [showNewCatModal, setShowNewCatModal] = useState(false);
   const [newCatName, setNewCatName] = useState('');
@@ -424,25 +111,22 @@ export const KnowledgeBase: React.FC = () => {
       updatedDate: new Date().toLocaleDateString('pt-BR')
     };
 
-    setCategoriesData((prev) => {
-      // Remove article from old placement if category changed
-      const cleaned = prev.map((cat) => ({
-        ...cat,
-        articles: cat.articles.filter((a) => a.id !== updatedArt.id)
-      }));
+    const cleaned = categoriesData.map((cat) => ({
+      ...cat,
+      articles: cat.articles.filter((a) => a.id !== updatedArt.id)
+    }));
 
-      // Add to target category
-      return cleaned.map((cat) => {
-        if (cat.name === updatedArt.category) {
-          return {
-            ...cat,
-            articles: [updatedArt, ...cat.articles]
-          };
-        }
-        return cat;
-      });
+    const nextCatData = cleaned.map((cat) => {
+      if (cat.name === updatedArt.category) {
+        return {
+          ...cat,
+          articles: [updatedArt, ...cat.articles]
+        };
+      }
+      return cat;
     });
 
+    updateKBCategories(nextCatData);
     setSelectedArticle(updatedArt);
     setIsEditing(false);
   };
@@ -450,12 +134,11 @@ export const KnowledgeBase: React.FC = () => {
   const handleDeleteArticle = () => {
     if (!selectedArticle) return;
     if (confirm(`Tem certeza que deseja excluir o artigo "${selectedArticle.title}"?`)) {
-      setCategoriesData((prev) =>
-        prev.map((cat) => ({
-          ...cat,
-          articles: cat.articles.filter((a) => a.id !== selectedArticle.id)
-        }))
-      );
+      const nextCatData = categoriesData.map((cat) => ({
+        ...cat,
+        articles: cat.articles.filter((a) => a.id !== selectedArticle.id)
+      }));
+      updateKBCategories(nextCatData);
       setSelectedArticle(null);
       setIsEditing(false);
     }
@@ -467,7 +150,8 @@ export const KnowledgeBase: React.FC = () => {
 
     const formattedName = newCatName.trim().toUpperCase();
     if (!categoriesData.some((c) => c.name === formattedName)) {
-      setCategoriesData((prev) => [...prev, { name: formattedName, articles: [] }]);
+      const nextCatData = [...categoriesData, { name: formattedName, articles: [] }];
+      updateKBCategories(nextCatData);
       setExpandedCategories((prev) => ({ ...prev, [formattedName]: true }));
     }
     setNewCatName('');

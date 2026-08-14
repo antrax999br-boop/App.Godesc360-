@@ -79,6 +79,23 @@ export interface CalendarEvent {
   createdAt: string;
 }
 
+export interface ArticleItem {
+  id: string;
+  title: string;
+  category: string;
+  status: 'Publicado' | 'Rascunho';
+  createdAuthor: string;
+  createdDate: string;
+  updatedAuthor: string;
+  updatedDate: string;
+  content: string;
+}
+
+export interface CategoryGroup {
+  name: string;
+  articles: ArticleItem[];
+}
+
 export interface TicketAttachment {
   name: string;
   size: string;
@@ -114,6 +131,8 @@ export interface Ticket {
   createdAt: string;
   updatedAt: string;
   assignedTo?: string;
+  pausedReason?: string;
+  pausedAt?: string;
   attachments: TicketAttachment[];
   messages: TicketMessage[];
 }

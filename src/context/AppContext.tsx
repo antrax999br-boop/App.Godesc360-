@@ -10,7 +10,12 @@ import {
   DatabaseFolder,
   DatabaseNote,
   CalendarEvent,
-  UserAccount
+  UserAccount,
+  ArticleItem,
+  CategoryGroup,
+  TicketAttachment,
+  TISession,
+  TISecurityLog
 } from '../types';
 import {
   INITIAL_TICKETS,
@@ -18,7 +23,8 @@ import {
   INITIAL_SERVICES,
   INITIAL_DATABASE_FOLDERS,
   INITIAL_DATABASE_NOTES,
-  INITIAL_CALENDAR_EVENTS
+  INITIAL_CALENDAR_EVENTS,
+  INITIAL_KB_DATA
 } from '../data/mockData';
 import { supabase } from '../lib/supabase';
 
@@ -51,6 +57,8 @@ interface AppContextType {
   setSelectedCategoryFilter: (category: string | null) => void;
   services: ServiceStatus[];
   toggleServiceStatus: (serviceId: string) => void;
+  kbCategories: CategoryGroup[];
+  updateKBCategories: (categories: CategoryGroup[]) => void;
   selectedTicket: Ticket | null;
   setSelectedTicket: (ticket: Ticket | null) => void;
   soundEnabled: boolean;
@@ -345,6 +353,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return INITIAL_SERVICES;
   });
 
+  // KB Categories state with localStorage fallback & Realtime sync
+  const [kbCategories, setKbCategories] = useState<CategoryGroup[]>(() => {
+    const saved = localStorage.getItem('godesc_kb_categories');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) { /* ignore */ }
+    }
+    return INITIAL_KB_DATA;
+  });
+
   // Base de Dados state
   const [folders, setFolders] = useState<DatabaseFolder[]>(() => {
     const saved = localStorage.getItem('godesc_db_folders');
@@ -489,9 +509,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             };
             setTickets(prev => {
               if (prev.some(t => t.id === newTicket.id)) return prev;
+              
+              triggerSystemNotification(
+                'Novo Chamado Recebido',
+                `${newTicket.company || newTicket.requesterName} abriu o chamado ${newTicket.ticketNumber}.`,
+                newTicket.company || newTicket.requesterName,
+                newTicket.priority,
+                newTicket.id
+              );
+
               return [newTicket, ...prev];
             });
-            playNotificationSound();
           } else if (payload.eventType === 'UPDATE') {
             const updated = payload.new;
             const msgs = updated.messages || [];
@@ -553,6 +581,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     return () => {
       supabase.removeChannel(statusChannel);
+    };
+  }, []);
+
+  // Synchronize Knowledge Base across clients in Realtime via Broadcast
+  useEffect(() => {
+    const kbChannel = supabase.channel('kb_sync_channel');
+
+    kbChannel
+      .on('broadcast', { event: 'kb_categories_changed' }, (payload) => {
+        if (payload?.payload?.categories && Array.isArray(payload.payload.categories)) {
+          setKbCategories(payload.payload.categories);
+          localStorage.setItem('godesc_kb_categories', JSON.stringify(payload.payload.categories));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(kbChannel);
     };
   }, []);
 
@@ -1300,6 +1346,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const updateKBCategories = (newCategories: CategoryGroup[]) => {
+    setKbCategories(newCategories);
+    localStorage.setItem('godesc_kb_categories', JSON.stringify(newCategories));
+
+    // Sincroniza em Tempo Real para todos os navegadores de analistas conectados
+    const kbChannel = supabase.channel('kb_sync_channel');
+    kbChannel.send({
+      type: 'broadcast',
+      event: 'kb_categories_changed',
+      payload: { categories: newCategories }
+    }).catch(err => console.warn('Supabase KB broadcast error:', err));
+  };
+
   // Base de Dados Management
   const addFolder = (name: string, color: string = '#45dfa4'): DatabaseFolder => {
     const today = new Date().toLocaleDateString('pt-BR');
@@ -1486,6 +1545,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSelectedCategoryFilter,
         services,
         toggleServiceStatus,
+        kbCategories,
+        updateKBCategories,
         selectedTicket,
         setSelectedTicket,
         soundEnabled,

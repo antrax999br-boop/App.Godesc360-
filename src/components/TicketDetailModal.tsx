@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { Ticket, TicketStatus, ServiceQueue } from '../types';
+import { Ticket, TicketStatus, ServiceQueue, TicketAttachment } from '../types';
 import { getOperatorsForQueue } from '../utils/queueUtils';
 import {
   X,
