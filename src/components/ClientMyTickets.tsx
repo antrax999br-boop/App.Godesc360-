@@ -28,7 +28,9 @@ export const ClientMyTickets: React.FC = () => {
   const filteredTickets = tickets.filter((tk) => {
     // Filtragem estrita pelo e-mail do solicitante
     if (cleanFilterEmail) {
-      if (tk.requesterEmail.trim().toLowerCase() !== cleanFilterEmail) {
+      const ticketEmail = (tk.requesterEmail || '').trim().toLowerCase();
+      const hasEmailInMsgs = tk.messages?.some(m => (m as any).requesterEmail?.trim().toLowerCase() === cleanFilterEmail);
+      if (ticketEmail !== cleanFilterEmail && !hasEmailInMsgs) {
         return false;
       }
     } else {

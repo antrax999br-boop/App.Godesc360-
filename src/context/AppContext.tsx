@@ -400,29 +400,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         const { data, error } = await supabase.from('tickets').select('*').order('created_at', { ascending: false });
         if (!error && data) {
-          const mapped: Ticket[] = data.map((item: any) => ({
-            id: item.id,
-            ticketNumber: item.ticket_number,
-            requesterName: item.client_name,
-            requesterEmail: item.requester_email || item.client_email || '',
-            company: item.company,
-            machineName: item.machine_name || '',
-            onlyMeOnComputer: item.only_me_on_computer ?? true,
-            category: item.category,
-            subcategory: item.subcategory || 'Geral',
-            priority: item.priority as TicketPriority,
-            status: item.status as Ticket['status'],
-            title: item.subject || item.title || 'Sem título',
-            description: item.description,
-            createdAt: item.created_at,
-            updatedAt: item.updated_at,
-            queue: item.queue as ServiceQueue,
-            assignedTo: item.assigned_to,
-            pausedReason: item.paused_reason,
-            pausedAt: item.paused_at,
-            attachments: item.attachments || [],
-            messages: item.messages || []
-          }));
+          const mapped: Ticket[] = data.map((item: any) => {
+            const msgs = item.messages || [];
+            const emailMsg = msgs.find((m: any) => m.requesterEmail);
+            const reqEmail = item.requester_email || item.client_email || emailMsg?.requesterEmail || msgs[0]?.requesterEmail || '';
+            const atts = (item.attachments && item.attachments.length > 0) ? item.attachments : (emailMsg?.attachments || msgs[0]?.attachments || []);
+
+            return {
+              id: item.id,
+              ticketNumber: item.ticket_number,
+              requesterName: item.client_name,
+              requesterEmail: reqEmail,
+              company: item.company,
+              machineName: item.machine_name || '',
+              onlyMeOnComputer: item.only_me_on_computer ?? true,
+              category: item.category,
+              subcategory: item.subcategory || 'Geral',
+              priority: item.priority as TicketPriority,
+              status: item.status as Ticket['status'],
+              title: item.subject || item.title || 'Sem título',
+              description: item.description,
+              createdAt: item.created_at,
+              updatedAt: item.updated_at,
+              queue: item.queue as ServiceQueue,
+              assignedTo: item.assigned_to,
+              pausedReason: item.paused_reason,
+              pausedAt: item.paused_at,
+              attachments: atts,
+              messages: msgs
+            };
+          });
           setTickets(mapped);
         } else if (error) {
           console.error('Supabase fetch error:', error);
@@ -443,11 +450,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         (payload) => {
           if (payload.eventType === 'INSERT') {
             const newItem = payload.new;
+            const msgs = newItem.messages || [];
+            const emailMsg = msgs.find((m: any) => m.requesterEmail);
+            const reqEmail = newItem.requester_email || newItem.client_email || emailMsg?.requesterEmail || msgs[0]?.requesterEmail || '';
+            const atts = (newItem.attachments && newItem.attachments.length > 0) ? newItem.attachments : (emailMsg?.attachments || msgs[0]?.attachments || []);
+
             const newTicket: Ticket = {
               id: newItem.id,
               ticketNumber: newItem.ticket_number,
               requesterName: newItem.client_name,
-              requesterEmail: newItem.requester_email || newItem.client_email || '',
+              requesterEmail: reqEmail,
               company: newItem.company,
               machineName: newItem.machine_name || '',
               onlyMeOnComputer: newItem.only_me_on_computer ?? true,
@@ -463,8 +475,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               assignedTo: newItem.assigned_to,
               pausedReason: newItem.paused_reason,
               pausedAt: newItem.paused_at,
-              attachments: newItem.attachments || [],
-              messages: newItem.messages || []
+              attachments: atts,
+              messages: msgs
             };
             setTickets(prev => {
               if (prev.some(t => t.id === newTicket.id)) return prev;
@@ -473,11 +485,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             playNotificationSound();
           } else if (payload.eventType === 'UPDATE') {
             const updated = payload.new;
+            const msgs = updated.messages || [];
+            const emailMsg = msgs.find((m: any) => m.requesterEmail);
+            const reqEmail = updated.requester_email || updated.client_email || emailMsg?.requesterEmail || msgs[0]?.requesterEmail || '';
+            const atts = (updated.attachments && updated.attachments.length > 0) ? updated.attachments : (emailMsg?.attachments || msgs[0]?.attachments || []);
+
             const updatedTicket: Ticket = {
               id: updated.id,
               ticketNumber: updated.ticket_number,
               requesterName: updated.client_name,
-              requesterEmail: updated.requester_email || updated.client_email || '',
+              requesterEmail: reqEmail,
               company: updated.company,
               machineName: updated.machine_name || '',
               onlyMeOnComputer: updated.only_me_on_computer ?? true,
@@ -493,8 +510,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               assignedTo: updated.assigned_to,
               pausedReason: updated.paused_reason,
               pausedAt: updated.paused_at,
-              attachments: updated.attachments || [],
-              messages: updated.messages || []
+              attachments: atts,
+              messages: msgs
             };
             setTickets(prev => prev.map(t => (t.id === updatedTicket.id ? updatedTicket : t)));
             setSelectedTicket(prev => (prev?.id === updatedTicket.id ? updatedTicket : prev));
@@ -939,6 +956,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newId = `tk-${Date.now()}`;
     const nowFormatted = 'Hoje às ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+    const initialMsg = {
+      id: `msg-${Date.now()}`,
+      sender: ticketData.requesterName,
+      role: 'client' as const,
+      text: `Chamado aberto via Portal do Cliente: ${ticketData.description}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      requesterEmail: ticketData.requesterEmail,
+      attachments: ticketData.attachments || []
+    };
+
     const newTicket: Ticket = {
       ...ticketData,
       id: newId,
@@ -947,15 +974,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedAt: nowFormatted,
       status: 'Novo',
       queue: ticketData.queue || 'N1',
-      messages: [
-        {
-          id: `msg-${Date.now()}`,
-          sender: ticketData.requesterName,
-          role: 'client',
-          text: `Chamado aberto via Portal do Cliente: ${ticketData.description}`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }
-      ]
+      messages: [initialMsg]
     };
 
     setTickets(prev => [newTicket, ...prev]);

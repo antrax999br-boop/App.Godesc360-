@@ -445,22 +445,18 @@ export const NewTicketForm: React.FC = () => {
                   </select>
                 </div>
 
-                {/* Priority Select */}
+                {/* Priority Display (Defined by TI) */}
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="ticket_priority" className="text-xs font-semibold text-white">
+                  <label className="text-xs font-semibold text-[#8d90a0]">
                     Prioridade
                   </label>
-                  <select
-                    id="ticket_priority"
-                    value={priority}
-                    onChange={(e) => setPriority(e.target.value as TicketPriority)}
-                    className="w-full bg-[#0D1117] border border-[#2A2F3A] focus:border-[#45dfa4] text-white rounded-lg p-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#45dfa4]/30 transition-all cursor-pointer"
-                  >
-                    <option value="Baixa">Baixa (Dúvidas/Melhorias)</option>
-                    <option value="Média">Média (Rotina de trabalho)</option>
-                    <option value="Alta">Alta (Impacto no setor)</option>
-                    <option value="Crítica">Crítica (Operação parada)</option>
-                  </select>
+                  <div className="w-full bg-[#0D1117]/60 border border-[#2A2F3A] text-[#c3c6d7] rounded-lg p-3 text-xs flex items-center justify-between font-mono">
+                    <span className="flex items-center gap-1.5 text-[#45dfa4] font-bold">
+                      <span className="w-2 h-2 rounded-full bg-[#45dfa4] inline-block"></span>
+                      Triagem T.I. (Padrão)
+                    </span>
+                    <span className="text-[10px] text-[#8d90a0] font-sans">Definida pelo Suporte</span>
+                  </div>
                 </div>
               </div>
 
