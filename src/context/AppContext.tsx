@@ -314,14 +314,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCompanies(prev => prev.filter(c => c.id !== id));
   };
 
-  // Tickets state with localStorage persistence
+  // Tickets state with Supabase & localStorage fallback
   const [tickets, setTickets] = useState<Ticket[]>(() => {
     const saved = localStorage.getItem('godesc_tickets');
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { /* ignore */ }
     }
-    return INITIAL_TICKETS;
+    return [];
   });
+
 
   // Notifications state
   const [notifications, setNotifications] = useState<SystemNotification[]>(() => {
