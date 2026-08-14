@@ -20,6 +20,8 @@ import {
   INITIAL_DATABASE_NOTES,
   INITIAL_CALENDAR_EVENTS
 } from '../data/mockData';
+import { supabase } from '../lib/supabase';
+
 
 interface AppContextType {
   currentScreen: ScreenView;
@@ -389,6 +391,112 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem('godesc_notifications', JSON.stringify(notifications));
   }, [notifications]);
+
+  // Initial Fetch & Realtime Sync from Supabase
+  useEffect(() => {
+    // 1. Initial fetch tickets from Supabase
+    const fetchSupabaseTickets = async () => {
+      try {
+        const { data, error } = await supabase.from('tickets').select('*').order('created_at', { ascending: false });
+        if (!error && data && data.length > 0) {
+          const mapped: Ticket[] = data.map((item: any) => ({
+            id: item.id,
+            ticketNumber: item.ticket_number,
+            requesterName: item.client_name,
+            company: item.company,
+            category: item.category,
+            subcategory: item.subcategory,
+            priority: item.priority as TicketPriority,
+            status: item.status as Ticket['status'],
+            subject: item.subject,
+            description: item.description,
+            createdAt: item.created_at,
+            updatedAt: item.updated_at,
+            queue: item.queue as ServiceQueue,
+            assignedTo: item.assigned_to,
+            pausedReason: item.paused_reason,
+            pausedAt: item.paused_at,
+            messages: item.messages || []
+          }));
+          setTickets(mapped);
+        }
+      } catch (err) {
+        console.warn('Supabase fetch error, fallback to local state', err);
+      }
+    };
+
+    fetchSupabaseTickets();
+
+    // 2. Realtime channel subscription
+    const ticketChannel = supabase
+      .channel('public:tickets')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tickets' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newItem = payload.new;
+            const newTicket: Ticket = {
+              id: newItem.id,
+              ticketNumber: newItem.ticket_number,
+              requesterName: newItem.client_name,
+              company: newItem.company,
+              category: newItem.category,
+              subcategory: newItem.subcategory,
+              priority: newItem.priority as TicketPriority,
+              status: newItem.status as Ticket['status'],
+              subject: newItem.subject,
+              description: newItem.description,
+              createdAt: newItem.created_at,
+              updatedAt: newItem.updated_at,
+              queue: newItem.queue as ServiceQueue,
+              assignedTo: newItem.assigned_to,
+              pausedReason: newItem.paused_reason,
+              pausedAt: newItem.paused_at,
+              messages: newItem.messages || []
+            };
+            setTickets(prev => {
+              if (prev.some(t => t.id === newTicket.id)) return prev;
+              return [newTicket, ...prev];
+            });
+            playNotificationSound();
+          } else if (payload.eventType === 'UPDATE') {
+            const updated = payload.new;
+            const updatedTicket: Ticket = {
+              id: updated.id,
+              ticketNumber: updated.ticket_number,
+              requesterName: updated.client_name,
+              company: updated.company,
+              category: updated.category,
+              subcategory: updated.subcategory,
+              priority: updated.priority as TicketPriority,
+              status: updated.status as Ticket['status'],
+              subject: updated.subject,
+              description: updated.description,
+              createdAt: updated.created_at,
+              updatedAt: updated.updated_at,
+              queue: updated.queue as ServiceQueue,
+              assignedTo: updated.assigned_to,
+              pausedReason: updated.paused_reason,
+              pausedAt: updated.paused_at,
+              messages: updated.messages || []
+            };
+            setTickets(prev => prev.map(t => (t.id === updatedTicket.id ? updatedTicket : t)));
+            setSelectedTicket(prev => (prev?.id === updatedTicket.id ? updatedTicket : prev));
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = payload.old.id;
+            setTickets(prev => prev.filter(t => t.id !== deletedId));
+            setSelectedTicket(prev => (prev?.id === deletedId ? null : prev));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ticketChannel);
+    };
+  }, []);
+
 
   useEffect(() => {
     localStorage.setItem('godesc_session', JSON.stringify(userSession));
@@ -845,11 +953,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       newId
     );
 
+    // Save to Supabase for Realtime broadcast across clients
+    supabase.from('tickets').insert([{
+      id: newId,
+      ticket_number: formattedNum,
+      client_name: ticketData.requesterName,
+      company: ticketData.company || '',
+      category: ticketData.category,
+      subcategory: ticketData.subcategory || '',
+      priority: ticketData.priority,
+      status: 'Novo',
+      subject: ticketData.subject,
+      description: ticketData.description,
+      created_at: nowFormatted,
+      updated_at: nowFormatted,
+      queue: ticketData.queue || 'N1',
+      assigned_to: ticketData.assignedTo || null,
+      messages: newTicket.messages
+    }]).then(({ error }) => {
+      if (error) console.warn('Supabase ticket insert error:', error);
+    });
+
     return newTicket;
   };
 
   const updateTicketStatus = (ticketId: string, status: Ticket['status'], technicianNote?: string) => {
     const nowFormatted = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    let updatedTicketObj: Ticket | null = null;
     
     setTickets(prev =>
       prev.map(tk => {
@@ -864,12 +994,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               timestamp: nowFormatted
             });
           }
-          return {
+          updatedTicketObj = {
             ...tk,
             status,
             updatedAt: `Hoje às ${nowFormatted}`,
             messages: updatedMessages
           };
+          return updatedTicketObj;
         }
         return tk;
       })
@@ -896,10 +1027,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return prev;
     });
+
+    if (updatedTicketObj) {
+      const obj = updatedTicketObj as Ticket;
+      supabase.from('tickets').update({
+        status: obj.status,
+        updated_at: obj.updatedAt,
+        messages: obj.messages
+      }).eq('id', ticketId).then(({ error }) => {
+        if (error) console.warn('Supabase status update error:', error);
+      });
+    }
   };
 
   const reassignTicket = (ticketId: string, queue?: ServiceQueue, assignedTo?: string, note?: string) => {
     const nowFormatted = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    let updatedTicketObj: Ticket | null = null;
 
     setTickets(prev =>
       prev.map(tk => {
@@ -914,13 +1057,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               timestamp: nowFormatted
             });
           }
-          return {
+          updatedTicketObj = {
             ...tk,
             queue: queue !== undefined ? queue : (tk.queue || 'N1'),
             assignedTo: assignedTo !== undefined ? assignedTo : tk.assignedTo,
             updatedAt: `Hoje às ${nowFormatted}`,
             messages: updatedMessages
           };
+          return updatedTicketObj;
         }
         return tk;
       })
@@ -948,11 +1092,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return prev;
     });
+
+    if (updatedTicketObj) {
+      const obj = updatedTicketObj as Ticket;
+      supabase.from('tickets').update({
+        queue: obj.queue,
+        assigned_to: obj.assignedTo,
+        updated_at: obj.updatedAt,
+        messages: obj.messages
+      }).eq('id', ticketId).then(({ error }) => {
+        if (error) console.warn('Supabase reassign update error:', error);
+      });
+    }
   };
 
   const deleteTicket = (ticketId: string) => {
     setTickets(prev => prev.filter(t => t.id !== ticketId));
     setSelectedTicket(prev => (prev?.id === ticketId ? null : prev));
+    supabase.from('tickets').delete().eq('id', ticketId).then(({ error }) => {
+      if (error) console.warn('Supabase delete ticket error:', error);
+    });
   };
 
   const addTicketMessage = (ticketId: string, text: string, role: 'client' | 'ti') => {
@@ -965,20 +1124,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       timestamp: nowFormatted
     };
 
+    let updatedMessagesList: any[] = [];
+    let updatedTimestampStr = `Hoje às ${nowFormatted}`;
+
     setTickets(prev =>
       prev.map(tk => {
         if (tk.id === ticketId) {
           const senderName = role === 'client' ? tk.requesterName : (userSession.name || 'Técnico TI');
+          updatedMessagesList = [
+            ...tk.messages,
+            {
+              ...newMsg,
+              sender: senderName
+            }
+          ];
           return {
             ...tk,
-            updatedAt: `Hoje às ${nowFormatted}`,
-            messages: [
-              ...tk.messages,
-              {
-                ...newMsg,
-                sender: senderName
-              }
-            ]
+            updatedAt: updatedTimestampStr,
+            messages: updatedMessagesList
           };
         }
         return tk;
@@ -990,7 +1153,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const senderName = role === 'client' ? prev.requesterName : (userSession.name || 'Técnico TI');
         return {
           ...prev,
-          updatedAt: `Hoje às ${nowFormatted}`,
+          updatedAt: updatedTimestampStr,
           messages: [
             ...prev.messages,
             {
@@ -1001,6 +1164,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       }
       return prev;
+    });
+
+    supabase.from('tickets').update({
+      updated_at: updatedTimestampStr,
+      messages: updatedMessagesList
+    }).eq('id', ticketId).then(({ error }) => {
+      if (error) console.warn('Supabase add message error:', error);
     });
   };
 
