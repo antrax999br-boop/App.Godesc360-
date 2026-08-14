@@ -398,7 +398,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const fetchSupabaseTickets = async () => {
       try {
         const { data, error } = await supabase.from('tickets').select('*').order('created_at', { ascending: false });
-        if (!error && data && data.length > 0) {
+        if (!error && data) {
           const mapped: Ticket[] = data.map((item: any) => ({
             id: item.id,
             ticketNumber: item.ticket_number,
@@ -421,11 +421,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setTickets(mapped);
         }
       } catch (err) {
-        console.warn('Supabase fetch error, fallback to local state', err);
+        console.warn('Supabase fetch error:', err);
       }
     };
 
     fetchSupabaseTickets();
+
 
     // 2. Realtime channel subscription
     const ticketChannel = supabase
