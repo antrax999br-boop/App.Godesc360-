@@ -1,0 +1,6 @@
+{
+  "name": "GoDesc Service Desk",
+  "description": "Sistema integrado de Service Desk e Portal de TI com abertura de chamados, monitoramento de infraestrutura, notificações em tempo real e painel técnico.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

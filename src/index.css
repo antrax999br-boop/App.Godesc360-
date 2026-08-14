@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --color-brand-green: #45dfa4;
+  --color-brand-blue: #2563eb;
+  --color-brand-dark: #1e1e24;
+  
+  --text-xs: 0.85rem;
+  --text-sm: 0.95rem;
+  --text-base: 1.05rem;
+  --text-lg: 1.2rem;
+  --text-xl: 1.35rem;
+  --text-2xl: 1.6rem;
+}
+
+:root {
+  color-scheme: dark;
+  font-family: 'Inter', 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+}
+
+body {
+  background-color: #1e1e24;
+  color: #dfe2eb;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  font-size: 0.95rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Global Font Size Boost for Readability */
+input, select, textarea, button {
+  font-size: 0.925rem;
+}
+
+/* Ensure small utility fonts are easily readable like the print reference */
+.text-\[9px\], 
+.text-\[10px\], 
+.text-\[11px\] {
+  font-size: 0.8125rem !important; /* ~13px */
+  line-height: 1.4 !important;
+}
+
+.text-xs {
+  font-size: 0.875rem !important; /* 14px */
+  line-height: 1.45 !important;
+}
+
+.text-sm {
+  font-size: 0.95rem !important; /* ~15.2px */
+  line-height: 1.5 !important;
+}
+
+/* Monospace font optimization */
+code, pre, textarea.font-mono, input.font-mono {
+  font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0d141d;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #232a34;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #434655;
+}
+
+.spring-hover {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.spring-hover:hover {
+  transform: translateY(-2px);
+}
+
