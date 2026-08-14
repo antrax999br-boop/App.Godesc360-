@@ -35,7 +35,7 @@ interface AppContextType {
   updateManagedUser: (id: string, updates: Partial<UserAccount>) => void;
   deleteManagedUser: (id: string) => void;
   tickets: Ticket[];
-  addTicket: (ticketData: Omit<Ticket, 'id' | 'ticketNumber' | 'createdAt' | 'updatedAt' | 'messages'>) => Ticket;
+  addTicket: (ticketData: Omit<Ticket, 'id' | 'ticketNumber' | 'createdAt' | 'updatedAt' | 'messages'>) => Promise<Ticket>;
   updateTicketStatus: (ticketId: string, status: Ticket['status'], technicianNote?: string) => void;
   reassignTicket: (ticketId: string, queue?: ServiceQueue, assignedTo?: string, note?: string) => void;
   deleteTicket: (ticketId: string) => void;
@@ -918,9 +918,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     playNotificationSound();
   };
 
-  const addTicket = (
+  const addTicket = async (
     ticketData: Omit<Ticket, 'id' | 'ticketNumber' | 'createdAt' | 'updatedAt' | 'messages'>
-  ): Ticket => {
+  ): Promise<Ticket> => {
     const ticketSeq = tickets.length + 1;
     const formattedNum = `#${String(ticketSeq).padStart(6, '0')}`;
     const newId = `tk-${Date.now()}`;
@@ -956,28 +956,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     // Save to Supabase for Realtime broadcast across clients
-    supabase.from('tickets').insert([{
-      id: newId,
-      ticket_number: formattedNum,
-      client_name: ticketData.requesterName,
-      company: ticketData.company || '',
-      category: ticketData.category,
-      subcategory: ticketData.subcategory || '',
-      priority: ticketData.priority,
-      status: 'Novo',
-      subject: ticketData.subject,
-      description: ticketData.description,
-      created_at: nowFormatted,
-      updated_at: nowFormatted,
-      queue: ticketData.queue || 'N1',
-      assigned_to: ticketData.assignedTo || null,
-      messages: newTicket.messages
-    }]).then(({ error }) => {
-      if (error) console.warn('Supabase ticket insert error:', error);
-    });
+    try {
+      await supabase.from('tickets').insert([{
+        id: newId,
+        ticket_number: formattedNum,
+        client_name: ticketData.requesterName,
+        company: ticketData.company || '',
+        category: ticketData.category,
+        subcategory: ticketData.subcategory || '',
+        priority: ticketData.priority,
+        status: 'Novo',
+        subject: ticketData.subject,
+        description: ticketData.description,
+        created_at: nowFormatted,
+        updated_at: nowFormatted,
+        queue: ticketData.queue || 'N1',
+        assigned_to: ticketData.assignedTo || null,
+        messages: newTicket.messages
+      }]);
+    } catch (err) {
+      console.error('Supabase ticket insert error:', err);
+    }
 
     return newTicket;
   };
+
 
   const updateTicketStatus = (ticketId: string, status: Ticket['status'], technicianNote?: string) => {
     const nowFormatted = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
