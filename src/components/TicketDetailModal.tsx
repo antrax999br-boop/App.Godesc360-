@@ -42,6 +42,7 @@ export const TicketDetailModal: React.FC = () => {
     !['client_my_tickets', 'client_home', 'portal_landing', 'new_ticket'].includes(currentScreen);
 
   const [replyText, setReplyText] = useState('');
+  const [replyAttachments, setReplyAttachments] = useState<TicketAttachment[]>([]);
   const [showResolvePrompt, setShowResolvePrompt] = useState(false);
   const [resolveMessage, setResolveMessage] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -60,17 +61,44 @@ export const TicketDetailModal: React.FC = () => {
 
   if (!activeTicket) return null;
 
+  const handleChatFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    Array.from(files).forEach((file: File) => {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const urlData = event.target?.result as string;
+        setReplyAttachments(prev => [
+          ...prev,
+          {
+            name: file.name,
+            size: `${sizeMB} MB`,
+            type: file.type || 'image/png',
+            url: urlData
+          }
+        ]);
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = '';
+  };
+
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!replyText.trim()) return;
+    if (!replyText.trim() && replyAttachments.length === 0) return;
 
     const text = replyText.trim();
+    const atts = [...replyAttachments];
     setReplyText('');
+    setReplyAttachments([]);
 
     addTicketMessage(
       activeTicket.id,
-      text,
-      userSession.isAuthenticated ? 'ti' : 'client'
+      text || (atts.length > 0 ? 'Print / Anexo enviado.' : ''),
+      userSession.isAuthenticated ? 'ti' : 'client',
+      atts.length > 0 ? atts : undefined
     );
   };
 
@@ -426,6 +454,27 @@ export const TicketDetailModal: React.FC = () => {
                     <span className="text-[#8d90a0] font-mono text-[10px]">{msg.timestamp}</span>
                   </div>
                   <p className="text-[#dfe2eb] leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+
+                  {/* Render message attachments if present */}
+                  {msg.attachments && msg.attachments.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-[#2A2F3A]/40 space-y-1.5">
+                      <span className="text-[10px] text-[#8d90a0] font-mono block">Anexo(s) nesta mensagem:</span>
+                      <div className="flex flex-wrap gap-2">
+                        {msg.attachments.map((att: any, attIdx: number) => (
+                          <button
+                            key={attIdx}
+                            type="button"
+                            onClick={() => setPreviewAttachment(att)}
+                            className="flex items-center gap-1.5 bg-[#181c22] hover:bg-[#252c38] border border-[#45dfa4]/30 text-[#45dfa4] text-xs px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <ImageIcon className="w-3.5 h-3.5" />
+                            <span className="font-mono text-[11px] font-semibold truncate max-w-[150px]">{att.name}</span>
+                            <Eye className="w-3 h-3 text-[#45dfa4] shrink-0" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
               <div ref={messagesEndRef} />
@@ -434,32 +483,69 @@ export const TicketDetailModal: React.FC = () => {
         </div>
 
         {/* Modal Reply Footer */}
-        <form
-          onSubmit={handleSendMessage}
-          className="p-3.5 sm:p-4 bg-[#111827] border-t border-[#2A2F3A] flex gap-3 items-center"
-        >
-          <input
-            id="ticket-reply-input"
-            type="text"
-            value={replyText}
-            onChange={(e) => setReplyText(e.target.value)}
-            placeholder={
-              userSession.isAuthenticated
-                ? 'Escreva uma nota técnica ou resposta ao solicitante...'
-                : 'Escreva um comentário ou informação adicional...'
-            }
-            className="flex-1 bg-[#181c22] border border-[#2A2F3A] focus:border-[#45dfa4] text-white text-xs rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-[#45dfa4]/30 transition-all placeholder:text-[#8d90a0]"
-          />
-          <button
-            id="btn-send-ticket-reply"
-            type="submit"
-            disabled={!replyText.trim()}
-            className="px-4 sm:px-5 py-3 bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed shadow-md shadow-[#45dfa4]/10"
+        <div className="bg-[#111827] border-t border-[#2A2F3A] p-3.5 sm:p-4 space-y-2">
+          {/* Selected Chat Attachments Thumbnails */}
+          {replyAttachments.length > 0 && (
+            <div className="flex flex-wrap gap-2 pb-1">
+              {replyAttachments.map((att, idx) => (
+                <div key={idx} className="flex items-center gap-2 bg-[#181c22] border border-[#45dfa4]/40 text-[#45dfa4] text-xs px-2.5 py-1 rounded-lg">
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  <span className="truncate max-w-[140px] font-mono text-[11px]">{att.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => setReplyAttachments(prev => prev.filter((_, i) => i !== idx))}
+                    className="hover:text-red-400 cursor-pointer ml-1"
+                    title="Remover anexo"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <form
+            onSubmit={handleSendMessage}
+            className="flex gap-2 sm:gap-3 items-center"
           >
-            <Send className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Enviar</span>
-          </button>
-        </form>
+            {/* Paperclip Attachment Button */}
+            <label
+              className="p-3 bg-[#181c22] hover:bg-[#252b36] text-[#45dfa4] border border-[#2A2F3A] rounded-xl cursor-pointer transition-colors shrink-0 flex items-center justify-center"
+              title="Anexar print ou arquivo no chamado"
+            >
+              <Paperclip className="w-4 h-4" />
+              <input
+                type="file"
+                accept="image/*,.pdf,.doc,.docx,.txt"
+                multiple
+                onChange={handleChatFileUpload}
+                className="hidden"
+              />
+            </label>
+
+            <input
+              id="ticket-reply-input"
+              type="text"
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              placeholder={
+                userSession.isAuthenticated
+                  ? 'Escreva uma resposta ou anexe um print...'
+                  : 'Escreva um comentário ou anexe um print...'
+              }
+              className="flex-1 bg-[#181c22] border border-[#2A2F3A] focus:border-[#45dfa4] text-white text-xs rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-[#45dfa4]/30 transition-all placeholder:text-[#8d90a0]"
+            />
+            <button
+              id="btn-send-ticket-reply"
+              type="submit"
+              disabled={!replyText.trim() && replyAttachments.length === 0}
+              className="px-4 sm:px-5 py-3 bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed shadow-md shadow-[#45dfa4]/10 shrink-0"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Enviar</span>
+            </button>
+          </form>
+        </div>
 
         {/* Modal 1: Prompt de Mensagem de Resolução */}
         {showResolvePrompt && (

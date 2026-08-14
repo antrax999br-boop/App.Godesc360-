@@ -39,7 +39,7 @@ interface AppContextType {
   updateTicketStatus: (ticketId: string, status: Ticket['status'], technicianNote?: string) => void;
   reassignTicket: (ticketId: string, queue?: ServiceQueue, assignedTo?: string, note?: string) => void;
   deleteTicket: (ticketId: string) => void;
-  addTicketMessage: (ticketId: string, text: string, role: 'client' | 'ti') => void;
+  addTicketMessage: (ticketId: string, text: string, role: 'client' | 'ti', attachments?: TicketAttachment[]) => void;
   notifications: SystemNotification[];
   unreadNotificationCount: number;
   markNotificationAsRead: (id: string) => void;
@@ -1153,17 +1153,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const addTicketMessage = (ticketId: string, text: string, role: 'client' | 'ti') => {
+  const addTicketMessage = (ticketId: string, text: string, role: 'client' | 'ti', attachments?: TicketAttachment[]) => {
     const nowFormatted = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const newMsg = {
       id: `msg-${Date.now()}`,
       sender: role === 'client' ? (userSession.isAuthenticated ? userSession.name || 'Solicitante' : 'Solicitante') : (userSession.name || 'Técnico TI'),
       role,
       text,
-      timestamp: nowFormatted
+      timestamp: nowFormatted,
+      attachments: attachments && attachments.length > 0 ? attachments : undefined
     };
 
     let updatedMessagesList: any[] = [];
+    let updatedAttachmentsList: TicketAttachment[] = [];
     let updatedTimestampStr = `Hoje às ${nowFormatted}`;
 
     setTickets(prev =>
@@ -1177,9 +1179,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               sender: senderName
             }
           ];
+          updatedAttachmentsList = attachments && attachments.length > 0
+            ? [...(tk.attachments || []), ...attachments]
+            : (tk.attachments || []);
+
           return {
             ...tk,
             updatedAt: updatedTimestampStr,
+            attachments: updatedAttachmentsList,
             messages: updatedMessagesList
           };
         }
@@ -1190,9 +1197,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSelectedTicket(prev => {
       if (prev && prev.id === ticketId) {
         const senderName = role === 'client' ? prev.requesterName : (userSession.name || 'Técnico TI');
+        const newAtts = attachments && attachments.length > 0
+          ? [...(prev.attachments || []), ...attachments]
+          : (prev.attachments || []);
+
         return {
           ...prev,
           updatedAt: updatedTimestampStr,
+          attachments: newAtts,
           messages: [
             ...prev.messages,
             {
