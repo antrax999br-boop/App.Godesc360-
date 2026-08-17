@@ -148,8 +148,12 @@ export const TIDashboard: React.FC = () => {
                 <TicketIcon className="w-4 h-4 text-[#8d90a0]" />
                 <span>Chamados</span>
               </div>
-              <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-[#2e353f] text-[#c3c6d7] rounded-full">
-                {tickets.length}
+              <span className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded-full ${
+                pendingCount > 0
+                  ? 'bg-[#45dfa4]/20 text-[#45dfa4] border border-[#45dfa4]/30'
+                  : 'bg-[#2e353f] text-[#8d90a0]'
+              }`}>
+                {pendingCount}
               </span>
             </button>
 
@@ -453,7 +457,7 @@ export const TIDashboard: React.FC = () => {
                 </div>
               </div>
               <div className="text-2xl sm:text-3xl font-bold text-[#ffb4ab] mb-1 font-mono">
-                {criticalCount > 0 ? criticalCount : 1}
+                {criticalCount}
               </div>
               <div className="text-xs text-[#8d90a0]">fora do prazo limite</div>
             </div>
