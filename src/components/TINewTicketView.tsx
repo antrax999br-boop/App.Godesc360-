@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import { processFileAttachment } from '../utils/fileUtils';
 import {
   User,
   FolderTree,
@@ -93,7 +94,7 @@ export const TINewTicketView: React.FC = () => {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
@@ -102,23 +103,14 @@ export const TINewTicketView: React.FC = () => {
       return;
     }
 
-    Array.from(files).forEach((file: File) => {
-      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const urlData = event.target?.result as string;
-        setAttachments(prev => [
-          ...prev,
-          {
-            name: file.name,
-            size: `${sizeMB} MB`,
-            type: file.type || 'application/octet-stream',
-            url: urlData
-          }
-        ]);
-      };
-      reader.readAsDataURL(file);
-    });
+    try {
+      const processed = await Promise.all(
+        Array.from(files).map((file: File) => processFileAttachment(file))
+      );
+      setAttachments(prev => [...prev, ...processed]);
+    } catch (err) {
+      console.error('Error processing attachments in TI New Ticket:', err);
+    }
   };
 
   const removeAttachment = (index: number) => {

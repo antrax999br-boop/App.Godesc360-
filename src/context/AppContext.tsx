@@ -413,17 +413,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Sound notifications
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
 
-  // Save state to localStorage
+  // Save state to localStorage safely
   useEffect(() => {
-    localStorage.setItem('godesc_tickets', JSON.stringify(tickets));
+    try {
+      localStorage.setItem('godesc_tickets', JSON.stringify(tickets));
+    } catch (err) {
+      console.warn('localStorage setItem godesc_tickets failed (quota or browser limit):', err);
+    }
   }, [tickets]);
 
   useEffect(() => {
-    localStorage.setItem('godesc_notifications', JSON.stringify(notifications));
+    try {
+      localStorage.setItem('godesc_notifications', JSON.stringify(notifications));
+    } catch (err) {
+      console.warn('localStorage setItem godesc_notifications failed:', err);
+    }
   }, [notifications]);
 
   // Initial Fetch & Realtime Sync from Supabase
   useEffect(() => {
+    // Helper to extract requester email defensively
+    const extractEmail = (item: any, msgs: any[]) => {
+      const emailMsg = msgs.find((m: any) => m.requesterEmail);
+      const raw = item.requester_email || item.client_email || item.requesterEmail || item.email || emailMsg?.requesterEmail || msgs[0]?.requesterEmail || '';
+      return (raw || '').trim().toLowerCase();
+    };
+
     // 1. Initial fetch tickets from Supabase
     const fetchSupabaseTickets = async () => {
       try {
@@ -431,32 +446,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!error && data) {
           const mapped: Ticket[] = data.map((item: any) => {
             const msgs = item.messages || [];
-            const emailMsg = msgs.find((m: any) => m.requesterEmail);
-            const reqEmail = item.requester_email || item.client_email || emailMsg?.requesterEmail || msgs[0]?.requesterEmail || '';
-            const atts = (item.attachments && item.attachments.length > 0) ? item.attachments : (emailMsg?.attachments || msgs[0]?.attachments || []);
+            const reqEmail = extractEmail(item, msgs);
+            const atts = (item.attachments && item.attachments.length > 0) ? item.attachments : (msgs[0]?.attachments || []);
+
+            // Ensure first message has requesterEmail attached if client role
+            const formattedMsgs = msgs.map((m: any, idx: number) => {
+              if (idx === 0 && (!m.requesterEmail || !m.requesterEmail.trim())) {
+                return { ...m, requesterEmail: reqEmail };
+              }
+              return m;
+            });
 
             return {
               id: item.id,
               ticketNumber: item.ticket_number,
-              requesterName: item.client_name,
+              requesterName: item.client_name || item.requester_name || 'Solicitante',
               requesterEmail: reqEmail,
-              company: item.company,
+              company: item.company || 'Empresa Corporativa',
               machineName: item.machine_name || '',
               onlyMeOnComputer: item.only_me_on_computer ?? true,
-              category: item.category,
+              category: item.category || 'Geral',
               subcategory: item.subcategory || 'Geral',
-              priority: item.priority as TicketPriority,
-              status: item.status as Ticket['status'],
+              priority: (item.priority || 'Média') as TicketPriority,
+              status: (item.status || 'Novo') as Ticket['status'],
               title: item.subject || item.title || 'Sem título',
-              description: item.description,
-              createdAt: item.created_at,
-              updatedAt: item.updated_at,
-              queue: item.queue as ServiceQueue,
+              description: item.description || '',
+              createdAt: item.created_at || 'Hoje',
+              updatedAt: item.updated_at || 'Hoje',
+              queue: (item.queue || 'N1') as ServiceQueue,
               assignedTo: item.assigned_to,
               pausedReason: item.paused_reason,
               pausedAt: item.paused_at,
               attachments: atts,
-              messages: msgs
+              messages: formattedMsgs
             };
           });
           setTickets(mapped);
@@ -480,27 +502,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (payload.eventType === 'INSERT') {
             const newItem = payload.new;
             const msgs = newItem.messages || [];
-            const emailMsg = msgs.find((m: any) => m.requesterEmail);
-            const reqEmail = newItem.requester_email || newItem.client_email || emailMsg?.requesterEmail || msgs[0]?.requesterEmail || '';
-            const atts = (newItem.attachments && newItem.attachments.length > 0) ? newItem.attachments : (emailMsg?.attachments || msgs[0]?.attachments || []);
+            const reqEmail = extractEmail(newItem, msgs);
+            const atts = (newItem.attachments && newItem.attachments.length > 0) ? newItem.attachments : (msgs[0]?.attachments || []);
 
             const newTicket: Ticket = {
               id: newItem.id,
               ticketNumber: newItem.ticket_number,
-              requesterName: newItem.client_name,
+              requesterName: newItem.client_name || newItem.requester_name || 'Solicitante',
               requesterEmail: reqEmail,
-              company: newItem.company,
+              company: newItem.company || 'Empresa Corporativa',
               machineName: newItem.machine_name || '',
               onlyMeOnComputer: newItem.only_me_on_computer ?? true,
-              category: newItem.category,
+              category: newItem.category || 'Geral',
               subcategory: newItem.subcategory || 'Geral',
-              priority: newItem.priority as TicketPriority,
-              status: newItem.status as Ticket['status'],
+              priority: (newItem.priority || 'Média') as TicketPriority,
+              status: (newItem.status || 'Novo') as Ticket['status'],
               title: newItem.subject || newItem.title || 'Sem título',
-              description: newItem.description,
-              createdAt: newItem.created_at,
-              updatedAt: newItem.updated_at,
-              queue: newItem.queue as ServiceQueue,
+              description: newItem.description || '',
+              createdAt: newItem.created_at || 'Hoje',
+              updatedAt: newItem.updated_at || 'Hoje',
+              queue: (newItem.queue || 'N1') as ServiceQueue,
               assignedTo: newItem.assigned_to,
               pausedReason: newItem.paused_reason,
               pausedAt: newItem.paused_at,
@@ -523,27 +544,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } else if (payload.eventType === 'UPDATE') {
             const updated = payload.new;
             const msgs = updated.messages || [];
-            const emailMsg = msgs.find((m: any) => m.requesterEmail);
-            const reqEmail = updated.requester_email || updated.client_email || emailMsg?.requesterEmail || msgs[0]?.requesterEmail || '';
-            const atts = (updated.attachments && updated.attachments.length > 0) ? updated.attachments : (emailMsg?.attachments || msgs[0]?.attachments || []);
+            const reqEmail = extractEmail(updated, msgs);
+            const atts = (updated.attachments && updated.attachments.length > 0) ? updated.attachments : (msgs[0]?.attachments || []);
 
             const updatedTicket: Ticket = {
               id: updated.id,
               ticketNumber: updated.ticket_number,
-              requesterName: updated.client_name,
+              requesterName: updated.client_name || updated.requester_name || 'Solicitante',
               requesterEmail: reqEmail,
-              company: updated.company,
+              company: updated.company || 'Empresa Corporativa',
               machineName: updated.machine_name || '',
               onlyMeOnComputer: updated.only_me_on_computer ?? true,
-              category: updated.category,
+              category: updated.category || 'Geral',
               subcategory: updated.subcategory || 'Geral',
-              priority: updated.priority as TicketPriority,
-              status: updated.status as Ticket['status'],
+              priority: (updated.priority || 'Média') as TicketPriority,
+              status: (updated.status || 'Novo') as Ticket['status'],
               title: updated.subject || updated.title || 'Sem título',
-              description: updated.description,
-              createdAt: updated.created_at,
-              updatedAt: updated.updated_at,
-              queue: updated.queue as ServiceQueue,
+              description: updated.description || '',
+              createdAt: updated.created_at || 'Hoje',
+              updatedAt: updated.updated_at || 'Hoje',
+              queue: (updated.queue || 'N1') as ServiceQueue,
               assignedTo: updated.assigned_to,
               pausedReason: updated.paused_reason,
               pausedAt: updated.paused_at,
@@ -1028,6 +1048,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const formattedNum = `#${String(ticketSeq).padStart(6, '0')}`;
     const newId = `tk-${Date.now()}`;
     const nowFormatted = 'Hoje às ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const cleanRequesterEmail = (ticketData.requesterEmail || '').trim().toLowerCase();
 
     const initialMsg = {
       id: `msg-${Date.now()}`,
@@ -1035,12 +1056,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       role: 'client' as const,
       text: `Chamado aberto via Portal do Cliente: ${ticketData.description}`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      requesterEmail: ticketData.requesterEmail,
+      requesterEmail: cleanRequesterEmail,
       attachments: ticketData.attachments || []
     };
 
     const newTicket: Ticket = {
       ...ticketData,
+      requesterEmail: cleanRequesterEmail,
       id: newId,
       ticketNumber: formattedNum,
       createdAt: nowFormatted,
@@ -1065,6 +1087,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: newId,
       ticket_number: formattedNum,
       client_name: ticketData.requesterName,
+      requester_name: ticketData.requesterName,
+      requester_email: cleanRequesterEmail,
+      client_email: cleanRequesterEmail,
       company: ticketData.company || '',
       category: ticketData.category,
       subcategory: ticketData.subcategory || '',

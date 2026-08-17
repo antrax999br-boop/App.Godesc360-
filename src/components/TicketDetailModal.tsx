@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { Ticket, TicketStatus, ServiceQueue, TicketAttachment } from '../types';
 import { getOperatorsForQueue } from '../utils/queueUtils';
+import { processFileAttachment } from '../utils/fileUtils';
 import {
   X,
   User,
@@ -61,27 +62,18 @@ export const TicketDetailModal: React.FC = () => {
 
   if (!activeTicket) return null;
 
-  const handleChatFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChatFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach((file: File) => {
-      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const urlData = event.target?.result as string;
-        setReplyAttachments(prev => [
-          ...prev,
-          {
-            name: file.name,
-            size: `${sizeMB} MB`,
-            type: file.type || 'image/png',
-            url: urlData
-          }
-        ]);
-      };
-      reader.readAsDataURL(file);
-    });
+    try {
+      const processed = await Promise.all(
+        Array.from(files).map((file: File) => processFileAttachment(file))
+      );
+      setReplyAttachments(prev => [...prev, ...processed]);
+    } catch (err) {
+      console.error('Error processing chat file upload:', err);
+    }
     e.target.value = '';
   };
 
@@ -174,7 +166,9 @@ export const TicketDetailModal: React.FC = () => {
             <div className="bg-[#111827] p-3 rounded-xl border border-[#2A2F3A]">
               <span className="text-[10px] font-mono text-[#8d90a0] block uppercase">Solicitante</span>
               <span className="text-xs font-semibold text-white truncate block">{activeTicket.requesterName}</span>
-              <span className="text-[10px] text-[#8d90a0] truncate block">{activeTicket.requesterEmail}</span>
+              <span className="text-[10px] text-[#45dfa4] font-mono truncate block" title={activeTicket.requesterEmail || 'Não informado'}>
+                {activeTicket.requesterEmail || 'E-mail não cadastrado'}
+              </span>
             </div>
 
             <div className="bg-[#111827] p-3 rounded-xl border border-[#2A2F3A]">
