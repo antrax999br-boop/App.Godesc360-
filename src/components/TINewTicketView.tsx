@@ -50,11 +50,11 @@ export const TINewTicketView: React.FC = () => {
       ];
 
   // Section 1: Informações do Solicitante
-  const [requesterName, setRequesterName] = useState('Laércio Schumacher');
-  const [requesterEmail, setRequesterEmail] = useState('laercio.schumacher@godesc.com.br');
+  const [requesterName, setRequesterName] = useState('');
+  const [requesterEmail, setRequesterEmail] = useState('');
   const [selectedClient, setSelectedClient] = useState('Empresa GoDesc 360');
   const [selectedDepartment, setSelectedDepartment] = useState('Tecnologia');
-  const [requesterPhone, setRequesterPhone] = useState('(11) 98765-4321');
+  const [requesterPhone, setRequesterPhone] = useState('');
 
   // Section 2: Destino e Atendimento
   const [serviceDepartment, setServiceDepartment] = useState('Service Desk IT');

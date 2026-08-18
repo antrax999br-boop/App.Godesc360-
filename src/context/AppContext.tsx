@@ -622,6 +622,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
+  // Synchronize Tickets and Trigger T.I. Notifications in Realtime via Supabase Broadcast
+  useEffect(() => {
+    const ticketSyncChannel = supabase.channel('ticket_sync_channel');
+
+    ticketSyncChannel
+      .on('broadcast', { event: 'new_ticket_created' }, (payload) => {
+        if (payload?.payload?.ticket) {
+          const incomingTicket: Ticket = payload.payload.ticket;
+          setTickets(prev => {
+            if (prev.some(t => t.id === incomingTicket.id)) return prev;
+
+            triggerSystemNotification(
+              'Novo Chamado Recebido',
+              `${incomingTicket.company || incomingTicket.requesterName} abriu o chamado ${incomingTicket.ticketNumber}.`,
+              incomingTicket.company || incomingTicket.requesterName,
+              incomingTicket.priority,
+              incomingTicket.id
+            );
+
+            return [incomingTicket, ...prev];
+          });
+        }
+      })
+      .on('broadcast', { event: 'ticket_updated' }, (payload) => {
+        if (payload?.payload?.ticket) {
+          const updatedTicket: Ticket = payload.payload.ticket;
+          setTickets(prev => prev.map(t => (t.id === updatedTicket.id ? updatedTicket : t)));
+          setSelectedTicket(prev => (prev?.id === updatedTicket.id ? updatedTicket : prev));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ticketSyncChannel);
+    };
+  }, []);
+
 
   useEffect(() => {
     localStorage.setItem('godesc_session', JSON.stringify(userSession));
@@ -1109,6 +1146,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.log('Supabase ticket inserted successfully:', newId);
       }
     });
+
+    // Broadcast Realtime Event to all connected clients & T.I. dashboards
+    try {
+      const syncChannel = supabase.channel('ticket_sync_channel');
+      syncChannel.send({
+        type: 'broadcast',
+        event: 'new_ticket_created',
+        payload: { ticket: newTicket }
+      });
+    } catch (err) {
+      console.warn('Realtime ticket broadcast failed:', err);
+    }
 
     return newTicket;
   };

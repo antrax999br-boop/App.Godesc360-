@@ -26,15 +26,21 @@ export const ClientMyTickets: React.FC = () => {
   const cleanFilterEmail = filterEmail.trim().toLowerCase();
 
   const filteredTickets = tickets.filter((tk) => {
-    // Filtragem estrita pelo e-mail do solicitante
+    // Filtragem pelo e-mail do solicitante
     if (cleanFilterEmail) {
       const ticketEmail = (tk.requesterEmail || '').trim().toLowerCase();
-      const hasEmailInMsgs = tk.messages?.some(m => (m as any).requesterEmail?.trim().toLowerCase() === cleanFilterEmail);
-      if (ticketEmail !== cleanFilterEmail && !hasEmailInMsgs) {
+      const hasEmailInMsgs = tk.messages?.some(m => {
+        const msgEmail = ((m as any).requesterEmail || '').trim().toLowerCase();
+        return msgEmail && (msgEmail === cleanFilterEmail || msgEmail.includes(cleanFilterEmail) || cleanFilterEmail.includes(msgEmail));
+      });
+      const matchesEmail = ticketEmail === cleanFilterEmail ||
+                           (ticketEmail && (ticketEmail.includes(cleanFilterEmail) || cleanFilterEmail.includes(ticketEmail))) ||
+                           hasEmailInMsgs;
+      if (!matchesEmail) {
         return false;
       }
     } else {
-      // Se nenhum e-mail for informado, não exibe chamados de terceiros
+      // Se nenhum e-mail for informado, não exibe chamados
       return false;
     }
 
