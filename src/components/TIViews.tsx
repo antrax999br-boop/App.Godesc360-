@@ -268,12 +268,12 @@ export const TITicketsView: React.FC = () => {
             onChange={(e) => setSelectedStatus(e.target.value)}
             className="bg-[#18181b] border border-[#27272a] text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-[#45dfa4] cursor-pointer"
           >
-            <option value="Abertos">Abertos</option>
             <option value="Todos">Todos os Status</option>
+            <option value="Abertos">Somente Abertos</option>
             <option value="Novo">Novo</option>
             <option value="Em Atendimento">Em Atendimento</option>
             <option value="Pendente">Pendente</option>
-            <option value="Resolvido">Resolvido</option>
+            <option value="Resolvido">Resolvido (Concluído)</option>
             <option value="Fechado">Fechado</option>
           </select>
 

@@ -53,6 +53,7 @@ export const ClientMyTickets: React.FC = () => {
     const matchStatus =
       statusFilter === 'Todos' ||
       (statusFilter === 'Abertos' && tk.status !== 'Resolvido' && tk.status !== 'Fechado') ||
+      (statusFilter === 'Concluídos' && (tk.status === 'Resolvido' || tk.status === 'Fechado')) ||
       tk.status === statusFilter;
 
     return matchSearch && matchStatus;
@@ -127,7 +128,7 @@ export const ClientMyTickets: React.FC = () => {
 
         {/* Filter Pills */}
         <div className="flex gap-2 overflow-x-auto pb-2 mb-6 text-xs font-mono">
-          {['Todos', 'Abertos', 'Novo', 'Em Atendimento', 'Pendente', 'Resolvido'].map((st) => (
+          {['Todos', 'Abertos', 'Concluídos', 'Novo', 'Em Atendimento', 'Pendente', 'Resolvido'].map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
