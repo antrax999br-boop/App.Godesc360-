@@ -49,7 +49,7 @@ export const TITicketsView: React.FC = () => {
 
   const [search, setSearch] = useState('');
   const [selectedQueue, setSelectedQueue] = useState<string>('Todas');
-  const [selectedStatus, setSelectedStatus] = useState<string>('Abertos');
+  const [selectedStatus, setSelectedStatus] = useState<string>('Todos');
   const [selectedPriority, setSelectedPriority] = useState<string>('Todos');
   const [selectedClient, setSelectedClient] = useState<string>('Todos');
   const [selectedOperator, setSelectedOperator] = useState<string>('Todos');

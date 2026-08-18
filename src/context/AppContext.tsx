@@ -1216,10 +1216,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (updatedTicketObj) {
       const obj = updatedTicketObj as Ticket;
+      const cleanEmail = (obj.requesterEmail || '').trim().toLowerCase();
       supabase.from('tickets').update({
         status: obj.status,
         updated_at: obj.updatedAt,
-        messages: obj.messages
+        messages: obj.messages,
+        requester_email: cleanEmail,
+        client_email: cleanEmail,
+        requester_name: obj.requesterName,
+        client_name: obj.requesterName
       }).eq('id', ticketId).then(({ error }) => {
         if (error) console.warn('Supabase status update error:', error);
       });
@@ -1292,11 +1297,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (updatedTicketObj) {
       const obj = updatedTicketObj as Ticket;
+      const cleanEmail = (obj.requesterEmail || '').trim().toLowerCase();
       supabase.from('tickets').update({
         queue: obj.queue,
         assigned_to: obj.assignedTo,
         updated_at: obj.updatedAt,
-        messages: obj.messages
+        messages: obj.messages,
+        requester_email: cleanEmail,
+        client_email: cleanEmail
       }).eq('id', ticketId).then(({ error }) => {
         if (error) console.warn('Supabase reassign update error:', error);
       });
@@ -1388,14 +1396,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return prev;
     });
 
-    supabase.from('tickets').update({
-      updated_at: updatedTimestampStr,
-      messages: updatedMessagesList
-    }).eq('id', ticketId).then(({ error }) => {
-      if (error) console.warn('Supabase add message error:', error);
-    });
-
     if (updatedTicketObj) {
+      const cleanEmail = ((updatedTicketObj as Ticket).requesterEmail || '').trim().toLowerCase();
+      supabase.from('tickets').update({
+        updated_at: updatedTimestampStr,
+        messages: updatedMessagesList,
+        requester_email: cleanEmail,
+        client_email: cleanEmail
+      }).eq('id', ticketId).then(({ error }) => {
+        if (error) console.warn('Supabase add message error:', error);
+      });
+
       try {
         const syncChannel = supabase.channel('ticket_sync_channel');
         syncChannel.send({
