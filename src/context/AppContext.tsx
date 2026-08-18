@@ -1223,6 +1223,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }).eq('id', ticketId).then(({ error }) => {
         if (error) console.warn('Supabase status update error:', error);
       });
+
+      try {
+        const syncChannel = supabase.channel('ticket_sync_channel');
+        syncChannel.send({
+          type: 'broadcast',
+          event: 'ticket_updated',
+          payload: { ticket: obj }
+        });
+      } catch (err) {
+        console.warn('Realtime broadcast ticket_updated failed:', err);
+      }
     }
   };
 
@@ -1289,6 +1300,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }).eq('id', ticketId).then(({ error }) => {
         if (error) console.warn('Supabase reassign update error:', error);
       });
+
+      try {
+        const syncChannel = supabase.channel('ticket_sync_channel');
+        syncChannel.send({
+          type: 'broadcast',
+          event: 'ticket_updated',
+          payload: { ticket: obj }
+        });
+      } catch (err) {
+        console.warn('Realtime broadcast ticket_updated failed:', err);
+      }
     }
   };
 
@@ -1314,6 +1336,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let updatedMessagesList: any[] = [];
     let updatedAttachmentsList: TicketAttachment[] = [];
     let updatedTimestampStr = `Hoje às ${nowFormatted}`;
+    let updatedTicketObj: Ticket | null = null;
 
     setTickets(prev =>
       prev.map(tk => {
@@ -1330,12 +1353,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             ? [...(tk.attachments || []), ...attachments]
             : (tk.attachments || []);
 
-          return {
+          updatedTicketObj = {
             ...tk,
             updatedAt: updatedTimestampStr,
             attachments: updatedAttachmentsList,
             messages: updatedMessagesList
           };
+          return updatedTicketObj;
         }
         return tk;
       })
@@ -1370,6 +1394,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }).eq('id', ticketId).then(({ error }) => {
       if (error) console.warn('Supabase add message error:', error);
     });
+
+    if (updatedTicketObj) {
+      try {
+        const syncChannel = supabase.channel('ticket_sync_channel');
+        syncChannel.send({
+          type: 'broadcast',
+          event: 'ticket_updated',
+          payload: { ticket: updatedTicketObj }
+        });
+      } catch (err) {
+        console.warn('Realtime broadcast ticket_updated failed:', err);
+      }
+    }
   };
 
   const markNotificationAsRead = (id: string) => {
