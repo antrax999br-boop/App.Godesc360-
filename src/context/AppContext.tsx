@@ -665,6 +665,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
+  // Fetch & Subscribe to Vault Credentials in Supabase (with Realtime & LocalStorage fallback)
+  useEffect(() => {
+    const fetchSupabaseVault = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('vault_credentials')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!error && data && Array.isArray(data) && data.length > 0) {
+          const mapped: VaultCredential[] = data.map((item: any) => ({
+            id: String(item.id),
+            title: item.title || 'Sem título',
+            company: item.company || 'Empresa ABC',
+            category: item.category || 'E-mail',
+            username: item.username || '',
+            password: item.password || '',
+            notes: item.notes || '',
+            accessLevel: item.access_level || item.accessLevel || 'Todos',
+            strength: item.strength || 'Média',
+            updatedAt: item.updated_at || item.updatedAt || new Date().toLocaleString('pt-BR'),
+            updatedBy: item.updated_by || item.updatedBy || 'T.I.'
+          }));
+          setVaultCredentials(mapped);
+          localStorage.setItem('godesc_vault_credentials', JSON.stringify(mapped));
+        }
+      } catch (err) {
+        console.warn('Supabase vault fetch exception:', err);
+      }
+    };
+
+    fetchSupabaseVault();
+
+    // Postgres changes subscription
+    const vaultPostgresChannel = supabase
+      .channel('public:vault_credentials')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'vault_credentials' },
+        () => {
+          fetchSupabaseVault();
+        }
+      )
+      .subscribe();
+
+    // Broadcast channel subscription
+    const vaultBroadcastChannel = supabase.channel('vault_sync_channel');
+    vaultBroadcastChannel
+      .on('broadcast', { event: 'vault_credentials_changed' }, (payload) => {
+        if (payload?.payload?.credentials && Array.isArray(payload.payload.credentials)) {
+          setVaultCredentials(payload.payload.credentials);
+          localStorage.setItem('godesc_vault_credentials', JSON.stringify(payload.payload.credentials));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(vaultPostgresChannel);
+      supabase.removeChannel(vaultBroadcastChannel);
+    };
+  }, []);
+
 
   useEffect(() => {
     localStorage.setItem('godesc_session', JSON.stringify(userSession));
@@ -1637,18 +1699,111 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `cred-${Date.now()}`,
       updatedAt: new Date().toLocaleString('pt-BR')
     };
-    setVaultCredentials(prev => [newCred, ...prev]);
+
+    setVaultCredentials(prev => {
+      const updated = [newCred, ...prev];
+      localStorage.setItem('godesc_vault_credentials', JSON.stringify(updated));
+
+      // Broadcast to other open sessions via Supabase Realtime
+      const syncChannel = supabase.channel('vault_sync_channel');
+      syncChannel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          syncChannel.send({
+            type: 'broadcast',
+            event: 'vault_credentials_changed',
+            payload: { credentials: updated }
+          });
+        }
+      });
+
+      return updated;
+    });
+
+    // Save to Supabase table
+    supabase.from('vault_credentials').insert([
+      {
+        id: newCred.id,
+        title: newCred.title,
+        company: newCred.company,
+        category: newCred.category,
+        username: newCred.username,
+        password: newCred.password,
+        notes: newCred.notes,
+        access_level: newCred.accessLevel,
+        strength: newCred.strength,
+        updated_at: newCred.updatedAt,
+        updated_by: newCred.updatedBy
+      }
+    ]).then(({ error }) => {
+      if (error) console.warn('Supabase insert vault credential warning:', error);
+    });
+
     return newCred;
   };
 
   const updateVaultCredential = (id: string, updates: Partial<VaultCredential>) => {
-    setVaultCredentials(prev =>
-      prev.map(c => (c.id === id ? { ...c, ...updates, updatedAt: new Date().toLocaleString('pt-BR') } : c))
-    );
+    let updatedList: VaultCredential[] = [];
+
+    setVaultCredentials(prev => {
+      updatedList = prev.map(c => (c.id === id ? { ...c, ...updates, updatedAt: new Date().toLocaleString('pt-BR') } : c));
+      localStorage.setItem('godesc_vault_credentials', JSON.stringify(updatedList));
+
+      // Broadcast to other open sessions via Supabase Realtime
+      const syncChannel = supabase.channel('vault_sync_channel');
+      syncChannel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          syncChannel.send({
+            type: 'broadcast',
+            event: 'vault_credentials_changed',
+            payload: { credentials: updatedList }
+          });
+        }
+      });
+
+      return updatedList;
+    });
+
+    // Update in Supabase table
+    const updateObj: any = { updated_at: new Date().toLocaleString('pt-BR') };
+    if (updates.title !== undefined) updateObj.title = updates.title;
+    if (updates.company !== undefined) updateObj.company = updates.company;
+    if (updates.category !== undefined) updateObj.category = updates.category;
+    if (updates.username !== undefined) updateObj.username = updates.username;
+    if (updates.password !== undefined) updateObj.password = updates.password;
+    if (updates.notes !== undefined) updateObj.notes = updates.notes;
+    if (updates.accessLevel !== undefined) updateObj.access_level = updates.accessLevel;
+    if (updates.strength !== undefined) updateObj.strength = updates.strength;
+    if (updates.updatedBy !== undefined) updateObj.updated_by = updates.updatedBy;
+
+    supabase.from('vault_credentials').update(updateObj).eq('id', id).then(({ error }) => {
+      if (error) console.warn('Supabase update vault credential warning:', error);
+    });
   };
 
   const deleteVaultCredential = (id: string) => {
-    setVaultCredentials(prev => prev.filter(c => c.id !== id));
+    setVaultCredentials(prev => {
+      const updated = prev.filter(c => c.id !== id);
+      localStorage.setItem('godesc_vault_credentials', JSON.stringify(updated));
+
+      // Broadcast to other open sessions via Supabase Realtime
+      const syncChannel = supabase.channel('vault_sync_channel');
+      syncChannel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          syncChannel.send({
+            type: 'broadcast',
+            event: 'vault_credentials_changed',
+            payload: { credentials: updated }
+          });
+        }
+      });
+
+      return updated;
+    });
+
+    // Delete in Supabase table
+    supabase.from('vault_credentials').delete().eq('id', id).then(({ error }) => {
+      if (error) console.warn('Supabase delete vault credential warning:', error);
+    });
   };
 
   // Sincronização em tempo real (multi-abas/janelas)
