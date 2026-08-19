@@ -16,8 +16,8 @@ import {
   Settings,
   Plus,
   Clock,
+  Calendar,
   Database,
-  HardDrive,
   CheckCircle2,
   AlertTriangle,
   Menu,
@@ -48,7 +48,7 @@ interface DonutSegment {
   color: string;
 }
 
-// SVG Donut Chart Component
+// SVG Donut Chart Component (Neutral Anthracite background)
 const SVGDonutChart: React.FC<{
   data: DonutSegment[];
   centerLabel?: string;
@@ -84,7 +84,7 @@ const SVGDonutChart: React.FC<{
             cy="50"
             r={radius}
             fill="transparent"
-            stroke="#151c25"
+            stroke="#27272a"
             strokeWidth="14"
           />
           {strokeDashArrays.map((seg, i) => (
@@ -302,11 +302,11 @@ export const TIDashboard: React.FC = () => {
   };
 
   return (
-    <div className={`bg-[#0b0f19] text-[#dfe2eb] font-sans min-h-screen flex overflow-x-hidden selection:bg-[#45dfa4]/30 selection:text-[#45dfa4] ${isTvMode ? 'p-6 bg-[#06080e]' : ''}`}>
+    <div className={`bg-[#1e1e24] text-[#dfe2eb] font-sans min-h-screen flex overflow-x-hidden selection:bg-[#45dfa4]/30 selection:text-[#45dfa4] ${isTvMode ? 'p-6 bg-[#18181b]' : ''}`}>
       {/* SideNavBar (Hidden in TV Mode) */}
       {!isTvMode && (
         <aside
-          className={`fixed left-0 top-0 h-screen w-64 bg-[#111622] border-r border-[#1f2632] flex flex-col py-6 z-40 transition-transform duration-300 ${
+          className={`fixed left-0 top-0 h-screen w-64 bg-[#18181b] border-r border-[#27272a] flex flex-col py-6 z-40 transition-transform duration-300 ${
             isSidebarOpenMobile ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
           }`}
         >
@@ -362,7 +362,7 @@ export const TIDashboard: React.FC = () => {
               <button
                 id="menu-ti-chamados"
                 onClick={() => setCurrentScreen('ti_tickets')}
-                className="w-full flex items-center justify-between px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors"
+                className="w-full flex items-center justify-between px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-3">
                   <TicketIcon className="w-4 h-4 text-[#8d90a0]" />
@@ -380,16 +380,25 @@ export const TIDashboard: React.FC = () => {
               <button
                 id="menu-ti-fila"
                 onClick={() => setCurrentScreen('ti_queue')}
-                className="w-full flex items-center gap-3 px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors cursor-pointer"
               >
                 <Layers className="w-4 h-4 text-[#8d90a0]" />
                 <span>Kanban Pessoal</span>
               </button>
 
               <button
+                id="menu-ti-calendar"
+                onClick={() => setCurrentScreen('ti_calendar')}
+                className="w-full flex items-center gap-3 px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors cursor-pointer"
+              >
+                <Calendar className="w-4 h-4 text-[#8d90a0]" />
+                <span>Calendário</span>
+              </button>
+
+              <button
                 id="menu-ti-knowledge-base"
                 onClick={() => setCurrentScreen('knowledge_base')}
-                className="w-full flex items-center gap-3 px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors cursor-pointer"
               >
                 <HelpCircle className="w-4 h-4 text-[#8d90a0]" />
                 <span>Base de Conhecimento</span>
@@ -406,7 +415,7 @@ export const TIDashboard: React.FC = () => {
                   <button
                     id="menu-ti-config"
                     onClick={() => setCurrentScreen('ti_config')}
-                    className="w-full flex items-center justify-between px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors"
+                    className="w-full flex items-center justify-between px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
                       <Settings className="w-4 h-4 text-[#8d90a0]" />
@@ -417,7 +426,7 @@ export const TIDashboard: React.FC = () => {
                   <button
                     id="menu-ti-audit-logs"
                     onClick={() => setCurrentScreen('ti_audit_logs')}
-                    className="w-full flex items-center justify-between px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors"
+                    className="w-full flex items-center justify-between px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
                       <Activity className="w-4 h-4 text-[#8d90a0]" />
@@ -430,7 +439,7 @@ export const TIDashboard: React.FC = () => {
               <button
                 id="menu-ti-database"
                 onClick={() => setCurrentScreen('ti_database')}
-                className="w-full flex items-center gap-3 px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors cursor-pointer"
               >
                 <Database className="w-4 h-4 text-[#8d90a0]" />
                 <span>Base de Dados</span>
@@ -439,7 +448,7 @@ export const TIDashboard: React.FC = () => {
           </div>
 
           {/* User Footer Session */}
-          <div className="px-4 pt-4 border-t border-[#1f2632] flex items-center justify-between">
+          <div className="px-4 pt-4 border-t border-[#27272a] flex items-center justify-between">
             <div className="flex items-center gap-3 overflow-hidden">
               <div className="w-8 h-8 rounded-full bg-[#45dfa4]/20 border border-[#45dfa4]/40 flex items-center justify-center font-bold text-xs text-[#45dfa4] shrink-0 font-mono">
                 {userSession.name?.slice(0, 2).toUpperCase() || 'TI'}
@@ -465,7 +474,7 @@ export const TIDashboard: React.FC = () => {
       <main className={`flex-1 flex flex-col min-w-0 ${!isTvMode ? 'md:ml-64' : ''}`}>
         {/* Top Header Bar */}
         {!isTvMode && (
-          <header className="sticky top-0 z-30 bg-[#111622]/90 backdrop-blur-md border-b border-[#1f2632] flex justify-between items-center h-16 px-4 sm:px-6 md:px-8">
+          <header className="sticky top-0 z-30 bg-[#18181b]/90 backdrop-blur-md border-b border-[#27272a] flex justify-between items-center h-16 px-4 sm:px-6 md:px-8">
             <div className="flex items-center gap-4 flex-1">
               <button
                 onClick={() => setIsSidebarOpenMobile(true)}
@@ -492,7 +501,7 @@ export const TIDashboard: React.FC = () => {
               <button
                 id="btn-switch-client-portal"
                 onClick={() => setCurrentScreen('client_home')}
-                className="hidden lg:flex items-center gap-1.5 text-xs font-mono text-[#c3c6d7] hover:text-[#45dfa4] bg-[#151c25] border border-[#27272a] px-3 py-1.5 rounded-lg transition-colors"
+                className="hidden lg:flex items-center gap-1.5 text-xs font-mono text-[#c3c6d7] hover:text-[#45dfa4] bg-[#151c25] border border-[#27272a] px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
                 <span>Portal do Cliente</span>
@@ -503,7 +512,7 @@ export const TIDashboard: React.FC = () => {
                 <button
                   id="btn-notif-bell-ti"
                   onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)}
-                  className="text-[#c3c6d7] hover:text-white hover:bg-[#151c25] rounded-lg p-2 transition-all relative"
+                  className="text-[#c3c6d7] hover:text-white hover:bg-[#151c25] rounded-lg p-2 transition-all relative cursor-pointer"
                   title="Notificações"
                 >
                   <Bell className="w-5 h-5" />
@@ -513,15 +522,15 @@ export const TIDashboard: React.FC = () => {
                 </button>
 
                 {showNotificationsDropdown && (
-                  <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-[#111622] border border-[#27272a] rounded-xl shadow-2xl z-50 overflow-hidden">
-                    <div className="p-3 bg-[#0b0f19] border-b border-[#27272a] flex items-center justify-between">
+                  <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-[#18181b] border border-[#27272a] rounded-xl shadow-2xl z-50 overflow-hidden">
+                    <div className="p-3 bg-[#151c25] border-b border-[#27272a] flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Bell className="w-4 h-4 text-[#45dfa4]" />
                         <span className="text-xs font-bold text-white">Notificações do Sistema</span>
                       </div>
                       <button
                         onClick={markAllNotificationsAsRead}
-                        className="text-[11px] font-mono text-[#45dfa4] hover:underline"
+                        className="text-[11px] font-mono text-[#45dfa4] hover:underline cursor-pointer"
                       >
                         Marcar lidas
                       </button>
@@ -568,7 +577,7 @@ export const TIDashboard: React.FC = () => {
               <button
                 id="btn-settings-ti"
                 onClick={() => setShowSettingsModal(true)}
-                className="text-[#c3c6d7] hover:text-white hover:bg-[#151c25] rounded-lg p-2 transition-all"
+                className="text-[#c3c6d7] hover:text-white hover:bg-[#151c25] rounded-lg p-2 transition-all cursor-pointer"
                 title="Configurações"
               >
                 <Settings className="w-5 h-5" />
@@ -583,10 +592,10 @@ export const TIDashboard: React.FC = () => {
           </header>
         )}
 
-        {/* Dashboard Content Container */}
+        {/* Dashboard Content Container (Neutral Anthracite Palette) */}
         <div className="flex-1 p-4 sm:p-6 md:p-8 max-w-[1600px] mx-auto w-full space-y-6">
           {/* Header Sub-Bar: Solvedesk Dashboard Header */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[#1f2632] pb-5">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[#27272a] pb-5">
             <div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
                 <span>Dashboard Principal</span>
@@ -631,7 +640,7 @@ export const TIDashboard: React.FC = () => {
           </div>
 
           {/* Filter Bar Row */}
-          <div className="bg-[#111622] border border-[#1f2632] rounded-xl p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 shadow-lg">
+          <div className="bg-[#151c25] border border-[#27272a] rounded-xl p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 shadow-lg">
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2 text-xs font-mono text-[#8d90a0]">
                 <Filter className="w-4 h-4 text-[#45dfa4]" />
@@ -642,7 +651,7 @@ export const TIDashboard: React.FC = () => {
               <select
                 value={companyFilter}
                 onChange={(e) => setCompanyFilter(e.target.value)}
-                className="bg-[#151c25] border border-[#27272a] text-white text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#45dfa4] font-mono"
+                className="bg-[#18181b] border border-[#27272a] text-white text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#45dfa4] font-mono"
               >
                 <option value="Todas as empresas">Todas as empresas</option>
                 {companies?.map((c) => (
@@ -656,7 +665,7 @@ export const TIDashboard: React.FC = () => {
               <select
                 value={departmentFilter}
                 onChange={(e) => setDepartmentFilter(e.target.value)}
-                className="bg-[#151c25] border border-[#27272a] text-white text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#45dfa4] font-mono"
+                className="bg-[#18181b] border border-[#27272a] text-white text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#45dfa4] font-mono"
               >
                 <option value="Todos os departamentos">Todos os departamentos</option>
                 <option value="N1">Fila N1 - Suporte</option>
@@ -669,7 +678,7 @@ export const TIDashboard: React.FC = () => {
               <select
                 value={periodFilter}
                 onChange={(e) => setPeriodFilter(e.target.value)}
-                className="bg-[#151c25] border border-[#27272a] text-white text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#45dfa4] font-mono"
+                className="bg-[#18181b] border border-[#27272a] text-white text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#45dfa4] font-mono"
               >
                 <option value="Últimos 30 dias">Últimos 30 dias</option>
                 <option value="Hoje">Hoje</option>
@@ -690,7 +699,7 @@ export const TIDashboard: React.FC = () => {
           {/* Metric Cards Grid - Row 1 (5 Cards) */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             {/* Card 1: Novos */}
-            <div className="bg-[#111622] border border-[#1f2632] rounded-xl p-4 hover:border-[#45dfa4]/40 transition-all flex flex-col justify-between">
+            <div className="bg-[#151c25] border border-[#27272a] rounded-xl p-4 hover:border-[#45dfa4]/40 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-white font-mono">Novos</span>
                 <TicketIcon className="w-4 h-4 text-[#8d90a0]" />
@@ -704,7 +713,7 @@ export const TIDashboard: React.FC = () => {
             </div>
 
             {/* Card 2: Encerrados */}
-            <div className="bg-[#111622] border border-[#1f2632] rounded-xl p-4 hover:border-[#22c55e]/40 transition-all flex flex-col justify-between">
+            <div className="bg-[#151c25] border border-[#27272a] rounded-xl p-4 hover:border-[#22c55e]/40 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-white font-mono">Encerrados</span>
                 <CheckCircle2 className="w-4 h-4 text-[#22c55e]" />
@@ -718,7 +727,7 @@ export const TIDashboard: React.FC = () => {
             </div>
 
             {/* Card 3: Em Atendimento */}
-            <div className="bg-[#111622] border border-[#1f2632] rounded-xl p-4 hover:border-[#f59e0b]/40 transition-all flex flex-col justify-between">
+            <div className="bg-[#151c25] border border-[#27272a] rounded-xl p-4 hover:border-[#f59e0b]/40 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-white font-mono">Em Atendimento</span>
                 <AlertCircle className="w-4 h-4 text-[#f59e0b]" />
@@ -732,7 +741,7 @@ export const TIDashboard: React.FC = () => {
             </div>
 
             {/* Card 4: SLA 1º Atendimento */}
-            <div className="bg-[#111622] border border-[#1f2632] rounded-xl p-4 hover:border-[#3b82f6]/40 transition-all flex flex-col justify-between">
+            <div className="bg-[#151c25] border border-[#27272a] rounded-xl p-4 hover:border-[#3b82f6]/40 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-white font-mono">SLA 1º Atendimento</span>
                 <Zap className="w-4 h-4 text-[#3b82f6]" />
@@ -740,13 +749,13 @@ export const TIDashboard: React.FC = () => {
               <div className="text-3xl font-extrabold text-[#3b82f6] font-mono tracking-tight my-1">
                 91.8%
               </div>
-              <div className="w-full h-1.5 bg-[#151c25] rounded-full overflow-hidden mt-1">
+              <div className="w-full h-1.5 bg-[#18181b] rounded-full overflow-hidden mt-1">
                 <div className="h-full bg-[#3b82f6] rounded-full" style={{ width: '91.8%' }}></div>
               </div>
             </div>
 
             {/* Card 5: SLA Solução */}
-            <div className="bg-[#111622] border border-[#1f2632] rounded-xl p-4 hover:border-[#22c55e]/40 transition-all flex flex-col justify-between">
+            <div className="bg-[#151c25] border border-[#27272a] rounded-xl p-4 hover:border-[#22c55e]/40 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-white font-mono">SLA Solução</span>
                 <TrendingUp className="w-4 h-4 text-[#22c55e]" />
@@ -754,7 +763,7 @@ export const TIDashboard: React.FC = () => {
               <div className="text-3xl font-extrabold text-[#22c55e] font-mono tracking-tight my-1">
                 99.6%
               </div>
-              <div className="w-full h-1.5 bg-[#151c25] rounded-full overflow-hidden mt-1">
+              <div className="w-full h-1.5 bg-[#18181b] rounded-full overflow-hidden mt-1">
                 <div className="h-full bg-[#22c55e] rounded-full" style={{ width: '99.6%' }}></div>
               </div>
             </div>
@@ -763,7 +772,7 @@ export const TIDashboard: React.FC = () => {
           {/* Metric Cards Grid - Row 2 (5 Cards) */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             {/* Card 6: Fora do SLA (Red Highlight Border) */}
-            <div className="bg-[#111622] border-2 border-[#ef4444]/60 rounded-xl p-4 shadow-lg shadow-[#ef4444]/5 flex flex-col justify-between">
+            <div className="bg-[#151c25] border-2 border-[#ef4444]/60 rounded-xl p-4 shadow-lg shadow-[#ef4444]/5 flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-white font-mono">Fora do SLA</span>
                 <AlertTriangle className="w-4 h-4 text-[#ef4444]" />
@@ -774,7 +783,7 @@ export const TIDashboard: React.FC = () => {
                     <span>1º Resposta</span>
                     <span className="text-[#ef4444] font-bold">8.2%</span>
                   </div>
-                  <div className="w-full h-1.5 bg-[#151c25] rounded-full overflow-hidden">
+                  <div className="w-full h-1.5 bg-[#18181b] rounded-full overflow-hidden">
                     <div className="h-full bg-[#ef4444] rounded-full" style={{ width: '8.2%' }}></div>
                   </div>
                 </div>
@@ -783,7 +792,7 @@ export const TIDashboard: React.FC = () => {
                     <span>Solução</span>
                     <span className="text-[#ef4444] font-bold">0.4%</span>
                   </div>
-                  <div className="w-full h-1.5 bg-[#151c25] rounded-full overflow-hidden">
+                  <div className="w-full h-1.5 bg-[#18181b] rounded-full overflow-hidden">
                     <div className="h-full bg-[#ef4444] rounded-full" style={{ width: '0.4%' }}></div>
                   </div>
                 </div>
@@ -791,7 +800,7 @@ export const TIDashboard: React.FC = () => {
             </div>
 
             {/* Card 7: Tempo Médio */}
-            <div className="bg-[#111622] border border-[#1f2632] rounded-xl p-4 hover:border-[#38bdf8]/40 transition-all flex flex-col justify-between">
+            <div className="bg-[#151c25] border border-[#27272a] rounded-xl p-4 hover:border-[#38bdf8]/40 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-white font-mono">Tempo Médio</span>
                 <Clock className="w-4 h-4 text-[#38bdf8]" />
@@ -805,7 +814,7 @@ export const TIDashboard: React.FC = () => {
             </div>
 
             {/* Card 8: Clientes */}
-            <div className="bg-[#111622] border border-[#1f2632] rounded-xl p-4 hover:border-[#8b5cf6]/40 transition-all flex flex-col justify-between">
+            <div className="bg-[#151c25] border border-[#27272a] rounded-xl p-4 hover:border-[#8b5cf6]/40 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-white font-mono">Clientes</span>
                 <Users className="w-4 h-4 text-[#8b5cf6]" />
@@ -819,7 +828,7 @@ export const TIDashboard: React.FC = () => {
             </div>
 
             {/* Card 9: Satisfação */}
-            <div className="bg-[#111622] border border-[#1f2632] rounded-xl p-4 hover:border-[#eab308]/40 transition-all flex flex-col justify-between">
+            <div className="bg-[#151c25] border border-[#27272a] rounded-xl p-4 hover:border-[#eab308]/40 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-white font-mono">Satisfação</span>
                 <Star className="w-4 h-4 text-[#eab308]" />
@@ -833,7 +842,7 @@ export const TIDashboard: React.FC = () => {
             </div>
 
             {/* Card 10: Operadores Online */}
-            <div className="bg-[#111622] border border-[#1f2632] rounded-xl p-4 hover:border-[#45dfa4]/40 transition-all flex flex-col justify-between">
+            <div className="bg-[#151c25] border border-[#27272a] rounded-xl p-4 hover:border-[#45dfa4]/40 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-white font-mono">Operadores Online</span>
                 <UserCheck className="w-4 h-4 text-[#45dfa4]" />
@@ -849,7 +858,7 @@ export const TIDashboard: React.FC = () => {
 
           {/* Secondary Metric Badges Grid (5 Mini Badges) */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            <div className="bg-[#111622] border border-[#1f2632] rounded-xl p-3 flex items-center justify-between">
+            <div className="bg-[#151c25] border border-[#27272a] rounded-xl p-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <TicketIcon className="w-4 h-4 text-[#45dfa4]" />
                 <span className="text-xs font-mono text-[#8d90a0]">Novos Totais</span>
@@ -857,7 +866,7 @@ export const TIDashboard: React.FC = () => {
               <span className="text-base font-bold text-white font-mono">{newCount}</span>
             </div>
 
-            <div className="bg-[#111622] border border-[#1f2632] rounded-xl p-3 flex items-center justify-between">
+            <div className="bg-[#151c25] border border-[#27272a] rounded-xl p-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-[#f59e0b]" />
                 <span className="text-xs font-mono text-[#8d90a0]">Em Andamento Totais</span>
@@ -865,7 +874,7 @@ export const TIDashboard: React.FC = () => {
               <span className="text-base font-bold text-white font-mono">{inServiceCount}</span>
             </div>
 
-            <div className="bg-[#111622] border border-[#1f2632] rounded-xl p-3 flex items-center justify-between">
+            <div className="bg-[#151c25] border border-[#27272a] rounded-xl p-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Monitor className="w-4 h-4 text-[#8b5cf6]" />
                 <span className="text-xs font-mono text-[#8d90a0]">Inventário</span>
@@ -873,7 +882,7 @@ export const TIDashboard: React.FC = () => {
               <span className="text-base font-bold text-white font-mono">179</span>
             </div>
 
-            <div className="bg-[#111622] border border-[#1f2632] rounded-xl p-3 flex items-center justify-between">
+            <div className="bg-[#151c25] border border-[#27272a] rounded-xl p-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-4 h-4 text-[#22c55e]" />
                 <span className="text-xs font-mono text-[#8d90a0]">WhatsApp</span>
@@ -881,7 +890,7 @@ export const TIDashboard: React.FC = () => {
               <span className="text-base font-bold text-white font-mono">134</span>
             </div>
 
-            <div className="bg-[#111622] border border-[#1f2632] rounded-xl p-3 flex items-center justify-between">
+            <div className="bg-[#151c25] border border-[#27272a] rounded-xl p-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-4 h-4 text-[#3b82f6]" />
                 <span className="text-xs font-mono text-[#8d90a0]">Conversas Abertas</span>
@@ -893,7 +902,7 @@ export const TIDashboard: React.FC = () => {
           {/* Charts Grid: 3 Donut Charts & 1 Horizontal Bar Chart */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Chart 1: Tickets por Status */}
-            <div className="bg-[#111622] border border-[#1f2632] rounded-xl p-5 flex flex-col justify-between">
+            <div className="bg-[#151c25] border border-[#27272a] rounded-xl p-5 flex flex-col justify-between">
               <h3 className="text-xs font-bold text-white font-mono uppercase tracking-wider mb-2">
                 Tickets por Status
               </h3>
@@ -901,7 +910,7 @@ export const TIDashboard: React.FC = () => {
             </div>
 
             {/* Chart 2: Tickets por Prioridade */}
-            <div className="bg-[#111622] border border-[#1f2632] rounded-xl p-5 flex flex-col justify-between">
+            <div className="bg-[#151c25] border border-[#27272a] rounded-xl p-5 flex flex-col justify-between">
               <h3 className="text-xs font-bold text-white font-mono uppercase tracking-wider mb-2">
                 Tickets por Prioridade
               </h3>
@@ -909,7 +918,7 @@ export const TIDashboard: React.FC = () => {
             </div>
 
             {/* Chart 3: Canal de Abertura */}
-            <div className="bg-[#111622] border border-[#1f2632] rounded-xl p-5 flex flex-col justify-between">
+            <div className="bg-[#151c25] border border-[#27272a] rounded-xl p-5 flex flex-col justify-between">
               <h3 className="text-xs font-bold text-white font-mono uppercase tracking-wider mb-2">
                 Canal de Abertura
               </h3>
@@ -918,7 +927,7 @@ export const TIDashboard: React.FC = () => {
           </div>
 
           {/* Horizontal Bar Chart: Top Categorias */}
-          <div className="bg-[#111622] border border-[#1f2632] rounded-xl p-6 shadow-xl">
+          <div className="bg-[#151c25] border border-[#27272a] rounded-xl p-6 shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xs font-bold text-white font-mono uppercase tracking-wider">
                 Top Categorias
@@ -929,7 +938,7 @@ export const TIDashboard: React.FC = () => {
           </div>
 
           {/* Quick Tickets Preview List */}
-          <div className="bg-[#111622] border border-[#1f2632] rounded-xl p-6">
+          <div className="bg-[#151c25] border border-[#27272a] rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-base font-bold text-white">Últimos Chamados Recebidos</h3>
@@ -944,12 +953,12 @@ export const TIDashboard: React.FC = () => {
               </button>
             </div>
 
-            <div className="divide-y divide-[#1f2632]">
+            <div className="divide-y divide-[#27272a]">
               {tickets.slice(0, 5).map((ticket) => (
                 <div
                   key={ticket.id}
                   onClick={() => handleOpenTicketDetails(ticket)}
-                  className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#151c25] px-2 rounded-lg cursor-pointer transition-colors"
+                  className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#18181b] px-2 rounded-lg cursor-pointer transition-colors"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -1007,7 +1016,7 @@ export const TIDashboard: React.FC = () => {
           >
             <div
               onClick={handleToastClick}
-              className="bg-[#111622] border border-[#ffb4ab]/50 rounded-xl shadow-2xl p-4 flex items-start gap-4 backdrop-blur-md cursor-pointer hover:border-[#45dfa4] transition-all"
+              className="bg-[#151c25] border border-[#ffb4ab]/50 rounded-xl shadow-2xl p-4 flex items-start gap-4 backdrop-blur-md cursor-pointer hover:border-[#45dfa4] transition-all"
             >
               <div className="w-9 h-9 rounded-full bg-[#93000a]/40 text-[#ffb4ab] flex items-center justify-center shrink-0 border border-[#ffb4ab]/40">
                 <Bell className="w-4 h-4 animate-bounce" />
@@ -1044,7 +1053,7 @@ export const TIDashboard: React.FC = () => {
       </AnimatePresence>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 w-full bg-[#111622] border-t border-[#1f2632] z-40 flex justify-around items-center h-16">
+      <nav className="md:hidden fixed bottom-0 left-0 w-full bg-[#18181b] border-t border-[#27272a] z-40 flex justify-around items-center h-16">
         <button
           onClick={() => setCurrentScreen('ti_dashboard')}
           className="flex flex-col items-center justify-center w-full h-full text-[#45dfa4]"
@@ -1064,7 +1073,7 @@ export const TIDashboard: React.FC = () => {
         <div className="relative -top-3">
           <button
             onClick={() => setCurrentScreen('ti_new_ticket')}
-            className="w-11 h-11 bg-[#45dfa4] hover:bg-[#00bd85] rounded-full flex items-center justify-center text-gray-950 shadow-lg border-2 border-[#111622] cursor-pointer"
+            className="w-11 h-11 bg-[#45dfa4] hover:bg-[#00bd85] rounded-full flex items-center justify-center text-gray-950 shadow-lg border-2 border-[#18181b] cursor-pointer"
           >
             <Plus className="w-5 h-5" />
           </button>
@@ -1090,7 +1099,7 @@ export const TIDashboard: React.FC = () => {
       {/* Settings Modal */}
       {showSettingsModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#111622] border border-[#27272a] rounded-2xl max-w-md w-full p-6 shadow-2xl">
+          <div className="bg-[#18181b] border border-[#27272a] rounded-2xl max-w-md w-full p-6 shadow-2xl">
             <div className="flex items-center justify-between pb-4 border-b border-[#27272a] mb-4">
               <div className="flex items-center gap-2">
                 <Settings className="w-5 h-5 text-[#45dfa4]" />
