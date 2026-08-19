@@ -225,9 +225,9 @@ export const TITicketsView: React.FC = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setCurrentScreen('ti_new_ticket')}
-            className="px-4 py-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-bold text-xs rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-blue-500/20 cursor-pointer"
+            className="px-4 py-2 bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 font-bold text-xs rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-[#45dfa4]/20 cursor-pointer"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 text-gray-950" />
             <span>+ Novo Ticket</span>
           </button>
         </div>

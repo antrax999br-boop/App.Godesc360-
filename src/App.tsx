@@ -21,6 +21,7 @@ import { TIConfigView } from './components/TIConfigView';
 import { TILoginScreen } from './components/TILoginScreen';
 import { TIAuditLogsView } from './components/TIAuditLogsView';
 import { TINewTicketView } from './components/TINewTicketView';
+import { TIVaultView } from './components/TIVaultView';
 import { ProtectedTIRoute } from './components/ProtectedTIRoute';
 import { AnimatePresence, motion } from 'motion/react';
 
@@ -109,6 +110,12 @@ const ScreenRenderer: React.FC = () => {
         return (
           <ProtectedTIRoute requiredModule="ti_new_ticket">
             <TINewTicketView key="ti_new_ticket" />
+          </ProtectedTIRoute>
+        );
+      case 'ti_vault':
+        return (
+          <ProtectedTIRoute requiredModule="ti_vault">
+            <TIVaultView key="ti_vault" />
           </ProtectedTIRoute>
         );
       default:

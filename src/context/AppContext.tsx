@@ -15,7 +15,8 @@ import {
   CategoryGroup,
   TicketAttachment,
   TISession,
-  TISecurityLog
+  TISecurityLog,
+  VaultCredential
 } from '../types';
 import {
   INITIAL_TICKETS,
@@ -72,6 +73,11 @@ interface AppContextType {
   addNote: (folderId: string, title: string, content: string, tags?: string[]) => DatabaseNote;
   updateNote: (id: string, updates: Partial<DatabaseNote>) => void;
   deleteNote: (id: string) => void;
+  // Cofre de Senhas & Gerenciamento Seguro de Credenciais
+  vaultCredentials: VaultCredential[];
+  addVaultCredential: (credData: Omit<VaultCredential, 'id' | 'updatedAt'>) => VaultCredential;
+  updateVaultCredential: (id: string, updates: Partial<VaultCredential>) => void;
+  deleteVaultCredential: (id: string) => void;
   // Calendário & Lembretes
   calendarEvents: CalendarEvent[];
   addCalendarEvent: (eventData: Omit<CalendarEvent, 'id' | 'createdAt' | 'notified'>) => CalendarEvent;
@@ -1569,6 +1575,82 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  // Cofre de Senhas State
+  const [vaultCredentials, setVaultCredentials] = useState<VaultCredential[]>(() => {
+    const saved = localStorage.getItem('godesc_vault_credentials');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) { /* ignore */ }
+    }
+    return [
+      {
+        id: 'cred-1',
+        title: 'Henrique Leal',
+        company: 'Empresa ABC',
+        category: 'E-mail',
+        username: '-',
+        password: 'Lev@2024!',
+        notes: 'Windows/REDE: User: henrique.leal Password: Lev@2024! Skype: comercial.plcom@outlook.com senha: PLcom@2024 Data fake de aniver no outlook: 01/01/2000',
+        accessLevel: 'Todos',
+        strength: 'Fraca',
+        updatedAt: '22/09/2025, 10:59:23',
+        updatedBy: 'Técnico T.I'
+      },
+      {
+        id: 'cred-2',
+        title: 'Raphael Castro',
+        company: 'Bex Company',
+        category: 'E-mail',
+        username: 'raphael.castro@bexcompany.com.br',
+        password: 'Password@2026!',
+        notes: 'Acesso E-mail Corporativo O365 & VPN Matriz',
+        accessLevel: 'Todos',
+        strength: 'Forte',
+        updatedAt: '23/07/2026, 11:48:53',
+        updatedBy: 'Técnico T.I'
+      },
+      {
+        id: 'cred-3',
+        title: 'Robson Braga',
+        company: 'TechLog Brasil',
+        category: 'VPN',
+        username: 'robson.braga@empresa.com.br',
+        password: 'VpnSecure@2026#',
+        notes: 'VPN Fortigate IP Sec & Acesso Servidor AD Principal',
+        accessLevel: 'Todos',
+        strength: 'Forte',
+        updatedAt: '18/08/2026, 14:20:10',
+        updatedBy: 'Técnico T.I'
+      }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('godesc_vault_credentials', JSON.stringify(vaultCredentials));
+  }, [vaultCredentials]);
+
+  const addVaultCredential = (credData: Omit<VaultCredential, 'id' | 'updatedAt'>): VaultCredential => {
+    const newCred: VaultCredential = {
+      ...credData,
+      id: `cred-${Date.now()}`,
+      updatedAt: new Date().toLocaleString('pt-BR')
+    };
+    setVaultCredentials(prev => [newCred, ...prev]);
+    return newCred;
+  };
+
+  const updateVaultCredential = (id: string, updates: Partial<VaultCredential>) => {
+    setVaultCredentials(prev =>
+      prev.map(c => (c.id === id ? { ...c, ...updates, updatedAt: new Date().toLocaleString('pt-BR') } : c))
+    );
+  };
+
+  const deleteVaultCredential = (id: string) => {
+    setVaultCredentials(prev => prev.filter(c => c.id !== id));
+  };
+
   // Sincronização em tempo real (multi-abas/janelas)
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
@@ -1672,6 +1754,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateCalendarEvent,
         deleteCalendarEvent,
         triggerCalendarEventReminder,
+        vaultCredentials,
+        addVaultCredential,
+        updateVaultCredential,
+        deleteVaultCredential,
         ticketCategories,
         addTicketCategory,
         editTicketCategory,

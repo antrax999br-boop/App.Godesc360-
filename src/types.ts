@@ -14,6 +14,7 @@ export type ScreenView =
   | 'ti_config'         // Configurações
   | 'ti_calendar'       // Calendário & Lembretes
   | 'ti_audit_logs'     // Logs de Auditoria de Segurança do TI
+  | 'ti_vault'          // Cofre de Senhas & Gerenciamento Seguro de Credenciais
   | 'ti_new_ticket';    // Abertura Interna de Chamado pelo Suporte T.I.
 
 export type TicketPriority = 'Baixa' | 'Média' | 'Alta' | 'Crítica';
@@ -62,6 +63,20 @@ export interface DatabaseNote {
   author: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface VaultCredential {
+  id: string;
+  title: string;
+  company: string;
+  category: 'E-mail' | 'VPN' | 'Servidor' | 'Rede' | 'Acesso' | 'Outros';
+  username: string;
+  password?: string;
+  notes?: string;
+  accessLevel: 'Todos' | 'Apenas N2/N3' | 'Apenas Gestores';
+  strength: 'Fraca' | 'Média' | 'Forte';
+  updatedAt: string;
+  updatedBy?: string;
 }
 
 export interface CalendarEvent {
