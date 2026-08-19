@@ -1578,10 +1578,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Cofre de Senhas State
   const [vaultCredentials, setVaultCredentials] = useState<VaultCredential[]>(() => {
     const saved = localStorage.getItem('godesc_vault_credentials');
-    if (saved) {
+    if (saved !== null) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       } catch (e) { /* ignore */ }
     }
     return [
@@ -1697,6 +1697,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       if (e.key === 'godesc_companies' && e.newValue) {
         try { setCompanies(JSON.parse(e.newValue)); } catch (err) {}
+      }
+      if (e.key === 'godesc_vault_credentials' && e.newValue) {
+        try { setVaultCredentials(JSON.parse(e.newValue)); } catch (err) {}
       }
     };
     

@@ -397,6 +397,15 @@ export const TIDashboard: React.FC = () => {
               </button>
 
               <button
+                id="menu-ti-vault"
+                onClick={() => setCurrentScreen('ti_vault')}
+                className="w-full flex items-center gap-3 px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors cursor-pointer"
+              >
+                <Key className="w-4 h-4 text-[#45dfa4]" />
+                <span>Cofre de Senhas</span>
+              </button>
+
+              <button
                 id="menu-ti-knowledge-base"
                 onClick={() => setCurrentScreen('knowledge_base')}
                 className="w-full flex items-center gap-3 px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors cursor-pointer"
@@ -436,15 +445,6 @@ export const TIDashboard: React.FC = () => {
                   </button>
                 </>
               )}
-
-              <button
-                id="menu-ti-vault"
-                onClick={() => setCurrentScreen('ti_vault')}
-                className="w-full flex items-center gap-3 px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors cursor-pointer"
-              >
-                <Key className="w-4 h-4 text-[#45dfa4]" />
-                <span>Cofre de Senhas</span>
-              </button>
 
               <button
                 id="menu-ti-database"
