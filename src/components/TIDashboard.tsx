@@ -170,6 +170,7 @@ const TopCategoriesChart: React.FC<{
 
 export const TIDashboard: React.FC = () => {
   const {
+    currentScreen,
     setCurrentScreen,
     userSession,
     logout,
@@ -349,7 +350,11 @@ export const TIDashboard: React.FC = () => {
             <button
               id="menu-ti-dashboard"
               onClick={() => setCurrentScreen('ti_dashboard')}
-              className="w-full flex items-center gap-3 px-4 py-2.5 bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium text-sm text-left transition-colors"
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                currentScreen === 'ti_dashboard'
+                  ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                  : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+              }`}
             >
               <LayoutDashboard className="w-4 h-4 text-[#45dfa4]" />
               <span>Dashboard</span>
@@ -363,10 +368,14 @@ export const TIDashboard: React.FC = () => {
               <button
                 id="menu-ti-chamados"
                 onClick={() => setCurrentScreen('ti_tickets')}
-                className="w-full flex items-center justify-between px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors cursor-pointer"
+                className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                  currentScreen === 'ti_tickets'
+                    ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                    : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                }`}
               >
                 <div className="flex items-center gap-3">
-                  <TicketIcon className="w-4 h-4 text-[#8d90a0]" />
+                  <TicketIcon className="w-4 h-4 text-[#45dfa4]" />
                   <span>Chamados</span>
                 </div>
                 <span className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded-full ${
@@ -381,25 +390,37 @@ export const TIDashboard: React.FC = () => {
               <button
                 id="menu-ti-fila"
                 onClick={() => setCurrentScreen('ti_queue')}
-                className="w-full flex items-center gap-3 px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors cursor-pointer"
+                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                  currentScreen === 'ti_queue'
+                    ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                    : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                }`}
               >
-                <Layers className="w-4 h-4 text-[#8d90a0]" />
+                <Layers className="w-4 h-4 text-[#45dfa4]" />
                 <span>Kanban Pessoal</span>
               </button>
 
               <button
                 id="menu-ti-calendar"
                 onClick={() => setCurrentScreen('ti_calendar')}
-                className="w-full flex items-center gap-3 px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors cursor-pointer"
+                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                  currentScreen === 'ti_calendar'
+                    ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                    : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                }`}
               >
-                <Calendar className="w-4 h-4 text-[#8d90a0]" />
+                <Calendar className="w-4 h-4 text-[#45dfa4]" />
                 <span>Calendário</span>
               </button>
 
               <button
                 id="menu-ti-vault"
                 onClick={() => setCurrentScreen('ti_vault')}
-                className="w-full flex items-center gap-3 px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors cursor-pointer"
+                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                  currentScreen === 'ti_vault'
+                    ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                    : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                }`}
               >
                 <Key className="w-4 h-4 text-[#45dfa4]" />
                 <span>Cofre de Senhas</span>
@@ -408,9 +429,13 @@ export const TIDashboard: React.FC = () => {
               <button
                 id="menu-ti-knowledge-base"
                 onClick={() => setCurrentScreen('knowledge_base')}
-                className="w-full flex items-center gap-3 px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors cursor-pointer"
+                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                  currentScreen === 'knowledge_base'
+                    ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                    : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                }`}
               >
-                <HelpCircle className="w-4 h-4 text-[#8d90a0]" />
+                <HelpCircle className="w-4 h-4 text-[#45dfa4]" />
                 <span>Base de Conhecimento</span>
               </button>
             </div>
@@ -425,10 +450,14 @@ export const TIDashboard: React.FC = () => {
                   <button
                     id="menu-ti-config"
                     onClick={() => setCurrentScreen('ti_config')}
-                    className="w-full flex items-center justify-between px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors cursor-pointer"
+                    className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                      currentScreen === 'ti_config'
+                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                    }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Settings className="w-4 h-4 text-[#8d90a0]" />
+                      <Settings className="w-4 h-4 text-[#45dfa4]" />
                       <span>Configurações</span>
                     </div>
                   </button>
@@ -436,10 +465,14 @@ export const TIDashboard: React.FC = () => {
                   <button
                     id="menu-ti-audit-logs"
                     onClick={() => setCurrentScreen('ti_audit_logs')}
-                    className="w-full flex items-center justify-between px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors cursor-pointer"
+                    className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                      currentScreen === 'ti_audit_logs'
+                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                    }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Activity className="w-4 h-4 text-[#8d90a0]" />
+                      <Activity className="w-4 h-4 text-[#45dfa4]" />
                       <span>Logs de Auditoria</span>
                     </div>
                   </button>
@@ -449,9 +482,13 @@ export const TIDashboard: React.FC = () => {
               <button
                 id="menu-ti-database"
                 onClick={() => setCurrentScreen('ti_database')}
-                className="w-full flex items-center gap-3 px-4 py-2 text-[#c3c6d7] hover:text-white hover:bg-[#1f2630] rounded-lg text-sm text-left transition-colors cursor-pointer"
+                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                  currentScreen === 'ti_database'
+                    ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                    : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                }`}
               >
-                <Database className="w-4 h-4 text-[#8d90a0]" />
+                <Database className="w-4 h-4 text-[#45dfa4]" />
                 <span>Base de Dados</span>
               </button>
             </div>
