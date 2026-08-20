@@ -2013,77 +2013,98 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   ]);
 
-  const [attendanceConversations, setAttendanceConversations] = useState<AttendanceConversation[]>([
-    {
-      id: 'conv-5511999887766',
-      companyId: 'default-company',
-      contactId: 'cnt-1',
-      contactName: 'João Silva',
-      contactPhone: '+55 11 99988-7766',
-      queueId: 'q-1',
-      queueName: 'Comercial',
-      status: 'WAITING',
-      botActive: true,
-      priority: 'Média',
-      startedAt: '10:15',
-      lastMessageText: 'Gostaria de solicitar um orçamento para o meu sistema.',
-      lastMessageAt: '10:15',
-      unreadCount: 1,
-      tags: ['Prospect', 'Comercial']
-    },
-    {
-      id: 'conv-5511988776655',
-      companyId: 'default-company',
-      contactId: 'cnt-2',
-      contactName: 'Maria Oliveira',
-      contactPhone: '+55 11 98877-6655',
-      queueId: 'q-2',
-      queueName: 'Suporte Técnico',
-      assignedUserId: 'usr-ceo',
-      assignedUserName: 'CEO (Direção Geral)',
-      status: 'IN_PROGRESS',
-      botActive: false,
-      priority: 'Alta',
-      startedAt: '09:30',
-      lastMessageText: 'Analista: Estarei verificando a falha no servidor agora.',
-      lastMessageAt: '09:42',
-      unreadCount: 0,
-      tags: ['Cliente', 'Urgente']
+  const [attendanceConversations, setAttendanceConversations] = useState<AttendanceConversation[]>(() => {
+    const saved = localStorage.getItem('godesc_attendance_conversations');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
     }
-  ]);
+    return [
+      {
+        id: 'conv-5511999887766',
+        companyId: 'default-company',
+        contactId: 'cnt-1',
+        contactName: 'João Silva',
+        contactPhone: '+55 11 99988-7766',
+        queueId: 'q-1',
+        queueName: 'Comercial',
+        status: 'WAITING',
+        botActive: true,
+        priority: 'Média',
+        startedAt: '10:15',
+        lastMessageText: 'Gostaria de solicitar um orçamento para o meu sistema.',
+        lastMessageAt: '10:15',
+        unreadCount: 1,
+        tags: ['Prospect', 'Comercial']
+      },
+      {
+        id: 'conv-5511988776655',
+        companyId: 'default-company',
+        contactId: 'cnt-2',
+        contactName: 'Maria Oliveira',
+        contactPhone: '+55 11 98877-6655',
+        queueId: 'q-2',
+        queueName: 'Suporte Técnico',
+        assignedUserId: 'usr-ceo',
+        assignedUserName: 'CEO (Direção Geral)',
+        status: 'IN_PROGRESS',
+        botActive: false,
+        priority: 'Alta',
+        startedAt: '09:30',
+        lastMessageText: 'Analista: Estarei verificando a falha no servidor agora.',
+        lastMessageAt: '09:42',
+        unreadCount: 0,
+        tags: ['Cliente', 'Urgente']
+      }
+    ];
+  });
 
-  const [attendanceMessages, setAttendanceMessages] = useState<AttendanceMessage[]>([
-    {
-      id: 'msg-1',
-      conversationId: 'conv-5511999887766',
-      senderType: 'CUSTOMER',
-      senderName: 'João Silva',
-      messageType: 'TEXT',
-      content: 'Olá! Gostaria de falar com o setor comercial.',
-      status: 'READ',
-      createdAt: new Date(Date.now() - 600000).toISOString()
-    },
-    {
-      id: 'msg-2',
-      conversationId: 'conv-5511999887766',
-      senderType: 'BOT',
-      senderName: 'Assistente Virtual',
-      messageType: 'TEXT',
-      content: 'Olá! Tudo bem? 👋 Encaminhei você para a fila do setor Comercial. Em instantes um consultor irá te atender!',
-      status: 'READ',
-      createdAt: new Date(Date.now() - 590000).toISOString()
-    },
-    {
-      id: 'msg-3',
-      conversationId: 'conv-5511999887766',
-      senderType: 'CUSTOMER',
-      senderName: 'João Silva',
-      messageType: 'TEXT',
-      content: 'Gostaria de solicitar um orçamento para o meu sistema.',
-      status: 'DELIVERED',
-      createdAt: new Date(Date.now() - 300000).toISOString()
+  const [attendanceMessages, setAttendanceMessages] = useState<AttendanceMessage[]>(() => {
+    const saved = localStorage.getItem('godesc_attendance_messages');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
     }
-  ]);
+    return [
+      {
+        id: 'msg-1',
+        conversationId: 'conv-5511999887766',
+        senderType: 'CUSTOMER',
+        senderName: 'João Silva',
+        messageType: 'TEXT',
+        content: 'Olá! Gostaria de falar com o setor comercial.',
+        status: 'READ',
+        createdAt: new Date(Date.now() - 600000).toISOString()
+      },
+      {
+        id: 'msg-2',
+        conversationId: 'conv-5511999887766',
+        senderType: 'BOT',
+        senderName: 'Assistente Virtual',
+        messageType: 'TEXT',
+        content: 'Olá! Tudo bem? 👋 Encaminhei você para a fila do setor Comercial. Em instantes um consultor irá te atender!',
+        status: 'READ',
+        createdAt: new Date(Date.now() - 590000).toISOString()
+      },
+      {
+        id: 'msg-3',
+        conversationId: 'conv-5511999887766',
+        senderType: 'CUSTOMER',
+        senderName: 'João Silva',
+        messageType: 'TEXT',
+        content: 'Gostaria de solicitar um orçamento para o meu sistema.',
+        status: 'DELIVERED',
+        createdAt: new Date(Date.now() - 300000).toISOString()
+      }
+    ];
+  });
+
+  // Automatically persist WhatsApp conversations and messages on change
+  useEffect(() => {
+    localStorage.setItem('godesc_attendance_conversations', JSON.stringify(attendanceConversations));
+  }, [attendanceConversations]);
+
+  useEffect(() => {
+    localStorage.setItem('godesc_attendance_messages', JSON.stringify(attendanceMessages));
+  }, [attendanceMessages]);
 
   const connectWhatsApp = async () => {
     const res = await whatsappProvider.connect('default-company');
