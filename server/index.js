@@ -71,18 +71,20 @@ async function startBaileys() {
         if (!senderJid || senderJid.endsWith('@g.us')) return; // ignora grupos
 
         const senderPhone = senderJid.split('@')[0];
-        const pushName = msg.pushName || `Cliente (${senderPhone})`;
+        const pushName = msg.pushName || '';
+        // Nome com fallback caso pushName venha vazio
+        const displayName = pushName.trim() || `Cliente (${senderPhone})`;
         const text = msg.message?.conversation || 
                      msg.message?.extendedTextMessage?.text || 
                      'Mensagem com mídia/anexo';
 
-        console.log(`📩 Nova mensagem real do WhatsApp de [${pushName} - ${senderPhone}]: ${text}`);
+        console.log(`📩 Nova mensagem real do WhatsApp de [${displayName} - ${senderPhone}]: ${text}`);
 
         // Guarda na fila de sincronização para o frontend GoDesc 360
         incomingQueue.push({
-          id: msg.key.id || `msg-${Date.now()}`,
+          id: msg.key.id || `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`,
           phone: senderPhone,
-          name: pushName,
+          name: displayName,
           content: text,
           timestamp: new Date().toISOString()
         });
@@ -139,9 +141,11 @@ app.post('/api/send-message', async (req, res) => {
   }
 
   try {
-    const formattedPhone = `${toPhone.replace(/\D/g, '')}@s.whatsapp.net`;
+    // Remove tudo que não é dígito e monta o JID correto do WhatsApp
+    const cleanPhone = toPhone.replace(/\D/g, '');
+    const formattedPhone = `${cleanPhone}@s.whatsapp.net`;
     const sent = await sock.sendMessage(formattedPhone, { text });
-    console.log(`📤 Mensagem enviada para [${toPhone}]: ${text}`);
+    console.log(`📤 Mensagem enviada para [+${cleanPhone}]: ${text}`);
     res.json({ success: true, messageId: sent.key.id });
   } catch (err) {
     console.error('Erro ao enviar mensagem:', err);

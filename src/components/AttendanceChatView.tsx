@@ -74,7 +74,7 @@ export const AttendanceChatView: React.FC = () => {
     }
 
     if (filterTab === 'mine') {
-      return c.assignedUserName === userSession.name;
+      return c.status !== 'CLOSED' && c.assignedUserName === userSession.name;
     }
     if (filterTab === 'waiting') {
       return c.status === 'WAITING';
@@ -85,7 +85,8 @@ export const AttendanceChatView: React.FC = () => {
     if (filterTab === 'closed') {
       return c.status === 'CLOSED';
     }
-    return true;
+    // Aba "Todas" esconde CLOSED por padrão — só aparecem na aba "Encerradas"
+    return c.status !== 'CLOSED';
   });
 
   const handleSendMessage = () => {
@@ -116,7 +117,11 @@ export const AttendanceChatView: React.FC = () => {
     if (!activeConv) return;
     sendAttendanceMessage(activeConv.id, 'Atendimento encerrado pelo analista. Obrigado pelo contato!', 'AGENT');
     closeConversation(activeConv.id);
-    setSelectedConvId('');
+    // Seleciona próxima conversa ativa automaticamente
+    const nextActive = attendanceConversations.find(
+      c => c.id !== activeConv.id && c.status !== 'CLOSED'
+    );
+    setSelectedConvId(nextActive?.id || '');
   };
 
   const handleConfirmTransfer = () => {

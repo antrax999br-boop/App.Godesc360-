@@ -1950,11 +1950,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     enabled: true,
     outOfHoursMessage: 'Olá! Nosso horário de atendimento é de segunda a sexta-feira, das 08:00 às 18:00.',
     schedules: [
-      { day: 'Segunda-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: true, lunchStart: '12:00', lunchEnd: '13:00' },
-      { day: 'Terça-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: true, lunchStart: '12:00', lunchEnd: '13:00' },
-      { day: 'Quarta-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: true, lunchStart: '12:00', lunchEnd: '13:00' },
-      { day: 'Quinta-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: true, lunchStart: '12:00', lunchEnd: '13:00' },
-      { day: 'Sexta-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: true, lunchStart: '12:00', lunchEnd: '13:00' },
+      { day: 'Segunda-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: false },
+      { day: 'Terça-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: false },
+      { day: 'Quarta-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: false },
+      { day: 'Quinta-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: false },
+      { day: 'Sexta-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: false },
       { day: 'Sábado', enabled: false, openTime: '08:00', closeTime: '12:00' },
       { day: 'Domingo', enabled: false, openTime: '08:00', closeTime: '12:00' }
     ]
@@ -2123,6 +2123,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Sync incoming real WhatsApp messages from Baileys Server (Render)
+  // processedMsgIds evita duplicatas quando múltiplas abas fazem poll simultâneo
+  const processedMsgIds = React.useRef<Set<string>>(new Set());
+
   useEffect(() => {
     const serverUrl = import.meta.env.VITE_WHATSAPP_API_URL || 'https://godesc360-whatsapp-api.onrender.com';
     const interval = setInterval(async () => {
@@ -2132,7 +2135,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const data = await res.json();
           if (data.messages && data.messages.length > 0) {
             data.messages.forEach((incMsg: { id: string; phone: string; name: string; content: string; timestamp: string }) => {
-              const convId = `conv-${incMsg.phone.replace(/\D/g, '')}`;
+              // Deduplicação: ignora mensagens já processadas nesta sessão
+              const msgKey = incMsg.id || `${incMsg.phone}-${incMsg.timestamp}-${incMsg.content}`;
+              if (processedMsgIds.current.has(msgKey)) return;
+              processedMsgIds.current.add(msgKey);
+              // Limita o Set a 500 IDs para não crescer indefinidamente
+              if (processedMsgIds.current.size > 500) {
+                const firstKey = processedMsgIds.current.values().next().value;
+                processedMsgIds.current.delete(firstKey);
+              }
+
+              const rawPhone = incMsg.phone.replace(/\D/g, '');
+              const convId = `conv-${rawPhone}`;
+              // Fallback de nome: se vier vazio, usa o número formatado
+              const contactName = (incMsg.name && incMsg.name.trim()) ? incMsg.name.trim() : `+${rawPhone}`;
               
               setAttendanceConversations(cPrev => {
                 const existing = cPrev.find(c => c.id === convId);
@@ -2143,9 +2159,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     if (c.id === convId) {
                       return {
                         ...c,
+                        // Atualiza nome se ainda estava vazio
+                        contactName: (c.contactName && c.contactName !== c.contactPhone) ? c.contactName : contactName,
                         lastMessageText: incMsg.content,
                         lastMessageAt: timeStr,
                         unreadCount: c.unreadCount + 1,
+                        // Reabre conversa encerrada quando cliente manda nova mensagem
                         status: c.status === 'CLOSED' ? 'WAITING' : c.status
                       };
                     }
@@ -2155,9 +2174,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   const newConv: AttendanceConversation = {
                     id: convId,
                     companyId: 'default-company',
-                    contactId: `cnt-${incMsg.phone.replace(/\D/g, '')}`,
-                    contactName: incMsg.name,
-                    contactPhone: incMsg.phone,
+                    contactId: `cnt-${rawPhone}`,
+                    contactName,
+                    contactPhone: `+${rawPhone}`,
                     status: 'WAITING',
                     queueName: 'Triagem Automática',
                     lastMessageText: incMsg.content,
@@ -2171,21 +2190,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 }
               });
 
-              // Add message object
+              // Adiciona objeto da mensagem com ID único garantido
               const newMsgObj: AttendanceMessage = {
-                id: incMsg.id,
+                id: msgKey,
                 conversationId: convId,
                 senderType: 'CUSTOMER',
-                senderName: incMsg.name,
+                senderName: contactName,
                 messageType: 'TEXT',
                 content: incMsg.content,
                 status: 'DELIVERED',
                 createdAt: incMsg.timestamp
               };
 
-              setAttendanceMessages(mPrev => [...mPrev, newMsgObj]);
+              setAttendanceMessages(mPrev => {
+                // Deduplicação na lista de mensagens também
+                if (mPrev.some(m => m.id === newMsgObj.id)) return mPrev;
+                return [...mPrev, newMsgObj];
+              });
 
-              // Process Chatbot Response
+              // Processa resposta do Chatbot
               setTimeout(() => {
                 setAttendanceConversations(currentConvs => {
                   const targetConv = currentConvs.find(c => c.id === convId);
@@ -2200,7 +2223,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
                     if (botResult.replyMessage) {
                       const botMsgObj: AttendanceMessage = {
-                        id: `msg-bot-${Date.now()}`,
+                        id: `msg-bot-${Date.now()}-${Math.random().toString(36).slice(2)}`,
                         conversationId: convId,
                         senderType: 'BOT',
                         senderName: 'Assistente Virtual',
@@ -2211,22 +2234,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                       };
                       setAttendanceMessages(mp => [...mp, botMsgObj]);
 
-                      // Send Bot Reply back to Customer's physical phone via Baileys API
+                      // Envia resposta do bot para o celular do cliente via API Baileys
                       fetch(`${serverUrl}/api/send-message`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ toPhone: incMsg.phone, text: botResult.replyMessage })
+                        body: JSON.stringify({ toPhone: `+${rawPhone}`, text: botResult.replyMessage })
                       }).catch(err => console.warn('Send bot reply failed:', err));
                     }
                   }
                   return currentConvs;
                 });
-              }, 500);
+              }, 800);
             });
           }
         }
       } catch (err) {
-        // Silent sync fail if backend sleeping
+        // Falha silenciosa quando servidor está hibernando
       }
     }, 3000);
 
