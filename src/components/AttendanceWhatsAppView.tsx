@@ -21,7 +21,7 @@ export const AttendanceWhatsAppView: React.FC = () => {
   const { whatsappConnection, connectWhatsApp, disconnectWhatsApp, setCurrentScreen } = useApp();
   const [loading, setLoading] = useState(false);
   const [serverUrl, setServerUrl] = useState<string>(
-    import.meta.env.VITE_WHATSAPP_API_URL || 'http://localhost:3001'
+    import.meta.env.VITE_WHATSAPP_API_URL || 'https://godesc360-whatsapp-api.onrender.com'
   );
   const [liveQrCode, setLiveQrCode] = useState<string | null>(null);
   const [connectionState, setConnectionState] = useState<string>(whatsappConnection.status);
