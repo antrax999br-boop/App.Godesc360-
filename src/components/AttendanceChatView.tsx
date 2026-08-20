@@ -307,51 +307,68 @@ export const AttendanceChatView: React.FC = () => {
 
                 {/* Header Action Buttons */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  {activeConv.status === 'WAITING' || !activeConv.assignedUserName ? (
-                    <button
-                      onClick={handleAssignToMe}
-                      className="px-3 py-1.5 bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 font-bold text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-md shadow-[#45dfa4]/20"
-                    >
-                      <UserCheck className="w-4 h-4" />
-                      Assumir Atendimento
-                    </button>
+                  {activeConv.status === 'CLOSED' ? (
+                    <div className="flex items-center gap-2">
+                      <span className="px-3 py-1.5 bg-red-500/10 text-red-400 border border-red-500/30 rounded-lg text-xs font-bold font-mono">
+                        🔴 Atendimento Encerrado
+                      </span>
+                      <button
+                        onClick={() => assignConversation(activeConv.id, userSession.username || 'ti_user', userSession.name || 'Analista T.I.')}
+                        className="px-3 py-1.5 bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 font-bold text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-md shadow-[#45dfa4]/20"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5 text-gray-950" />
+                        Reabrir Atendimento
+                      </button>
+                    </div>
                   ) : (
-                    <button
-                      onClick={handleToggleBot}
-                      className={`px-3 py-1.5 text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer font-bold ${
-                        activeConv.botActive
-                          ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
-                          : 'bg-[#27272a] text-[#8d90a0] hover:text-white'
-                      }`}
-                    >
-                      <Bot className="w-4 h-4" />
-                      {activeConv.botActive ? 'Devolver p/ BOT' : 'Ativar BOT'}
-                    </button>
+                    <>
+                      {activeConv.status === 'WAITING' || !activeConv.assignedUserName ? (
+                        <button
+                          onClick={handleAssignToMe}
+                          className="px-3 py-1.5 bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 font-bold text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-md shadow-[#45dfa4]/20"
+                        >
+                          <UserCheck className="w-4 h-4" />
+                          Assumir Atendimento
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleToggleBot}
+                          className={`px-3 py-1.5 text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer font-bold ${
+                            activeConv.botActive
+                              ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
+                              : 'bg-[#27272a] text-[#8d90a0] hover:text-white'
+                          }`}
+                        >
+                          <Bot className="w-4 h-4" />
+                          {activeConv.botActive ? 'Devolver p/ BOT' : 'Ativar BOT'}
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => setShowTransferModal(true)}
+                        className="px-3 py-1.5 bg-[#27272a] hover:bg-[#323238] text-white text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <ArrowRightLeft className="w-4 h-4 text-[#45dfa4]" />
+                        Transferir
+                      </button>
+
+                      <button
+                        onClick={handleCreateTicketFromChat}
+                        className="px-3 py-1.5 bg-[#27272a] hover:bg-[#323238] text-white text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <TicketIcon className="w-4 h-4 text-[#45dfa4]" />
+                        Criar Ticket
+                      </button>
+
+                      <button
+                        onClick={handleClose}
+                        className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Encerrar Conversa
+                      </button>
+                    </>
                   )}
-
-                  <button
-                    onClick={() => setShowTransferModal(true)}
-                    className="px-3 py-1.5 bg-[#27272a] hover:bg-[#323238] text-white text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
-                  >
-                    <ArrowRightLeft className="w-4 h-4 text-[#45dfa4]" />
-                    Transferir
-                  </button>
-
-                  <button
-                    onClick={handleCreateTicketFromChat}
-                    className="px-3 py-1.5 bg-[#27272a] hover:bg-[#323238] text-white text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
-                  >
-                    <TicketIcon className="w-4 h-4 text-[#45dfa4]" />
-                    Criar Ticket
-                  </button>
-
-                  <button
-                    onClick={handleClose}
-                    className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
-                  >
-                    <XCircle className="w-4 h-4" />
-                    Encerrar Conversa
-                  </button>
                 </div>
               </div>
 

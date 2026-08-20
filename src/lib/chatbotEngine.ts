@@ -26,6 +26,11 @@ export class ChatbotEngine {
       return { isWorking: true, outMessage: '' };
     }
 
+    // Usar fuso horário do Brasil (America/Sao_Paulo)
+    const now = new Date();
+    const brTimeString = now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" });
+    const brDate = new Date(brTimeString);
+
     const daysMap: Record<number, string> = {
       0: 'Domingo',
       1: 'Segunda-feira',
@@ -36,8 +41,7 @@ export class ChatbotEngine {
       6: 'Sábado'
     };
 
-    const now = new Date();
-    const dayName = daysMap[now.getDay()];
+    const dayName = daysMap[brDate.getDay()];
     const schedule = config.schedules.find(s => s.day === dayName);
 
     if (!schedule || !schedule.enabled) {
@@ -47,7 +51,7 @@ export class ChatbotEngine {
       };
     }
 
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const currentMinutes = brDate.getHours() * 60 + brDate.getMinutes();
 
     const [openH, openM] = schedule.openTime.split(':').map(Number);
     const openMinutes = openH * 60 + openM;
@@ -88,7 +92,7 @@ export class ChatbotEngine {
     businessHours?: BusinessHoursConfig,
     queues: AttendanceQueue[] = []
   ): ChatbotProcessingResult {
-    // 1. Check Operating Hours first
+    // 1. Check Operating Hours with Brazil timezone
     const hoursCheck = this.isWithinBusinessHours(businessHours);
     if (!hoursCheck.isWorking) {
       return {
@@ -96,8 +100,8 @@ export class ChatbotEngine {
       };
     }
 
-    // If bot is paused (human attendant engaged), bot should not intercept
-    if (!conversation.botActive || conversation.status === 'IN_PROGRESS') {
+    // If bot is paused (human attendant engaged and not waiting), bot should not intercept
+    if (!conversation.botActive && conversation.status === 'IN_PROGRESS') {
       return {};
     }
 
