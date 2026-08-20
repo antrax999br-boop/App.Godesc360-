@@ -29,7 +29,8 @@ import {
   ShieldAlert,
   ChevronRight,
   Sparkles,
-  ArrowLeft
+  ArrowLeft,
+  RefreshCw
 } from 'lucide-react';
 
 export const AttendanceChatView: React.FC = () => {
@@ -115,7 +116,7 @@ export const AttendanceChatView: React.FC = () => {
     if (!activeConv) return;
     sendAttendanceMessage(activeConv.id, 'Atendimento encerrado pelo analista. Obrigado pelo contato!', 'AGENT');
     closeConversation(activeConv.id);
-    setSelectedConversationId(null);
+    setSelectedConvId('');
   };
 
   const handleConfirmTransfer = () => {

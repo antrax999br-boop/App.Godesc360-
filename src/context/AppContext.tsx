@@ -2155,6 +2155,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   const newConv: AttendanceConversation = {
                     id: convId,
                     companyId: 'default-company',
+                    contactId: `cnt-${incMsg.phone.replace(/\D/g, '')}`,
                     contactName: incMsg.name,
                     contactPhone: incMsg.phone,
                     status: 'WAITING',
@@ -2163,7 +2164,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     lastMessageAt: timeStr,
                     unreadCount: 1,
                     botActive: true,
-                    createdAt: incMsg.timestamp
+                    priority: 'Média',
+                    startedAt: incMsg.timestamp
                   };
                   return [newConv, ...cPrev];
                 }
