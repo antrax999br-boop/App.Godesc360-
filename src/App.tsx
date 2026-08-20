@@ -25,6 +25,14 @@ import { TIVaultView } from './components/TIVaultView';
 import { ProtectedTIRoute } from './components/ProtectedTIRoute';
 import { AnimatePresence, motion } from 'motion/react';
 
+import { AttendanceWhatsAppView } from './components/AttendanceWhatsAppView';
+import { AttendanceChatView } from './components/AttendanceChatView';
+import { AttendanceChatbotView } from './components/AttendanceChatbotView';
+import { AttendanceQueuesView } from './components/AttendanceQueuesView';
+import { AttendanceSettingsView } from './components/AttendanceSettingsView';
+import { AttendanceContactsView } from './components/AttendanceContactsView';
+import { AttendanceDashboardView } from './components/AttendanceDashboardView';
+
 const ScreenRenderer: React.FC = () => {
   const { currentScreen } = useApp();
 
@@ -46,6 +54,49 @@ const ScreenRenderer: React.FC = () => {
             <TIDashboard key="ti_dashboard" />
           </ProtectedTIRoute>
         );
+      case 'attendance_dashboard':
+        return (
+          <ProtectedTIRoute requiredModule="ti_dashboard">
+            <AttendanceDashboardView key="attendance_dashboard" />
+          </ProtectedTIRoute>
+        );
+      case 'attendance_chat':
+        return (
+          <ProtectedTIRoute requiredModule="ti_tickets">
+            <AttendanceChatView key="attendance_chat" />
+          </ProtectedTIRoute>
+        );
+      case 'attendance_whatsapp':
+        return (
+          <ProtectedTIRoute requiredModule="ti_config">
+            <AttendanceWhatsAppView key="attendance_whatsapp" />
+          </ProtectedTIRoute>
+        );
+      case 'attendance_chatbot':
+        return (
+          <ProtectedTIRoute requiredModule="ti_config">
+            <AttendanceChatbotView key="attendance_chatbot" />
+          </ProtectedTIRoute>
+        );
+      case 'attendance_queue':
+      case 'attendance_queues_config':
+        return (
+          <ProtectedTIRoute requiredModule="ti_queue">
+            <AttendanceQueuesView key="attendance_queue" />
+          </ProtectedTIRoute>
+        );
+      case 'attendance_settings':
+        return (
+          <ProtectedTIRoute requiredModule="ti_config">
+            <AttendanceSettingsView key="attendance_settings" />
+          </ProtectedTIRoute>
+        );
+      case 'attendance_contacts':
+        return (
+          <ProtectedTIRoute requiredModule="ti_clients">
+            <AttendanceContactsView key="attendance_contacts" />
+          </ProtectedTIRoute>
+        );
       case 'client_my_tickets':
         return <ClientMyTickets key="client_my_tickets" />;
       case 'knowledge_base':
@@ -57,6 +108,7 @@ const ScreenRenderer: React.FC = () => {
       case 'system_status':
         return <SystemStatusView key="system_status" />;
       case 'ti_tickets':
+      case 'attendance_tickets':
         return (
           <ProtectedTIRoute requiredModule="ti_tickets">
             <TITicketsView key="ti_tickets" />

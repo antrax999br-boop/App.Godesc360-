@@ -16,7 +16,15 @@ import {
   TicketAttachment,
   TISession,
   TISecurityLog,
-  VaultCredential
+  VaultCredential,
+  WhatsAppConnection,
+  AttendanceConversation,
+  AttendanceMessage,
+  AttendanceQueue,
+  AttendanceContact,
+  ChatbotFlow,
+  BusinessHoursConfig,
+  SenderType
 } from '../types';
 import {
   INITIAL_TICKETS,
@@ -28,6 +36,8 @@ import {
   INITIAL_KB_DATA
 } from '../data/mockData';
 import { supabase } from '../lib/supabase';
+import { whatsappProvider } from '../lib/whatsappProvider';
+import { ChatbotEngine } from '../lib/chatbotEngine';
 
 
 interface AppContextType {
@@ -91,13 +101,25 @@ interface AppContextType {
   addSubCategory: (categoryId: number, subcategoryName: string) => void;
   deleteSubCategory: (categoryId: number, subcategoryName: string) => void;
   deleteTicketCategory: (id: number) => void;
-  // TI Session & Security Controls
-  tiSession: TISession;
-  auditLogs: TISecurityLog[];
-  tiLogin: (username: string, password?: string) => { success: boolean; message: string; locked?: boolean };
-  tiLogout: () => void;
-  unlockUserAccount: (targetUserId: string) => { success: boolean; message: string };
-  checkTISessionValid: () => boolean;
+  // Central de Atendimento WhatsApp & Chatbot
+  whatsappConnection: WhatsAppConnection;
+  attendanceConversations: AttendanceConversation[];
+  attendanceMessages: AttendanceMessage[];
+  attendanceQueues: AttendanceQueue[];
+  attendanceContacts: AttendanceContact[];
+  chatbotFlow: ChatbotFlow;
+  businessHours: BusinessHoursConfig;
+  connectWhatsApp: () => Promise<void>;
+  disconnectWhatsApp: () => Promise<void>;
+  sendAttendanceMessage: (conversationId: string, content: string, senderType?: SenderType) => void;
+  assignConversation: (conversationId: string, userId: string, userName: string) => void;
+  transferConversation: (conversationId: string, targetQueueId?: string, targetQueueName?: string, targetUserName?: string) => void;
+  closeConversation: (conversationId: string) => void;
+  toggleBotState: (conversationId: string, active: boolean) => void;
+  saveChatbotFlow: (flow: ChatbotFlow) => void;
+  publishChatbotFlow: (flow: ChatbotFlow) => void;
+  updateBusinessHours: (config: Partial<BusinessHoursConfig>) => void;
+  saveAttendanceQueue: (queue: AttendanceQueue) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -1905,6 +1927,338 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  // Central de Atendimento WhatsApp & Chatbot Multi-Tenant
+  const [whatsappConnection, setWhatsappConnection] = useState<WhatsAppConnection>({
+    id: 'conn-default',
+    companyId: 'default-company',
+    status: 'CONNECTED',
+    phoneNumber: '+55 11 99887-6655',
+    name: 'Empresa GoDesc360',
+    connectedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  });
+
+  const [attendanceQueues, setAttendanceQueues] = useState<AttendanceQueue[]>([
+    { id: 'q-1', companyId: 'default-company', name: 'Comercial', description: 'Vendas e Orçamentos', color: '#3b82f6', assignedUsers: ['admin.ceo', 'admin.gestor'], priority: 'Média', distributionStrategy: 'ROUND_ROBIN' },
+    { id: 'q-2', companyId: 'default-company', name: 'Suporte Técnico', description: 'Atendimento Técnico N1/N2/N3', color: '#45dfa4', assignedUsers: ['admin.ceo', 'admin.gestor'], priority: 'Alta', distributionStrategy: 'ROUND_ROBIN' },
+    { id: 'q-3', companyId: 'default-company', name: 'Financeiro', description: 'Faturamento e Cobrança', color: '#a855f7', assignedUsers: ['admin.gestor'], priority: 'Média', distributionStrategy: 'ROUND_ROBIN' }
+  ]);
+
+  const [businessHours, setBusinessHours] = useState<BusinessHoursConfig>({
+    id: 'bh-1',
+    companyId: 'default-company',
+    enabled: true,
+    outOfHoursMessage: 'Olá! Nosso horário de atendimento é de segunda a sexta-feira, das 08:00 às 18:00.',
+    schedules: [
+      { day: 'Segunda-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: true, lunchStart: '12:00', lunchEnd: '13:00' },
+      { day: 'Terça-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: true, lunchStart: '12:00', lunchEnd: '13:00' },
+      { day: 'Quarta-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: true, lunchStart: '12:00', lunchEnd: '13:00' },
+      { day: 'Quinta-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: true, lunchStart: '12:00', lunchEnd: '13:00' },
+      { day: 'Sexta-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: true, lunchStart: '12:00', lunchEnd: '13:00' },
+      { day: 'Sábado', enabled: false, openTime: '08:00', closeTime: '12:00' },
+      { day: 'Domingo', enabled: false, openTime: '08:00', closeTime: '12:00' }
+    ]
+  });
+
+  const [chatbotFlow, setChatbotFlow] = useState<ChatbotFlow>({
+    id: 'flow-1',
+    companyId: 'default-company',
+    name: 'Fluxo Principal WhatsApp',
+    status: 'PUBLISHED',
+    version: 1,
+    nodes: [
+      {
+        id: 'node-start',
+        title: 'Menu Inicial',
+        type: 'MENU',
+        message: 'Olá! Tudo bem? 👋\n\nBem-vindo à Empresa XYZ.\n\nDigite uma opção:\n\n1 - Comercial\n2 - Suporte Técnico\n3 - Financeiro\n4 - Abrir Ticket\n5 - Falar com Atendente',
+        options: [
+          { id: 'opt-1', triggerValue: '1', label: 'Comercial', targetNodeId: 'node-comercial' },
+          { id: 'opt-2', triggerValue: '2', label: 'Suporte Técnico', targetNodeId: 'node-suporte' },
+          { id: 'opt-3', triggerValue: '3', label: 'Financeiro', targetNodeId: 'node-financeiro' },
+          { id: 'opt-4', triggerValue: '4', label: 'Abrir Ticket', targetNodeId: 'node-ticket' },
+          { id: 'opt-5', triggerValue: '5', label: 'Falar com Atendente', targetNodeId: 'node-humano' }
+        ],
+        position: { x: 100, y: 100 }
+      }
+    ],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  });
+
+  const [attendanceContacts, setAttendanceContacts] = useState<AttendanceContact[]>([
+    {
+      id: 'cnt-1',
+      companyId: 'default-company',
+      name: 'João Silva',
+      phone: '+55 11 99988-7766',
+      email: 'joao.silva@empresa.com.br',
+      companyName: 'Tech Solutions LTDA',
+      tags: ['Prospect', 'Comercial'],
+      firstContactAt: '10/08/2026',
+      lastContactAt: '20/08/2026',
+      totalAttendances: 3
+    },
+    {
+      id: 'cnt-2',
+      companyId: 'default-company',
+      name: 'Maria Oliveira',
+      phone: '+55 11 98877-6655',
+      email: 'maria@oliveira.com.br',
+      companyName: 'Oliveira & Associados',
+      tags: ['Cliente', 'Urgente'],
+      firstContactAt: '01/08/2026',
+      lastContactAt: '20/08/2026',
+      totalAttendances: 7
+    }
+  ]);
+
+  const [attendanceConversations, setAttendanceConversations] = useState<AttendanceConversation[]>([
+    {
+      id: 'conv-5511999887766',
+      companyId: 'default-company',
+      contactId: 'cnt-1',
+      contactName: 'João Silva',
+      contactPhone: '+55 11 99988-7766',
+      queueId: 'q-1',
+      queueName: 'Comercial',
+      status: 'WAITING',
+      botActive: true,
+      priority: 'Média',
+      startedAt: '10:15',
+      lastMessageText: 'Gostaria de solicitar um orçamento para o meu sistema.',
+      lastMessageAt: '10:15',
+      unreadCount: 1,
+      tags: ['Prospect', 'Comercial']
+    },
+    {
+      id: 'conv-5511988776655',
+      companyId: 'default-company',
+      contactId: 'cnt-2',
+      contactName: 'Maria Oliveira',
+      contactPhone: '+55 11 98877-6655',
+      queueId: 'q-2',
+      queueName: 'Suporte Técnico',
+      assignedUserId: 'usr-ceo',
+      assignedUserName: 'CEO (Direção Geral)',
+      status: 'IN_PROGRESS',
+      botActive: false,
+      priority: 'Alta',
+      startedAt: '09:30',
+      lastMessageText: 'Analista: Estarei verificando a falha no servidor agora.',
+      lastMessageAt: '09:42',
+      unreadCount: 0,
+      tags: ['Cliente', 'Urgente']
+    }
+  ]);
+
+  const [attendanceMessages, setAttendanceMessages] = useState<AttendanceMessage[]>([
+    {
+      id: 'msg-1',
+      conversationId: 'conv-5511999887766',
+      senderType: 'CUSTOMER',
+      senderName: 'João Silva',
+      messageType: 'TEXT',
+      content: 'Olá! Gostaria de falar com o setor comercial.',
+      status: 'READ',
+      createdAt: new Date(Date.now() - 600000).toISOString()
+    },
+    {
+      id: 'msg-2',
+      conversationId: 'conv-5511999887766',
+      senderType: 'BOT',
+      senderName: 'Assistente Virtual',
+      messageType: 'TEXT',
+      content: 'Olá! Tudo bem? 👋 Encaminhei você para a fila do setor Comercial. Em instantes um consultor irá te atender!',
+      status: 'READ',
+      createdAt: new Date(Date.now() - 590000).toISOString()
+    },
+    {
+      id: 'msg-3',
+      conversationId: 'conv-5511999887766',
+      senderType: 'CUSTOMER',
+      senderName: 'João Silva',
+      messageType: 'TEXT',
+      content: 'Gostaria de solicitar um orçamento para o meu sistema.',
+      status: 'DELIVERED',
+      createdAt: new Date(Date.now() - 300000).toISOString()
+    }
+  ]);
+
+  const connectWhatsApp = async () => {
+    const res = await whatsappProvider.connect('default-company');
+    setWhatsappConnection({
+      ...res,
+      status: 'CONNECTED',
+      phoneNumber: '+55 11 99887-6655',
+      name: 'Empresa GoDesc360',
+      connectedAt: new Date().toISOString()
+    });
+  };
+
+  const disconnectWhatsApp = async () => {
+    await whatsappProvider.disconnect('default-company');
+    setWhatsappConnection(prev => ({ ...prev, status: 'DISCONNECTED' }));
+  };
+
+  const sendAttendanceMessage = (conversationId: string, content: string, senderType: SenderType = 'AGENT') => {
+    const conv = attendanceConversations.find(c => c.id === conversationId);
+    if (!conv) return;
+
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    const newMsg: AttendanceMessage = {
+      id: `msg-${Date.now()}`,
+      conversationId,
+      senderType,
+      senderName: senderType === 'AGENT' ? (userSession.name || 'Atendente T.I.') : conv.contactName,
+      messageType: 'TEXT',
+      content,
+      status: 'SENT',
+      createdAt: now.toISOString()
+    };
+
+    setAttendanceMessages(prev => [...prev, newMsg]);
+
+    setAttendanceConversations(prev =>
+      prev.map(c => {
+        if (c.id === conversationId) {
+          return {
+            ...c,
+            lastMessageText: `${senderType === 'AGENT' ? 'Você: ' : ''}${content}`,
+            lastMessageAt: timeStr,
+            unreadCount: senderType === 'CUSTOMER' ? c.unreadCount + 1 : 0
+          };
+        }
+        return c;
+      })
+    );
+
+    if (senderType === 'CUSTOMER' && conv.botActive) {
+      setTimeout(() => {
+        const botResult = ChatbotEngine.processIncomingMessage(
+          content,
+          conv,
+          chatbotFlow,
+          businessHours,
+          attendanceQueues
+        );
+
+        if (botResult.replyMessage) {
+          const botMsg: AttendanceMessage = {
+            id: `msg-bot-${Date.now()}`,
+            conversationId,
+            senderType: 'BOT',
+            senderName: 'Assistente Virtual',
+            messageType: 'TEXT',
+            content: botResult.replyMessage,
+            status: 'READ',
+            createdAt: new Date().toISOString()
+          };
+
+          setAttendanceMessages(mPrev => [...mPrev, botMsg]);
+
+          setAttendanceConversations(cPrev =>
+            cPrev.map(cItem => {
+              if (cItem.id === conversationId) {
+                return {
+                  ...cItem,
+                  status: botResult.updateConversationStatus || cItem.status,
+                  queueId: botResult.targetQueueId || cItem.queueId,
+                  queueName: botResult.targetQueueName || cItem.queueName,
+                  botActive: botResult.botActive !== undefined ? botResult.botActive : cItem.botActive,
+                  lastMessageText: botResult.replyMessage || cItem.lastMessageText
+                };
+              }
+              return cItem;
+            })
+          );
+        }
+      }, 600);
+    }
+  };
+
+  const assignConversation = (conversationId: string, userId: string, userName: string) => {
+    setAttendanceConversations(prev =>
+      prev.map(c => {
+        if (c.id === conversationId) {
+          return {
+            ...c,
+            assignedUserId: userId,
+            assignedUserName: userName,
+            status: 'IN_PROGRESS',
+            botActive: false,
+            assignedAt: new Date().toISOString()
+          };
+        }
+        return c;
+      })
+    );
+  };
+
+  const transferConversation = (conversationId: string, targetQueueId?: string, targetQueueName?: string, targetUserName?: string) => {
+    setAttendanceConversations(prev =>
+      prev.map(c => {
+        if (c.id === conversationId) {
+          return {
+            ...c,
+            queueId: targetQueueId || c.queueId,
+            queueName: targetQueueName || c.queueName,
+            assignedUserName: targetUserName || undefined,
+            status: 'TRANSFERRED'
+          };
+        }
+        return c;
+      })
+    );
+  };
+
+  const closeConversation = (conversationId: string) => {
+    setAttendanceConversations(prev =>
+      prev.map(c => {
+        if (c.id === conversationId) {
+          return {
+            ...c,
+            status: 'CLOSED',
+            closedAt: new Date().toISOString()
+          };
+        }
+        return c;
+      })
+    );
+  };
+
+  const toggleBotState = (conversationId: string, active: boolean) => {
+    setAttendanceConversations(prev =>
+      prev.map(c => (c.id === conversationId ? { ...c, botActive: active } : c))
+    );
+  };
+
+  const saveChatbotFlow = (flow: ChatbotFlow) => {
+    setChatbotFlow(flow);
+  };
+
+  const publishChatbotFlow = (flow: ChatbotFlow) => {
+    setChatbotFlow({ ...flow, status: 'PUBLISHED' });
+  };
+
+  const updateBusinessHours = (config: Partial<BusinessHoursConfig>) => {
+    setBusinessHours(prev => ({ ...prev, ...config }));
+  };
+
+  const saveAttendanceQueue = (queue: AttendanceQueue) => {
+    setAttendanceQueues(prev => {
+      const idx = prev.findIndex(q => q.id === queue.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = queue;
+        return copy;
+      }
+      return [...prev, queue];
+    });
+  };
+
   const unreadNotificationCount = notifications.filter(n => !n.read).length;
 
   return (
@@ -1973,7 +2327,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         tiLogin,
         tiLogout,
         unlockUserAccount,
-        checkTISessionValid
+        checkTISessionValid,
+        // Central de Atendimento WhatsApp & Chatbot
+        whatsappConnection,
+        attendanceConversations,
+        attendanceMessages,
+        attendanceQueues,
+        attendanceContacts,
+        chatbotFlow,
+        businessHours,
+        connectWhatsApp,
+        disconnectWhatsApp,
+        sendAttendanceMessage,
+        assignConversation,
+        transferConversation,
+        closeConversation,
+        toggleBotState,
+        saveChatbotFlow,
+        publishChatbotFlow,
+        updateBusinessHours,
+        saveAttendanceQueue
       }}
     >
       {children}

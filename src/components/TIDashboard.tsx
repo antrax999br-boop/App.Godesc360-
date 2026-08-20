@@ -37,7 +37,9 @@ import {
   Tv,
   Filter,
   Monitor,
-  AlertCircle
+  AlertCircle,
+  Bot,
+  Smartphone
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Ticket } from '../types';
@@ -438,6 +440,115 @@ export const TIDashboard: React.FC = () => {
                 <HelpCircle className="w-4 h-4 text-[#45dfa4]" />
                 <span>Base de Conhecimento</span>
               </button>
+            </div>
+
+            {/* Atendimento Section (WhatsApp & Chatbot) */}
+            <div className="py-2">
+              <p className="px-4 text-[10px] font-mono text-[#8d90a0] uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                <span>Atendimento WhatsApp</span>
+                <span className="w-2 h-2 rounded-full bg-[#45dfa4] animate-pulse" />
+              </p>
+
+              <button
+                id="menu-attendance-chat"
+                onClick={() => setCurrentScreen('attendance_chat')}
+                className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                  currentScreen === 'attendance_chat'
+                    ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                    : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <MessageSquare className="w-4 h-4 text-[#45dfa4]" />
+                  <span>Chat em Tempo Real</span>
+                </div>
+                <span className="px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-[#45dfa4]/20 text-[#45dfa4] border border-[#45dfa4]/30">
+                  Ao Vivo
+                </span>
+              </button>
+
+              {/* Admin-only Attendance Configuration Submenus */}
+              {(userSession.role === 'ceo' || userSession.role === 'gestor' || userSession.role === 'admin' || userSession.permissions?.canAccessConfig) && (
+                <>
+                  <button
+                    id="menu-attendance-dashboard"
+                    onClick={() => setCurrentScreen('attendance_dashboard')}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                      currentScreen === 'attendance_dashboard'
+                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                    }`}
+                  >
+                    <TrendingUp className="w-4 h-4 text-[#45dfa4]" />
+                    <span>Dashboard Atendimento</span>
+                  </button>
+
+                  <button
+                    id="menu-attendance-chatbot"
+                    onClick={() => setCurrentScreen('attendance_chatbot')}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                      currentScreen === 'attendance_chatbot'
+                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                    }`}
+                  >
+                    <Bot className="w-4 h-4 text-[#45dfa4]" />
+                    <span>Chatbot Automático</span>
+                  </button>
+
+                  <button
+                    id="menu-attendance-queue"
+                    onClick={() => setCurrentScreen('attendance_queue')}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                      currentScreen === 'attendance_queue' || currentScreen === 'attendance_queues_config'
+                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                    }`}
+                  >
+                    <Layers className="w-4 h-4 text-[#45dfa4]" />
+                    <span>Filas de Atendimento</span>
+                  </button>
+
+                  <button
+                    id="menu-attendance-whatsapp"
+                    onClick={() => setCurrentScreen('attendance_whatsapp')}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                      currentScreen === 'attendance_whatsapp'
+                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                    }`}
+                  >
+                    <Smartphone className="w-4 h-4 text-[#45dfa4]" />
+                    <span>Conexão WhatsApp</span>
+                  </button>
+
+                  <button
+                    id="menu-attendance-contacts"
+                    onClick={() => setCurrentScreen('attendance_contacts')}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                      currentScreen === 'attendance_contacts'
+                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                    }`}
+                  >
+                    <Users className="w-4 h-4 text-[#45dfa4]" />
+                    <span>Contatos & CRM</span>
+                  </button>
+
+                  <button
+                    id="menu-attendance-settings"
+                    onClick={() => setCurrentScreen('attendance_settings')}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                      currentScreen === 'attendance_settings'
+                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                    }`}
+                  >
+                    <Clock className="w-4 h-4 text-[#45dfa4]" />
+                    <span>Horários & Ausência</span>
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Administração Section */}

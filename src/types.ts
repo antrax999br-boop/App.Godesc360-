@@ -15,7 +15,162 @@ export type ScreenView =
   | 'ti_calendar'       // Calendário & Lembretes
   | 'ti_audit_logs'     // Logs de Auditoria de Segurança do TI
   | 'ti_vault'          // Cofre de Senhas & Gerenciamento Seguro de Credenciais
-  | 'ti_new_ticket';    // Abertura Interna de Chamado pelo Suporte T.I.
+  | 'ti_new_ticket'     // Abertura Interna de Chamado pelo Suporte T.I.
+  // Módulo de Atendimento WhatsApp & Chatbot Multi-Tenant
+  | 'attendance_dashboard'
+  | 'attendance_chat'
+  | 'attendance_queue'
+  | 'attendance_tickets'
+  | 'attendance_contacts'
+  | 'attendance_chatbot'
+  | 'attendance_queues_config'
+  | 'attendance_departments'
+  | 'attendance_whatsapp'
+  | 'attendance_settings';
+
+export type WhatsAppConnectionStatus = 'DISCONNECTED' | 'CONNECTING' | 'WAITING_QR' | 'CONNECTED' | 'FAILED' | 'EXPIRED';
+
+export interface WhatsAppConnection {
+  id: string;
+  companyId: string;
+  phoneNumber?: string;
+  name?: string;
+  status: WhatsAppConnectionStatus;
+  qrCode?: string;
+  connectedAt?: string;
+  updatedAt: string;
+}
+
+export type ConversationStatus = 'WAITING' | 'IN_PROGRESS' | 'BOT' | 'TRANSFERRED' | 'CLOSED';
+
+export type SenderType = 'CUSTOMER' | 'AGENT' | 'BOT' | 'SYSTEM';
+
+export type MessageType = 'TEXT' | 'IMAGE' | 'AUDIO' | 'VIDEO' | 'DOCUMENT' | 'LOCATION' | 'SYSTEM';
+
+export type MessageStatus = 'PENDING' | 'SENDING' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED';
+
+export interface AttendanceMessage {
+  id: string;
+  conversationId: string;
+  externalMessageId?: string;
+  senderType: SenderType;
+  senderId?: string;
+  senderName: string;
+  messageType: MessageType;
+  content: string;
+  mediaUrl?: string;
+  status: MessageStatus;
+  quotedMessageId?: string;
+  createdAt: string;
+}
+
+export interface AttendanceConversation {
+  id: string;
+  companyId: string;
+  contactId: string;
+  contactName: string;
+  contactPhone: string;
+  whatsappConnectionId?: string;
+  queueId?: string;
+  queueName?: string;
+  departmentId?: string;
+  assignedUserId?: string;
+  assignedUserName?: string;
+  status: ConversationStatus;
+  botActive: boolean;
+  priority: TicketPriority;
+  startedAt: string;
+  assignedAt?: string;
+  closedAt?: string;
+  lastMessageText: string;
+  lastMessageAt: string;
+  unreadCount: number;
+  rating?: number;
+  ticketId?: string;
+  tags?: string[];
+}
+
+export interface AttendanceContact {
+  id: string;
+  companyId: string;
+  name: string;
+  phone: string;
+  email?: string;
+  companyName?: string;
+  document?: string;
+  tags: string[];
+  notes?: string;
+  firstContactAt: string;
+  lastContactAt: string;
+  totalAttendances: number;
+}
+
+export type QueueDistributionStrategy = 'ROUND_ROBIN' | 'LEAST_BUSY' | 'MANUAL';
+
+export interface AttendanceQueue {
+  id: string;
+  companyId: string;
+  name: string;
+  description?: string;
+  color: string;
+  department?: string;
+  assignedUsers: string[]; // usernames or IDs
+  priority: TicketPriority;
+  welcomeMessage?: string;
+  waitingMessage?: string;
+  outOfHoursMessage?: string;
+  maxClients?: number;
+  distributionStrategy: QueueDistributionStrategy;
+}
+
+export interface DaySchedule {
+  day: string; // 'Segunda-feira', 'Terça-feira', etc.
+  enabled: boolean;
+  openTime: string; // '08:00'
+  closeTime: string; // '18:00'
+  hasLunchBreak?: boolean;
+  lunchStart?: string; // '12:00'
+  lunchEnd?: string; // '13:00'
+}
+
+export interface BusinessHoursConfig {
+  id: string;
+  companyId: string;
+  enabled: boolean;
+  schedules: DaySchedule[];
+  outOfHoursMessage: string;
+}
+
+export type ChatbotNodeType = 'START' | 'MESSAGE' | 'MENU' | 'QUEUE_TRANSFER' | 'TICKET_CREATE' | 'HUMAN_ATTENDANT' | 'END';
+
+export interface ChatbotOption {
+  id: string;
+  triggerValue: string; // '1', '2', '3'
+  label: string;
+  targetNodeId: string;
+}
+
+export interface ChatbotNode {
+  id: string;
+  title: string;
+  type: ChatbotNodeType;
+  message: string;
+  options: ChatbotOption[];
+  targetQueueId?: string;
+  targetDepartment?: string;
+  position: { x: number; y: number };
+}
+
+export interface ChatbotFlow {
+  id: string;
+  companyId: string;
+  name: string;
+  status: 'DRAFT' | 'PUBLISHED';
+  version: number;
+  nodes: ChatbotNode[];
+  createdAt: string;
+  updatedAt: string;
+}
 
 export type TicketPriority = 'Baixa' | 'Média' | 'Alta' | 'Crítica';
 
