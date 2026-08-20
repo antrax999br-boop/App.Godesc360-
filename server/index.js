@@ -1,5 +1,5 @@
 /**
- * GoDesc 360 - Microservidor Baileys WhatsApp Multi-Device
+ * GoDesc 360 - Microservidor Baileys WhatsApp Multi-Device + Webhook/Chatbot Sync
  */
 
 const express = require('express');
@@ -17,6 +17,9 @@ let sock = null;
 let qrCodeBase64 = null;
 let connectionStatus = 'DISCONNECTED';
 let connectedPhone = null;
+
+// Armazenamento em memória das conversas e mensagens recebidas do celular real
+const incomingQueue = [];
 
 async function startBaileys() {
   try {
@@ -57,14 +60,42 @@ async function startBaileys() {
     });
 
     sock.ev.on('messages.upsert', async (m) => {
-      console.log('📩 Nova mensagem recebida do WhatsApp:', JSON.stringify(m, null, 2));
+      try {
+        if (!m.messages || !m.messages[0]) return;
+        const msg = m.messages[0];
+        
+        // Ignora mensagens enviadas por si mesmo no celular
+        if (msg.key.fromMe) return;
+
+        const senderJid = msg.key.remoteJid;
+        if (!senderJid || senderJid.endsWith('@g.us')) return; // ignora grupos
+
+        const senderPhone = senderJid.split('@')[0];
+        const pushName = msg.pushName || `Cliente (${senderPhone})`;
+        const text = msg.message?.conversation || 
+                     msg.message?.extendedTextMessage?.text || 
+                     'Mensagem com mídia/anexo';
+
+        console.log(`📩 Nova mensagem real do WhatsApp de [${pushName} - ${senderPhone}]: ${text}`);
+
+        // Guarda na fila de sincronização para o frontend GoDesc 360
+        incomingQueue.push({
+          id: msg.key.id || `msg-${Date.now()}`,
+          phone: senderPhone,
+          name: pushName,
+          content: text,
+          timestamp: new Date().toISOString()
+        });
+
+      } catch (err) {
+        console.error('Erro ao processar mensagem recebida:', err);
+      }
     });
   } catch (err) {
     console.error('Erro ao iniciar Baileys:', err);
   }
 }
 
-// Inicia o motor Baileys imediatamente na subida do servidor
 startBaileys();
 
 app.get('/api/status', (req, res) => {
@@ -80,7 +111,6 @@ app.get('/api/qr', async (req, res) => {
     await startBaileys();
   }
 
-  // Se o QR Code ainda está sendo gerado pelo WhatsApp, aguarda até 5 segundos
   let attempts = 0;
   while (!qrCodeBase64 && connectionStatus !== 'CONNECTED' && attempts < 10) {
     await new Promise(r => setTimeout(r, 500));
@@ -94,6 +124,14 @@ app.get('/api/qr', async (req, res) => {
   });
 });
 
+// Endpoint para buscar novas mensagens em tempo real no frontend
+app.get('/api/sync-messages', (req, res) => {
+  const messages = [...incomingQueue];
+  incomingQueue.length = 0; // limpa a fila após entrega
+  res.json({ messages });
+});
+
+// Endpoint para enviar mensagem do atendente de volta para o celular do cliente
 app.post('/api/send-message', async (req, res) => {
   const { toPhone, text } = req.body;
   if (!sock || connectionStatus !== 'CONNECTED') {
@@ -103,8 +141,10 @@ app.post('/api/send-message', async (req, res) => {
   try {
     const formattedPhone = `${toPhone.replace(/\D/g, '')}@s.whatsapp.net`;
     const sent = await sock.sendMessage(formattedPhone, { text });
+    console.log(`📤 Mensagem enviada para [${toPhone}]: ${text}`);
     res.json({ success: true, messageId: sent.key.id });
   } catch (err) {
+    console.error('Erro ao enviar mensagem:', err);
     res.status(500).json({ error: err.message });
   }
 });

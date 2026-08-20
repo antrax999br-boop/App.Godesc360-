@@ -2101,6 +2101,115 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setWhatsappConnection(prev => ({ ...prev, status: 'DISCONNECTED' }));
   };
 
+  // Sync incoming real WhatsApp messages from Baileys Server (Render)
+  useEffect(() => {
+    const serverUrl = import.meta.env.VITE_WHATSAPP_API_URL || 'https://godesc360-whatsapp-api.onrender.com';
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${serverUrl}/api/sync-messages`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.messages && data.messages.length > 0) {
+            data.messages.forEach((incMsg: { id: string; phone: string; name: string; content: string; timestamp: string }) => {
+              const convId = `conv-${incMsg.phone.replace(/\D/g, '')}`;
+              
+              setAttendanceConversations(cPrev => {
+                const existing = cPrev.find(c => c.id === convId);
+                const timeStr = new Date(incMsg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                if (existing) {
+                  return cPrev.map(c => {
+                    if (c.id === convId) {
+                      return {
+                        ...c,
+                        lastMessageText: incMsg.content,
+                        lastMessageAt: timeStr,
+                        unreadCount: c.unreadCount + 1,
+                        status: c.status === 'CLOSED' ? 'WAITING' : c.status
+                      };
+                    }
+                    return c;
+                  });
+                } else {
+                  const newConv: AttendanceConversation = {
+                    id: convId,
+                    companyId: 'default-company',
+                    contactName: incMsg.name,
+                    contactPhone: incMsg.phone,
+                    status: 'WAITING',
+                    queueName: 'Triagem Automática',
+                    lastMessageText: incMsg.content,
+                    lastMessageAt: timeStr,
+                    unreadCount: 1,
+                    botActive: true,
+                    createdAt: incMsg.timestamp
+                  };
+                  return [newConv, ...cPrev];
+                }
+              });
+
+              // Add message object
+              const newMsgObj: AttendanceMessage = {
+                id: incMsg.id,
+                conversationId: convId,
+                senderType: 'CUSTOMER',
+                senderName: incMsg.name,
+                messageType: 'TEXT',
+                content: incMsg.content,
+                status: 'DELIVERED',
+                createdAt: incMsg.timestamp
+              };
+
+              setAttendanceMessages(mPrev => [...mPrev, newMsgObj]);
+
+              // Process Chatbot Response
+              setTimeout(() => {
+                setAttendanceConversations(currentConvs => {
+                  const targetConv = currentConvs.find(c => c.id === convId);
+                  if (targetConv && targetConv.botActive) {
+                    const botResult = ChatbotEngine.processIncomingMessage(
+                      incMsg.content,
+                      targetConv,
+                      chatbotFlow,
+                      businessHours,
+                      attendanceQueues
+                    );
+
+                    if (botResult.replyMessage) {
+                      const botMsgObj: AttendanceMessage = {
+                        id: `msg-bot-${Date.now()}`,
+                        conversationId: convId,
+                        senderType: 'BOT',
+                        senderName: 'Assistente Virtual',
+                        messageType: 'TEXT',
+                        content: botResult.replyMessage,
+                        status: 'READ',
+                        createdAt: new Date().toISOString()
+                      };
+                      setAttendanceMessages(mp => [...mp, botMsgObj]);
+
+                      // Send Bot Reply back to Customer's physical phone via Baileys API
+                      fetch(`${serverUrl}/api/send-message`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ toPhone: incMsg.phone, text: botResult.replyMessage })
+                      }).catch(err => console.warn('Send bot reply failed:', err));
+                    }
+                  }
+                  return currentConvs;
+                });
+              }, 500);
+            });
+          }
+        }
+      } catch (err) {
+        // Silent sync fail if backend sleeping
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [chatbotFlow, businessHours, attendanceQueues]);
+
   const sendAttendanceMessage = (conversationId: string, content: string, senderType: SenderType = 'AGENT') => {
     const conv = attendanceConversations.find(c => c.id === conversationId);
     if (!conv) return;
@@ -2135,47 +2244,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
     );
 
-    if (senderType === 'CUSTOMER' && conv.botActive) {
-      setTimeout(() => {
-        const botResult = ChatbotEngine.processIncomingMessage(
-          content,
-          conv,
-          chatbotFlow,
-          businessHours,
-          attendanceQueues
-        );
-
-        if (botResult.replyMessage) {
-          const botMsg: AttendanceMessage = {
-            id: `msg-bot-${Date.now()}`,
-            conversationId,
-            senderType: 'BOT',
-            senderName: 'Assistente Virtual',
-            messageType: 'TEXT',
-            content: botResult.replyMessage,
-            status: 'READ',
-            createdAt: new Date().toISOString()
-          };
-
-          setAttendanceMessages(mPrev => [...mPrev, botMsg]);
-
-          setAttendanceConversations(cPrev =>
-            cPrev.map(cItem => {
-              if (cItem.id === conversationId) {
-                return {
-                  ...cItem,
-                  status: botResult.updateConversationStatus || cItem.status,
-                  queueId: botResult.targetQueueId || cItem.queueId,
-                  queueName: botResult.targetQueueName || cItem.queueName,
-                  botActive: botResult.botActive !== undefined ? botResult.botActive : cItem.botActive,
-                  lastMessageText: botResult.replyMessage || cItem.lastMessageText
-                };
-              }
-              return cItem;
-            })
-          );
-        }
-      }, 600);
+    // Send real message to Customer's physical phone via Baileys API
+    if (senderType === 'AGENT') {
+      const serverUrl = import.meta.env.VITE_WHATSAPP_API_URL || 'https://godesc360-whatsapp-api.onrender.com';
+      fetch(`${serverUrl}/api/send-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toPhone: conv.contactPhone, text: content })
+      }).catch(err => console.warn('Real WhatsApp outbound delivery failed:', err));
     }
   };
 

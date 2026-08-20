@@ -113,8 +113,9 @@ export const AttendanceChatView: React.FC = () => {
 
   const handleClose = () => {
     if (!activeConv) return;
-    closeConversation(activeConv.id);
     sendAttendanceMessage(activeConv.id, 'Atendimento encerrado pelo analista. Obrigado pelo contato!', 'AGENT');
+    closeConversation(activeConv.id);
+    setSelectedConversationId(null);
   };
 
   const handleConfirmTransfer = () => {
