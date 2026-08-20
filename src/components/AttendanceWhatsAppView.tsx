@@ -13,8 +13,7 @@ import {
   ArrowLeft,
   Server,
   Globe,
-  HelpCircle,
-  ExternalLink
+  Loader2
 } from 'lucide-react';
 
 export const AttendanceWhatsAppView: React.FC = () => {
@@ -43,18 +42,30 @@ export const AttendanceWhatsAppView: React.FC = () => {
         setConnectionState('WAITING_QR');
       } else if (data.status === 'CONNECTED') {
         setConnectionState('CONNECTED');
+        setLiveQrCode(null);
         if (data.phoneNumber) setPhoneNumber(data.phoneNumber);
         await connectWhatsApp();
+      } else {
+        setLiveQrCode(null);
+        setApiError('Aguardando o WhatsApp Web gerar a chave do QR Code (tente novamente em 5 segundos)...');
       }
     } catch (err: any) {
-      setApiError('Não foi possível conectar ao servidor Baileys local. Utilizando o motor de conexão rápida.');
-      // Generate clean QR code for demo
-      const token = `https://wa.me/qr/GODESC360_${Date.now()}`;
-      setLiveQrCode(`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(token)}`);
+      setApiError('Não foi possível conectar ao servidor Render. Aguarde o servidor acordar ou clique em Ativar Sessão Instantânea.');
     } finally {
       setLoading(false);
     }
   };
+
+  // Periodic status check
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (connectionState === 'WAITING_QR' || liveQrCode) {
+      interval = setInterval(() => {
+        fetchLiveQRCode();
+      }, 5000);
+    }
+    return () => clearInterval(interval);
+  }, [connectionState, liveQrCode]);
 
   const handleConnectInstant = async () => {
     setLoading(true);
@@ -96,7 +107,7 @@ export const AttendanceWhatsAppView: React.FC = () => {
               </span>
             </h1>
             <p className="text-xs text-[#8d90a0]">
-              Pareamento em tempo real com aplicativo do celular para recepção e envio de mensagens no GoDesc 360.
+              Pareamento em tempo real com o aplicativo do celular para recepção e envio de mensagens no GoDesc 360.
             </p>
           </div>
         </div>
@@ -114,19 +125,6 @@ export const AttendanceWhatsAppView: React.FC = () => {
             </span>
           )}
         </div>
-      </div>
-
-      {/* Deploy & Vercel Info Box */}
-      <div className="p-4 bg-[#141416] border border-[#27272a] rounded-2xl space-y-2">
-        <h3 className="text-xs font-bold text-white flex items-center gap-2 font-mono">
-          <Globe className="w-4 h-4 text-[#45dfa4]" />
-          Como hospedar no GitHub / Vercel para escaneamento com celular real:
-        </h3>
-        <p className="text-xs text-[#8d90a0] leading-relaxed">
-          1. O microservidor Node Baileys incluído na pasta <code className="text-[#45dfa4] font-mono">server/</code> pode ser publicado no <strong>Railway.app</strong> ou <strong>Render.com</strong> (gratuito).<br />
-          2. Cole a URL da API gerada no campo abaixo (ou configure a variável <code className="text-[#45dfa4] font-mono">VITE_WHATSAPP_API_URL</code> no Vercel).<br />
-          3. O QR Code gerado abaixo passará a fazer a leitura <strong>OFICIAL</strong> direta do celular!
-        </p>
       </div>
 
       {/* Main Connection Panel */}
@@ -147,7 +145,7 @@ export const AttendanceWhatsAppView: React.FC = () => {
                     type="text"
                     value={serverUrl}
                     onChange={e => setServerUrl(e.target.value)}
-                    placeholder="http://localhost:3001 ou https://sua-api.onrender.com"
+                    placeholder="https://godesc360-whatsapp-api.onrender.com"
                     className="flex-1 bg-[#1e1e24] border border-[#27272a] rounded-lg px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-[#45dfa4]"
                   />
                 </div>
@@ -160,6 +158,13 @@ export const AttendanceWhatsAppView: React.FC = () => {
                 </div>
                 <ShieldCheck className="w-5 h-5 text-emerald-400" />
               </div>
+
+              {apiError && (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{apiError}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -180,7 +185,7 @@ export const AttendanceWhatsAppView: React.FC = () => {
                   disabled={loading}
                   className="w-full bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-[#45dfa4]/20 text-xs"
                 >
-                  <Zap className="w-4 h-4 text-gray-950" />
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin text-gray-950" /> : <Zap className="w-4 h-4 text-gray-950" />}
                   Gerar QR Code Oficial (Servidor Baileys)
                 </button>
 
@@ -190,7 +195,7 @@ export const AttendanceWhatsAppView: React.FC = () => {
                   className="w-full bg-[#27272a] hover:bg-[#323238] text-white py-2.5 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border border-[#323238]"
                 >
                   <CheckCircle2 className="w-4 h-4 text-[#45dfa4]" />
-                  Ativar Sessão Instantânea de Atendimento (Sem Servidor)
+                  Ativar Sessão Instantânea de Atendimento (Modo Demonstração)
                 </button>
               </div>
             )}
@@ -235,18 +240,22 @@ export const AttendanceWhatsAppView: React.FC = () => {
                   className="px-4 py-2 bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 font-bold text-xs rounded-xl cursor-pointer shadow-md flex items-center justify-center gap-2 mx-auto"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  Confirmar Conexão do Aparelho
+                  Confirmar Leitura no Aparelho
                 </button>
               </div>
             </div>
           ) : (
             <div className="space-y-4 py-12">
               <div className="w-16 h-16 bg-[#27272a] rounded-full flex items-center justify-center text-[#8d90a0] mx-auto border border-[#323238]">
-                <QrCode className="w-8 h-8 text-[#45dfa4]" />
+                {loading ? <Loader2 className="w-8 h-8 text-[#45dfa4] animate-spin" /> : <QrCode className="w-8 h-8 text-[#45dfa4]" />}
               </div>
-              <h3 className="text-base font-bold text-white">QR Code Não Gerado</h3>
+              <h3 className="text-base font-bold text-white">
+                {loading ? 'Gerando QR Code Oficial...' : 'Aguardando Geração do QR Code'}
+              </h3>
               <p className="text-xs text-[#8d90a0] max-w-xs mx-auto">
-                Clique no botão à esquerda para obter o QR Code Oficial do servidor Baileys ou ativar a sessão.
+                {loading
+                  ? 'Aguarde alguns segundos enquanto o servidor estabelece o aperto de mão com a rede WhatsApp Web...'
+                  : 'Clique no botão "Gerar QR Code Oficial" para obter a chave do celular.'}
               </p>
             </div>
           )}

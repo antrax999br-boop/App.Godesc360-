@@ -1,18 +1,5 @@
 /**
  * GoDesc 360 - Microservidor Baileys WhatsApp Multi-Device
- * 
- * Este servidor Node.js roda o motor oficial do Baileys para gerar o QR Code oficial
- * e manter a sessão conectada ao WhatsApp Web 24/7.
- * 
- * Para rodar localmente:
- * 1. cd server
- * 2. npm install
- * 3. node index.js
- * 
- * Para hospedar gratuitamente (Railway.app, Render.com ou Fly.io):
- * 1. Suba esta pasta ou repositório no GitHub.
- * 2. Crie um Web Service no Render/Railway apontando para esta pasta.
- * 3. Configure a variável VITE_WHATSAPP_API_URL no Vercel com a URL gerada!
  */
 
 const express = require('express');
@@ -24,7 +11,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 10000;
 
 let sock = null;
 let qrCodeBase64 = null;
@@ -32,47 +19,54 @@ let connectionStatus = 'DISCONNECTED';
 let connectedPhone = null;
 
 async function startBaileys() {
-  const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info');
+  try {
+    const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info');
 
-  sock = makeWASocket({
-    auth: state,
-    printQRInTerminal: true,
-  });
+    sock = makeWASocket({
+      auth: state,
+      printQRInTerminal: true,
+      browser: ['GoDesc 360 Service Desk', 'Chrome', '1.0.0']
+    });
 
-  sock.ev.on('creds.update', saveCreds);
+    sock.ev.on('creds.update', saveCreds);
 
-  sock.ev.on('connection.update', async (update) => {
-    const { connection, lastDisconnect, qr } = update;
+    sock.ev.on('connection.update', async (update) => {
+      const { connection, lastDisconnect, qr } = update;
 
-    if (qr) {
-      connectionStatus = 'WAITING_QR';
-      qrCodeBase64 = await QRCode.toDataURL(qr);
-      console.log('⚡ Novo QR Code oficial do WhatsApp gerado!');
-    }
-
-    if (connection === 'close') {
-      const shouldReconnect = (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut);
-      connectionStatus = 'DISCONNECTED';
-      qrCodeBase64 = null;
-      console.log('🔴 Conexão fechada. Reconectando...', shouldReconnect);
-      if (shouldReconnect) {
-        startBaileys();
+      if (qr) {
+        connectionStatus = 'WAITING_QR';
+        qrCodeBase64 = await QRCode.toDataURL(qr);
+        console.log('⚡ QR Code oficial do WhatsApp gerado com sucesso!');
       }
-    } else if (connection === 'open') {
-      connectionStatus = 'CONNECTED';
-      qrCodeBase64 = null;
-      connectedPhone = sock.user?.id ? sock.user.id.split(':')[0] : 'Conectado';
-      console.log('🟢 WhatsApp conectado com sucesso! Número:', connectedPhone);
-    }
-  });
 
-  sock.ev.on('messages.upsert', async (m) => {
-    console.log('📩 Nova mensagem recebida do WhatsApp:', JSON.stringify(m, null, 2));
-    // Aqui a mensagem recebida pode ser gravada diretamente no Supabase!
-  });
+      if (connection === 'close') {
+        const statusCode = lastDisconnect?.error?.output?.statusCode;
+        const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+        connectionStatus = 'DISCONNECTED';
+        qrCodeBase64 = null;
+        console.log('🔴 Conexão encerrada. Reconectando...', shouldReconnect);
+        if (shouldReconnect) {
+          setTimeout(() => startBaileys(), 3000);
+        }
+      } else if (connection === 'open') {
+        connectionStatus = 'CONNECTED';
+        qrCodeBase64 = null;
+        connectedPhone = sock.user?.id ? sock.user.id.split(':')[0] : 'Conectado';
+        console.log('🟢 WhatsApp conectado com sucesso! Número:', connectedPhone);
+      }
+    });
+
+    sock.ev.on('messages.upsert', async (m) => {
+      console.log('📩 Nova mensagem recebida do WhatsApp:', JSON.stringify(m, null, 2));
+    });
+  } catch (err) {
+    console.error('Erro ao iniciar Baileys:', err);
+  }
 }
 
-// Endpoint para buscar o status da sessão
+// Inicia o motor Baileys imediatamente na subida do servidor
+startBaileys();
+
 app.get('/api/status', (req, res) => {
   res.json({
     status: connectionStatus,
@@ -81,12 +75,18 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// Endpoint para gerar/buscar o QR Code oficial
 app.get('/api/qr', async (req, res) => {
-  if (connectionStatus === 'DISCONNECTED' && !sock) {
+  if (!sock) {
     await startBaileys();
   }
-  
+
+  // Se o QR Code ainda está sendo gerado pelo WhatsApp, aguarda até 5 segundos
+  let attempts = 0;
+  while (!qrCodeBase64 && connectionStatus !== 'CONNECTED' && attempts < 10) {
+    await new Promise(r => setTimeout(r, 500));
+    attempts++;
+  }
+
   res.json({
     status: connectionStatus,
     qrCode: qrCodeBase64,
@@ -94,7 +94,6 @@ app.get('/api/qr', async (req, res) => {
   });
 });
 
-// Endpoint para enviar mensagem
 app.post('/api/send-message', async (req, res) => {
   const { toPhone, text } = req.body;
   if (!sock || connectionStatus !== 'CONNECTED') {
