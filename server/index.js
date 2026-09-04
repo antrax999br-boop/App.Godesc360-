@@ -18,18 +18,55 @@ let sock = null;
 let qrCodeBase64 = null;
 let connectionStatus = 'DISCONNECTED';
 let connectedPhone = null;
+let isStarting = false;
 
 // Armazenamento em memória das conversas e mensagens recebidas do celular real
 const incomingQueue = [];
 
 async function startBaileys() {
+  if (isStarting) return;
+  isStarting = true;
+
   try {
+    if (sock) {
+      try {
+        sock.ev.removeAllListeners();
+        sock.end(undefined);
+      } catch (e) {}
+      sock = null;
+    }
+
     const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info');
 
     sock = makeWASocket({
       auth: state,
       printQRInTerminal: true,
-      browser: ['GoDesc 360 Service Desk', 'Chrome', '1.0.0']
+      browser: ['GoDesc 360 Service Desk', 'Chrome', '1.0.0'],
+      syncFullHistory: false,
+      keepAliveIntervalMs: 30000,
+      connectTimeoutMs: 60000,
+      defaultQueryTimeoutMs: 60000,
+      patchMessageBeforeSending: (message) => {
+        const requiresPatch = !!(
+          message.buttonsMessage ||
+          message.templateMessage ||
+          message.listMessage
+        );
+        if (requiresPatch) {
+          message = {
+            viewOnceMessage: {
+              message: {
+                messageContextInfo: {
+                  deviceListMetadataVersion: 2,
+                  deviceListMetadata: {},
+                },
+                ...message,
+              },
+            },
+          };
+        }
+        return message;
+      }
     });
 
     sock.ev.on('creds.update', saveCreds);
@@ -49,6 +86,8 @@ async function startBaileys() {
         connectionStatus = 'DISCONNECTED';
         qrCodeBase64 = null;
         console.log('🔴 Conexão encerrada. Reconectando...', shouldReconnect, 'StatusCode:', statusCode);
+        
+        isStarting = false;
         if (!shouldReconnect) {
           try {
             fs.rmSync('baileys_auth_info', { recursive: true, force: true });
@@ -62,6 +101,7 @@ async function startBaileys() {
         qrCodeBase64 = null;
         connectedPhone = sock.user?.id ? sock.user.id.split(':')[0] : 'Conectado';
         console.log('🟢 WhatsApp conectado com sucesso! Número:', connectedPhone);
+        isStarting = false;
       }
     });
 
@@ -124,6 +164,7 @@ async function startBaileys() {
     });
   } catch (err) {
     console.error('Erro ao iniciar Baileys:', err);
+    isStarting = false;
   }
 }
 
@@ -162,49 +203,77 @@ app.get('/api/sync-messages', (req, res) => {
   res.json({ messages });
 });
 
-// Endpoint para enviar mensagem do atendente de volta para o celular do cliente
+// Helper para obter JID válido do WhatsApp considerando 9º dígito BR
+async function resolveJid(toPhone) {
+  let clean = toPhone.replace(/\D/g, '');
+  if (!clean) return null;
+
+  // Se o número tiver 10 ou 11 dígitos e não começar com 55 (DDI Brasil), adiciona 55
+  if ((clean.length === 10 || clean.length === 11) && !clean.startsWith('55')) {
+    clean = '55' + clean;
+  }
+
+  let targetJid = `${clean}@s.whatsapp.net`;
+  if (!sock) return targetJid;
+
+  try {
+    const onWa = await sock.onWhatsApp(clean);
+    if (onWa && onWa.length > 0 && onWa[0].exists && onWa[0].jid) {
+      return onWa[0].jid;
+    }
+
+    if (clean.startsWith('55') && clean.length === 13 && clean[4] === '9') {
+      // Tenta sem o 9º dígito
+      const without9 = clean.slice(0, 4) + clean.slice(5);
+      const onWaAlt = await sock.onWhatsApp(without9);
+      if (onWaAlt && onWaAlt.length > 0 && onWaAlt[0].exists && onWaAlt[0].jid) {
+        return onWaAlt[0].jid;
+      }
+    } else if (clean.startsWith('55') && clean.length === 12) {
+      // Tenta com o 9º dígito
+      const with9 = clean.slice(0, 4) + '9' + clean.slice(4);
+      const onWaAlt = await sock.onWhatsApp(with9);
+      if (onWaAlt && onWaAlt.length > 0 && onWaAlt[0].exists && onWaAlt[0].jid) {
+        return onWaAlt[0].jid;
+      }
+    }
+  } catch (e) {
+    console.warn('⚠️ Verification onWhatsApp failed, using default JID:', e);
+  }
+
+  return targetJid;
+}
+
+// Endpoint para enviar mensagem do atendente ou chatbot para o cliente
 app.post('/api/send-message', async (req, res) => {
   const { toPhone, text } = req.body;
+
+  if (!toPhone || !text) {
+    return res.status(400).json({ error: 'Parâmetros toPhone e text são obrigatórios.' });
+  }
+
+  // Se a conexão estiver reconectando, aguarda até 5s
+  let waitCount = 0;
+  while (connectionStatus !== 'CONNECTED' && waitCount < 10) {
+    await new Promise(r => setTimeout(r, 500));
+    waitCount++;
+  }
+
   if (!sock || connectionStatus !== 'CONNECTED') {
     return res.status(400).json({ error: 'WhatsApp não está conectado no servidor!' });
   }
 
   try {
-    const cleanPhone = toPhone.replace(/\D/g, '');
-    if (!cleanPhone) {
+    const targetJid = await resolveJid(toPhone);
+    if (!targetJid) {
       return res.status(400).json({ error: 'Número de telefone inválido' });
-    }
-
-    // Resolve o JID exato no WhatsApp (resolve variação do 9º dígito no Brasil)
-    let targetJid = `${cleanPhone}@s.whatsapp.net`;
-    try {
-      const [onWa] = await sock.onWhatsApp(cleanPhone);
-      if (onWa && onWa.exists && onWa.jid) {
-        targetJid = onWa.jid;
-      } else if (cleanPhone.startsWith('55') && cleanPhone.length === 13 && cleanPhone[4] === '9') {
-        // Tenta sem o 9º dígito adicional
-        const phoneWithout9 = cleanPhone.slice(0, 4) + cleanPhone.slice(5);
-        const [onWaAlt] = await sock.onWhatsApp(phoneWithout9);
-        if (onWaAlt && onWaAlt.exists && onWaAlt.jid) {
-          targetJid = onWaAlt.jid;
-        }
-      } else if (cleanPhone.startsWith('55') && cleanPhone.length === 12) {
-        // Tenta adicionando o 9º dígito
-        const phoneWith9 = cleanPhone.slice(0, 4) + '9' + cleanPhone.slice(4);
-        const [onWaAlt] = await sock.onWhatsApp(phoneWith9);
-        if (onWaAlt && onWaAlt.exists && onWaAlt.jid) {
-          targetJid = onWaAlt.jid;
-        }
-      }
-    } catch (e) {
-      console.warn('Checagem onWhatsApp falhou, utilizando JID padrão:', e);
     }
 
     const sent = await sock.sendMessage(targetJid, { text });
     console.log(`📤 Mensagem enviada com sucesso para [${targetJid}]: ${text}`);
     res.json({ success: true, messageId: sent.key.id, jid: targetJid });
   } catch (err) {
-    console.error('Erro ao enviar mensagem:', err);
+    console.error('Erro ao enviar mensagem via Baileys:', err);
     res.status(500).json({ error: err.message || 'Falha ao enviar mensagem pelo WhatsApp' });
   }
 });
@@ -233,4 +302,3 @@ app.post('/api/logout', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Servidor Baileys WhatsApp rodando na porta ${PORT}`);
 });
-
