@@ -107,10 +107,60 @@ export class ChatbotEngine {
 
     const trimmed = incomingText.trim();
 
-    // Default Bot Initial Menu
-    const initialWelcomeMsg = `Olá! Tudo bem? 👋\n\nBem-vindo à Central de Atendimento GoDesc360.\n\nComo podemos te ajudar hoje? Digite uma opção:\n\n1 - 💼 Comercial\n2 - 🛠️ Suporte Técnico\n3 - 💳 Financeiro\n4 - 🎫 Abrir Ticket Chamado\n5 - 👤 Falar com Atendente`;
+    // Check if customized flow nodes exist
+    const rootNode = (flow && flow.nodes && flow.nodes.length > 0)
+      ? (flow.nodes.find(n => n.type === 'START' || n.type === 'MENU' || n.id === 'node-start') || flow.nodes[0])
+      : null;
 
-    // Process numerical options
+    // Dynamically match user option against flow rootNode options if present
+    if (rootNode && rootNode.options && rootNode.options.length > 0) {
+      const matchedOpt = rootNode.options.find(o => o.triggerValue.trim() === trimmed);
+
+      if (matchedOpt) {
+        const targetNode = flow.nodes.find(n => n.id === matchedOpt.targetNodeId);
+        const optLabelLower = matchedOpt.label.toLowerCase();
+        
+        // Find matching queue
+        const targetQueue = queues.find(q => 
+          q.name.toLowerCase().includes(optLabelLower) || 
+          (targetNode?.targetDepartment && q.name.toLowerCase().includes(targetNode.targetDepartment.toLowerCase()))
+        ) || queues[0];
+
+        if (optLabelLower.includes('ticket') || optLabelLower.includes('chamado') || targetNode?.type === 'TICKET_CREATE') {
+          return {
+            replyMessage: targetNode?.message || `Geramos um chamado de suporte técnico automático para seu atendimento! 🎫\n\nNosso sistema registrou suas informações e um técnico entrará em contato.`,
+            updateConversationStatus: 'WAITING',
+            targetQueueName: targetQueue?.name || 'Suporte Técnico',
+            botActive: false,
+            createTicketData: {
+              title: `Chamado via WhatsApp: ${conversation.contactName}`,
+              description: `Solicitação via WhatsApp por ${conversation.contactName} (${conversation.contactPhone})`,
+              category: 'Suporte Geral'
+            }
+          };
+        }
+
+        if (optLabelLower.includes('atendente') || optLabelLower.includes('humano') || targetNode?.type === 'HUMAN_ATTENDANT') {
+          return {
+            replyMessage: targetNode?.message || `Você solicitou atendimento humano. Você foi inserido na fila de espera e o primeiro analista disponível irá te atender. 👤`,
+            updateConversationStatus: 'WAITING',
+            targetQueueName: targetQueue?.name || 'Fila Geral',
+            botActive: false
+          };
+        }
+
+        // Standard Queue transfer for menu choices (e.g. Comercial, Suporte, Financeiro, etc)
+        return {
+          replyMessage: targetNode?.message || `Perfeito! Vou encaminhar você para a fila do setor **${matchedOpt.label}**. Por favor, aguarde um momento. ⏳`,
+          updateConversationStatus: 'WAITING',
+          targetQueueId: targetQueue?.id,
+          targetQueueName: targetQueue?.name || matchedOpt.label,
+          botActive: false
+        };
+      }
+    }
+
+    // Process fallback numerical options if flow options didn't match
     if (trimmed === '1') {
       const q = queues.find(item => item.name.toLowerCase().includes('comercial')) || queues[0];
       return {
@@ -167,9 +217,12 @@ export class ChatbotEngine {
       };
     }
 
+    // Build welcome message from rootNode message if present, or default fallback
+    const welcomeMsg = rootNode?.message || `Olá! Tudo bem? 👋\n\nBem-vindo à Central de Atendimento GoDesc360.\n\nComo podemos te ajudar hoje? Digite uma opção:\n\n1 - 💼 Comercial\n2 - 🛠️ Suporte Técnico\n3 - 💳 Financeiro\n4 - 🎫 Abrir Ticket Chamado\n5 - 👤 Falar com Atendente`;
+
     // Default response for unhandled text -> Send menu
     return {
-      replyMessage: initialWelcomeMsg
+      replyMessage: welcomeMsg
     };
   }
 }

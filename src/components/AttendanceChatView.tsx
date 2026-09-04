@@ -82,6 +82,9 @@ export const AttendanceChatView: React.FC = () => {
     if (filterTab === 'in_progress') {
       return c.status === 'IN_PROGRESS';
     }
+    if (filterTab === 'bot') {
+      return c.status === 'BOT' || c.botActive;
+    }
     if (filterTab === 'closed') {
       return c.status === 'CLOSED';
     }
@@ -210,9 +213,10 @@ export const AttendanceChatView: React.FC = () => {
             <div className="flex items-center gap-1 overflow-x-auto pb-1 no-scrollbar text-[11px] font-mono">
               {[
                 { id: 'all', label: 'Todas' },
-                { id: 'mine', label: 'Minhas' },
                 { id: 'waiting', label: 'Aguardando' },
                 { id: 'in_progress', label: 'Em Atend.' },
+                { id: 'mine', label: 'Minhas' },
+                { id: 'bot', label: 'Robô' },
                 { id: 'closed', label: 'Encerradas' }
               ].map(tab => (
                 <button
@@ -269,8 +273,18 @@ export const AttendanceChatView: React.FC = () => {
                       <p className="text-xs text-[#8d90a0] truncate mb-1.5">{c.lastMessageText}</p>
 
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#27272a] text-[#45dfa4] font-mono font-medium">
-                          {c.queueName || 'Geral'}
+                        <span className={`text-[10px] px-2 py-0.5 rounded-md font-mono font-bold ${
+                          (c.queueName || '').toLowerCase().includes('comercial')
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                            : (c.queueName || '').toLowerCase().includes('suporte')
+                            ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
+                            : (c.queueName || '').toLowerCase().includes('financeiro')
+                            ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                            : (c.queueName || '').toLowerCase().includes('ticket') || (c.queueName || '').toLowerCase().includes('chamado')
+                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                            : 'bg-[#27272a] text-[#45dfa4] border border-[#323238]'
+                        }`}>
+                          {c.queueName || 'Fila Geral'}
                         </span>
                         {c.unreadCount > 0 && (
                           <span className="w-4 h-4 rounded-full bg-[#45dfa4] text-gray-950 text-[10px] font-bold flex items-center justify-center font-mono">

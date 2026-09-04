@@ -17,11 +17,9 @@ import {
 } from 'lucide-react';
 
 export const AttendanceWhatsAppView: React.FC = () => {
-  const { whatsappConnection, connectWhatsApp, disconnectWhatsApp, setCurrentScreen } = useApp();
+  const { whatsappConnection, whatsappServerUrl, updateWhatsappServerUrl, connectWhatsApp, disconnectWhatsApp, setCurrentScreen } = useApp();
   const [loading, setLoading] = useState(false);
-  const [serverUrl, setServerUrl] = useState<string>(
-    import.meta.env.VITE_WHATSAPP_API_URL || 'https://godesc360-whatsapp-api.onrender.com'
-  );
+  const [serverUrl, setServerUrl] = useState<string>(whatsappServerUrl);
   const [liveQrCode, setLiveQrCode] = useState<string | null>(null);
   const [connectionState, setConnectionState] = useState<string>(whatsappConnection.status);
   const [phoneNumber, setPhoneNumber] = useState<string>(whatsappConnection.phoneNumber || '+55 11 99887-6655');
@@ -32,7 +30,9 @@ export const AttendanceWhatsAppView: React.FC = () => {
     setLoading(true);
     setApiError(null);
     try {
-      const response = await fetch(`${serverUrl}/api/qr`);
+      const activeUrl = serverUrl.trim().replace(/\/+$/, '');
+      updateWhatsappServerUrl(activeUrl);
+      const response = await fetch(`${activeUrl}/api/qr`);
       if (!response.ok) {
         throw new Error('Servidor Baileys offline ou não encotrado nesta URL');
       }
@@ -137,17 +137,45 @@ export const AttendanceWhatsAppView: React.FC = () => {
             </h2>
 
             <div className="space-y-3">
-              <div className="p-3.5 bg-[#141416] rounded-xl border border-[#27272a] space-y-1.5">
+              <div className="p-3.5 bg-[#141416] rounded-xl border border-[#27272a] space-y-2">
                 <label className="text-xs text-[#8d90a0] block font-mono">URL da API do Servidor Baileys:</label>
                 <div className="flex items-center gap-2">
                   <Server className="w-4 h-4 text-[#45dfa4] shrink-0" />
                   <input
                     type="text"
                     value={serverUrl}
-                    onChange={e => setServerUrl(e.target.value)}
+                    onChange={e => {
+                      setServerUrl(e.target.value);
+                      updateWhatsappServerUrl(e.target.value);
+                    }}
                     placeholder="https://godesc360-whatsapp-api.onrender.com"
                     className="flex-1 bg-[#1e1e24] border border-[#27272a] rounded-lg px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-[#45dfa4]"
                   />
+                </div>
+                {/* Botões rápidos para alternar entre Render e Localhost */}
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = 'https://godesc360-whatsapp-api.onrender.com';
+                      setServerUrl(url);
+                      updateWhatsappServerUrl(url);
+                    }}
+                    className="px-2.5 py-1 bg-[#45dfa4]/10 hover:bg-[#45dfa4]/20 text-[#45dfa4] border border-[#45dfa4]/30 rounded-lg text-[11px] font-mono cursor-pointer transition-all flex items-center gap-1"
+                  >
+                    ☁️ Usar Servidor Render (Nuvem)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = 'http://localhost:10000';
+                      setServerUrl(url);
+                      updateWhatsappServerUrl(url);
+                    }}
+                    className="px-2.5 py-1 bg-[#27272a] hover:bg-[#323238] text-white border border-[#323238] rounded-lg text-[11px] font-mono cursor-pointer transition-all flex items-center gap-1"
+                  >
+                    💻 Usar Localhost:10000
+                  </button>
                 </div>
               </div>
 

@@ -18,6 +18,7 @@ import {
   TISecurityLog,
   VaultCredential,
   WhatsAppConnection,
+  WhatsAppConnectionStatus,
   AttendanceConversation,
   AttendanceMessage,
   AttendanceQueue,
@@ -103,6 +104,8 @@ interface AppContextType {
   deleteTicketCategory: (id: number) => void;
   // Central de Atendimento WhatsApp & Chatbot
   whatsappConnection: WhatsAppConnection;
+  whatsappServerUrl: string;
+  updateWhatsappServerUrl: (url: string) => void;
   attendanceConversations: AttendanceConversation[];
   attendanceMessages: AttendanceMessage[];
   attendanceQueues: AttendanceQueue[];
@@ -1960,31 +1963,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ]
   });
 
-  const [chatbotFlow, setChatbotFlow] = useState<ChatbotFlow>({
-    id: 'flow-1',
-    companyId: 'default-company',
-    name: 'Fluxo Principal WhatsApp',
-    status: 'PUBLISHED',
-    version: 1,
-    nodes: [
-      {
-        id: 'node-start',
-        title: 'Menu Inicial',
-        type: 'MENU',
-        message: 'Olá! Tudo bem? 👋\n\nBem-vindo à Empresa XYZ.\n\nDigite uma opção:\n\n1 - Comercial\n2 - Suporte Técnico\n3 - Financeiro\n4 - Abrir Ticket\n5 - Falar com Atendente',
-        options: [
-          { id: 'opt-1', triggerValue: '1', label: 'Comercial', targetNodeId: 'node-comercial' },
-          { id: 'opt-2', triggerValue: '2', label: 'Suporte Técnico', targetNodeId: 'node-suporte' },
-          { id: 'opt-3', triggerValue: '3', label: 'Financeiro', targetNodeId: 'node-financeiro' },
-          { id: 'opt-4', triggerValue: '4', label: 'Abrir Ticket', targetNodeId: 'node-ticket' },
-          { id: 'opt-5', triggerValue: '5', label: 'Falar com Atendente', targetNodeId: 'node-humano' }
-        ],
-        position: { x: 100, y: 100 }
-      }
-    ],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+  const [chatbotFlow, setChatbotFlow] = useState<ChatbotFlow>(() => {
+    const saved = localStorage.getItem('godesc_chatbot_flow');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return {
+      id: 'flow-1',
+      companyId: 'default-company',
+      name: 'Fluxo Principal WhatsApp',
+      status: 'PUBLISHED',
+      version: 1,
+      nodes: [
+        {
+          id: 'node-start',
+          title: 'Menu Inicial',
+          type: 'MENU',
+          message: 'Olá! Tudo bem? 👋\n\nBem-vindo à Central de Atendimento GoDesc 360.\n\nDigite uma opção:\n\n1 - Comercial\n2 - Suporte Técnico\n3 - Financeiro\n4 - Abrir Ticket\n5 - Falar com Atendente',
+          options: [
+            { id: 'opt-1', triggerValue: '1', label: 'Comercial', targetNodeId: 'node-comercial' },
+            { id: 'opt-2', triggerValue: '2', label: 'Suporte Técnico', targetNodeId: 'node-suporte' },
+            { id: 'opt-3', triggerValue: '3', label: 'Financeiro', targetNodeId: 'node-financeiro' },
+            { id: 'opt-4', triggerValue: '4', label: 'Abrir Ticket', targetNodeId: 'node-ticket' },
+            { id: 'opt-5', triggerValue: '5', label: 'Falar com Atendente', targetNodeId: 'node-humano' }
+          ],
+          position: { x: 100, y: 100 }
+        }
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
   });
+
+  useEffect(() => {
+    localStorage.setItem('godesc_chatbot_flow', JSON.stringify(chatbotFlow));
+  }, [chatbotFlow]);
 
   const [attendanceContacts, setAttendanceContacts] = useState<AttendanceContact[]>([
     {
@@ -2106,40 +2119,79 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('godesc_attendance_messages', JSON.stringify(attendanceMessages));
   }, [attendanceMessages]);
 
+
+
+  // URL configurável do microservidor Baileys
+  const [whatsappServerUrl, setWhatsappServerUrlState] = useState<string>(() => {
+    const saved = localStorage.getItem('godesc_whatsapp_server_url');
+    if (saved) return saved;
+    return import.meta.env.VITE_WHATSAPP_API_URL || 'https://godesc360-whatsapp-api.onrender.com';
+  });
+
+  const updateWhatsappServerUrl = (url: string) => {
+    const cleanUrl = url.trim().replace(/\/+$/, '');
+    setWhatsappServerUrlState(cleanUrl);
+    localStorage.setItem('godesc_whatsapp_server_url', cleanUrl);
+  };
+
+  // Poll contínuo do status do servidor Baileys para manter o frontend 100% em sincronia
+  useEffect(() => {
+    const checkServerStatus = async () => {
+      try {
+        const res = await fetch(`${whatsappServerUrl}/api/status`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status) {
+            setWhatsappConnection(prev => ({
+              ...prev,
+              status: data.status as WhatsAppConnectionStatus,
+              phoneNumber: data.phoneNumber || prev.phoneNumber || 'Conectado',
+              updatedAt: new Date().toISOString()
+            }));
+          }
+        }
+      } catch (err) {
+        // Servidor offline ou hibernando
+      }
+    };
+
+    checkServerStatus();
+    const interval = setInterval(checkServerStatus, 4000);
+    return () => clearInterval(interval);
+  }, [whatsappServerUrl]);
+
   const connectWhatsApp = async () => {
     const res = await whatsappProvider.connect('default-company');
-    setWhatsappConnection({
+    setWhatsappConnection(prev => ({
+      ...prev,
       ...res,
       status: 'CONNECTED',
-      phoneNumber: '+55 11 99887-6655',
-      name: 'Empresa GoDesc360',
-      connectedAt: new Date().toISOString()
-    });
+      updatedAt: new Date().toISOString()
+    }));
   };
 
   const disconnectWhatsApp = async () => {
+    try {
+      await fetch(`${whatsappServerUrl}/api/logout`, { method: 'POST' });
+    } catch (e) {}
     await whatsappProvider.disconnect('default-company');
-    setWhatsappConnection(prev => ({ ...prev, status: 'DISCONNECTED' }));
+    setWhatsappConnection(prev => ({ ...prev, status: 'DISCONNECTED', phoneNumber: undefined }));
   };
 
-  // Sync incoming real WhatsApp messages from Baileys Server (Render)
-  // processedMsgIds evita duplicatas quando múltiplas abas fazem poll simultâneo
+  // Sync incoming real WhatsApp messages from Baileys Server
   const processedMsgIds = React.useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    const serverUrl = import.meta.env.VITE_WHATSAPP_API_URL || 'https://godesc360-whatsapp-api.onrender.com';
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`${serverUrl}/api/sync-messages`);
+        const res = await fetch(`${whatsappServerUrl}/api/sync-messages`);
         if (res.ok) {
           const data = await res.json();
           if (data.messages && data.messages.length > 0) {
             data.messages.forEach((incMsg: { id: string; phone: string; name: string; content: string; timestamp: string }) => {
-              // Deduplicação: ignora mensagens já processadas nesta sessão
               const msgKey = incMsg.id || `${incMsg.phone}-${incMsg.timestamp}-${incMsg.content}`;
               if (processedMsgIds.current.has(msgKey)) return;
               processedMsgIds.current.add(msgKey);
-              // Limita o Set a 500 IDs para não crescer indefinidamente
               if (processedMsgIds.current.size > 500) {
                 const firstKey = processedMsgIds.current.values().next().value;
                 processedMsgIds.current.delete(firstKey);
@@ -2147,24 +2199,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
               const rawPhone = incMsg.phone.replace(/\D/g, '');
               const convId = `conv-${rawPhone}`;
-              // Fallback de nome: se vier vazio, usa o número formatado
               const contactName = (incMsg.name && incMsg.name.trim()) ? incMsg.name.trim() : `+${rawPhone}`;
               
               setAttendanceConversations(cPrev => {
-                const existing = cPrev.find(c => c.id === convId);
+                const existing = cPrev.find(c => 
+                  c.id === convId || 
+                  c.contactPhone.replace(/\D/g, '') === rawPhone ||
+                  (rawPhone.length >= 8 && c.contactPhone.replace(/\D/g, '').endsWith(rawPhone.slice(-8)))
+                );
                 const timeStr = new Date(incMsg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                 if (existing) {
                   return cPrev.map(c => {
-                    if (c.id === convId) {
+                    if (c.id === existing.id) {
                       return {
                         ...c,
-                        // Atualiza nome se ainda estava vazio
                         contactName: (c.contactName && c.contactName !== c.contactPhone) ? c.contactName : contactName,
                         lastMessageText: incMsg.content,
                         lastMessageAt: timeStr,
                         unreadCount: c.unreadCount + 1,
-                        // Reabre conversa encerrada quando cliente manda nova mensagem
                         status: c.status === 'CLOSED' ? 'WAITING' : c.status
                       };
                     }
@@ -2177,7 +2230,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     contactId: `cnt-${rawPhone}`,
                     contactName,
                     contactPhone: `+${rawPhone}`,
-                    status: 'WAITING',
+                    status: 'BOT', // Inicia no estado BOT enquanto está na triagem do Chatbot
                     queueName: 'Triagem Automática',
                     lastMessageText: incMsg.content,
                     lastMessageAt: timeStr,
@@ -2190,7 +2243,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 }
               });
 
-              // Adiciona objeto da mensagem com ID único garantido
               const newMsgObj: AttendanceMessage = {
                 id: msgKey,
                 conversationId: convId,
@@ -2203,15 +2255,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               };
 
               setAttendanceMessages(mPrev => {
-                // Deduplicação na lista de mensagens também
                 if (mPrev.some(m => m.id === newMsgObj.id)) return mPrev;
                 return [...mPrev, newMsgObj];
               });
 
+              playNotificationSound();
+
               // Processa resposta do Chatbot
               setTimeout(() => {
                 setAttendanceConversations(currentConvs => {
-                  const targetConv = currentConvs.find(c => c.id === convId);
+                  const targetConv = currentConvs.find(c => c.id === convId || c.contactPhone.replace(/\D/g, '') === rawPhone);
                   if (targetConv && targetConv.botActive) {
                     const botResult = ChatbotEngine.processIncomingMessage(
                       incMsg.content,
@@ -2224,7 +2277,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     if (botResult.replyMessage) {
                       const botMsgObj: AttendanceMessage = {
                         id: `msg-bot-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-                        conversationId: convId,
+                        conversationId: targetConv.id,
                         senderType: 'BOT',
                         senderName: 'Assistente Virtual',
                         messageType: 'TEXT',
@@ -2234,13 +2287,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                       };
                       setAttendanceMessages(mp => [...mp, botMsgObj]);
 
-                      // Envia resposta do bot para o celular do cliente via API Baileys
-                      fetch(`${serverUrl}/api/send-message`, {
+                      // Envia resposta do bot para o celular do cliente
+                      fetch(`${whatsappServerUrl}/api/send-message`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ toPhone: `+${rawPhone}`, text: botResult.replyMessage })
+                        body: JSON.stringify({ toPhone: targetConv.contactPhone, text: botResult.replyMessage })
                       }).catch(err => console.warn('Send bot reply failed:', err));
                     }
+
+                    // Abertura automática de chamado no sistema se a opção selecionada for Ticket
+                    if (botResult.createTicketData) {
+                      addTicket({
+                        title: botResult.createTicketData.title,
+                        description: botResult.createTicketData.description,
+                        requesterName: targetConv.contactName,
+                        requesterEmail: `${rawPhone}@whatsapp.user`,
+                        company: 'Atendimento WhatsApp',
+                        machineName: 'WhatsApp',
+                        onlyMeOnComputer: false,
+                        category: botResult.createTicketData.category || 'Suporte Geral',
+                        subcategory: 'Atendimento Automatizado',
+                        priority: 'Média',
+                        status: 'Novo',
+                        attachments: []
+                      });
+                    }
+
+                    // Atualiza o estado da conversa (Fila, Status WAITING/BOT, e desativação do bot)
+                    return currentConvs.map(c => {
+                      if (c.id === targetConv.id) {
+                        return {
+                          ...c,
+                          status: botResult.updateConversationStatus || c.status,
+                          queueId: botResult.targetQueueId || c.queueId,
+                          queueName: botResult.targetQueueName || c.queueName,
+                          botActive: botResult.botActive !== undefined ? botResult.botActive : c.botActive
+                        };
+                      }
+                      return c;
+                    });
                   }
                   return currentConvs;
                 });
@@ -2251,10 +2336,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch (err) {
         // Falha silenciosa quando servidor está hibernando
       }
-    }, 3000);
+    }, 2500);
 
     return () => clearInterval(interval);
-  }, [chatbotFlow, businessHours, attendanceQueues]);
+  }, [whatsappServerUrl, chatbotFlow, businessHours, attendanceQueues]);
 
   const sendAttendanceMessage = (conversationId: string, content: string, senderType: SenderType = 'AGENT') => {
     const conv = attendanceConversations.find(c => c.id === conversationId);
@@ -2283,21 +2368,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             ...c,
             lastMessageText: `${senderType === 'AGENT' ? 'Você: ' : ''}${content}`,
             lastMessageAt: timeStr,
-            unreadCount: senderType === 'CUSTOMER' ? c.unreadCount + 1 : 0
+            unreadCount: senderType === 'CUSTOMER' ? c.unreadCount + 1 : 0,
+            // Desativa robô e assume conversa quando atendente humano digita
+            botActive: senderType === 'AGENT' ? false : c.botActive,
+            status: (senderType === 'AGENT' && c.status === 'WAITING') ? 'IN_PROGRESS' : c.status
           };
         }
         return c;
       })
     );
 
-    // Send real message to Customer's physical phone via Baileys API
+    // Envia mensagem real para o celular do cliente via API do Baileys
     if (senderType === 'AGENT') {
-      const serverUrl = import.meta.env.VITE_WHATSAPP_API_URL || 'https://godesc360-whatsapp-api.onrender.com';
-      fetch(`${serverUrl}/api/send-message`, {
+      fetch(`${whatsappServerUrl}/api/send-message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ toPhone: conv.contactPhone, text: content })
-      }).catch(err => console.warn('Real WhatsApp outbound delivery failed:', err));
+      })
+        .then(async res => {
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || data.error) {
+            const errorMsg = data.error || 'WhatsApp não respondeu no servidor';
+            console.error('Falha no envio de mensagem WhatsApp:', errorMsg);
+            triggerSystemNotification(
+              '⚠️ Erro no Envio do WhatsApp',
+              `A mensagem para ${conv.contactName} não foi entregue: ${errorMsg}`,
+              conv.companyId || 'Sistema',
+              'Alta'
+            );
+          }
+        })
+        .catch(err => {
+          console.warn('Real WhatsApp outbound delivery failed:', err);
+          triggerSystemNotification(
+            '⚠️ Servidor WhatsApp Indisponível',
+            `Não foi possível conectar ao servidor Baileys (${whatsappServerUrl})`,
+            conv.companyId || 'Sistema',
+            'Alta'
+          );
+        });
     }
   };
 
@@ -2359,10 +2468,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const saveChatbotFlow = (flow: ChatbotFlow) => {
     setChatbotFlow(flow);
+    localStorage.setItem('godesc_chatbot_flow', JSON.stringify(flow));
   };
 
   const publishChatbotFlow = (flow: ChatbotFlow) => {
-    setChatbotFlow({ ...flow, status: 'PUBLISHED' });
+    const updated = { ...flow, status: 'PUBLISHED' as const };
+    setChatbotFlow(updated);
+    localStorage.setItem('godesc_chatbot_flow', JSON.stringify(updated));
   };
 
   const updateBusinessHours = (config: Partial<BusinessHoursConfig>) => {
@@ -2452,6 +2564,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         checkTISessionValid,
         // Central de Atendimento WhatsApp & Chatbot
         whatsappConnection,
+        whatsappServerUrl,
+        updateWhatsappServerUrl,
         attendanceConversations,
         attendanceMessages,
         attendanceQueues,
