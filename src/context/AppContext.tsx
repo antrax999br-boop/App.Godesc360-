@@ -2188,7 +2188,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (res.ok) {
           const data = await res.json();
           if (data.messages && data.messages.length > 0) {
-            data.messages.forEach((incMsg: { id: string; phone: string; name: string; content: string; timestamp: string }) => {
+            data.messages.forEach((incMsg: { id: string; phone: string; jid?: string; name: string; content: string; timestamp: string }) => {
               const msgKey = incMsg.id || `${incMsg.phone}-${incMsg.timestamp}-${incMsg.content}`;
               if (processedMsgIds.current.has(msgKey)) return;
               processedMsgIds.current.add(msgKey);
@@ -2200,6 +2200,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               const rawPhone = incMsg.phone.replace(/\D/g, '');
               const convId = `conv-${rawPhone}`;
               const contactName = (incMsg.name && incMsg.name.trim()) ? incMsg.name.trim() : `+${rawPhone}`;
+              const contactJid = incMsg.jid || `${rawPhone}@s.whatsapp.net`;
               
               setAttendanceConversations(cPrev => {
                 const existing = cPrev.find(c => 
@@ -2214,6 +2215,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     if (c.id === existing.id) {
                       return {
                         ...c,
+                        contactJid: incMsg.jid || c.contactJid || contactJid,
                         contactName: (c.contactName && c.contactName !== c.contactPhone) ? c.contactName : contactName,
                         lastMessageText: incMsg.content,
                         lastMessageAt: timeStr,
@@ -2230,6 +2232,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     contactId: `cnt-${rawPhone}`,
                     contactName,
                     contactPhone: `+${rawPhone}`,
+                    contactJid,
                     status: 'BOT', // Inicia no estado BOT enquanto está na triagem do Chatbot
                     queueName: 'Triagem Automática',
                     lastMessageText: incMsg.content,
@@ -2291,7 +2294,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                       fetch(`${whatsappServerUrl}/api/send-message`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ toPhone: targetConv.contactPhone, text: botResult.replyMessage })
+                        body: JSON.stringify({ toPhone: targetConv.contactJid || targetConv.contactPhone, text: botResult.replyMessage })
                       }).catch(err => console.warn('Send bot reply failed:', err));
                     }
 
@@ -2383,7 +2386,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fetch(`${whatsappServerUrl}/api/send-message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ toPhone: conv.contactPhone, text: content })
+        body: JSON.stringify({ toPhone: conv.contactJid || conv.contactPhone, text: content })
       })
         .then(async res => {
           const data = await res.json().catch(() => ({}));

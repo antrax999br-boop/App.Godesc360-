@@ -70,6 +70,7 @@ export interface AttendanceConversation {
   contactId: string;
   contactName: string;
   contactPhone: string;
+  contactJid?: string;
   whatsappConnectionId?: string;
   queueId?: string;
   queueName?: string;

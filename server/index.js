@@ -153,6 +153,7 @@ async function startBaileys() {
           incomingQueue.push({
             id: msg.key.id || `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             phone: senderPhone,
+            jid: senderJid,
             name: displayName,
             content: text,
             timestamp: new Date(timestampNum * 1000).toISOString()
@@ -205,6 +206,12 @@ app.get('/api/sync-messages', (req, res) => {
 
 // Helper para obter JID válido do WhatsApp considerando 9º dígito BR
 async function resolveJid(toPhone) {
+  if (!toPhone) return null;
+
+  // Se já for o JID exato recebido do WhatsApp (ex: 5545999887766@s.whatsapp.net)
+  if (typeof toPhone === 'string' && toPhone.includes('@')) {
+    return toPhone;
+  }
   let clean = toPhone.replace(/\D/g, '');
   if (!clean) return null;
 
