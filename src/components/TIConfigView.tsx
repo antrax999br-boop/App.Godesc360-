@@ -116,7 +116,7 @@ export const TIConfigView: React.FC = () => {
   const [emailProvider, setEmailProvider] = useState<'godesc' | 'custom' | 'gmail'>('godesc');
   const [emailUser, setEmailUser] = useState('');
   const [emailPass, setEmailPass] = useState('');
-  const [emailFromName, setEmailFromName] = useState('GoDesc 360 Service Desk');
+  const [emailFromName, setEmailFromName] = useState('GoDesc');
   const [emailEnabled, setEmailEnabled] = useState(true);
   const [emailSmtpHost, setEmailSmtpHost] = useState('mail.desccloud.com.br');
   const [emailSmtpPort, setEmailSmtpPort] = useState<number>(587);
@@ -1926,11 +1926,11 @@ export const TIConfigView: React.FC = () => {
 
                     {/* Footer */}
                     <div className="bg-[#0e121b] border-t border-[#232d3f] p-6 text-center text-xs space-y-1">
-                      <p className="text-slate-400">Este é um e-mail automático gerado pelo sistema <strong className="text-white">GoDesc 360</strong></p>
+                      <p className="text-slate-400">Este é um e-mail automático gerado pelo sistema <strong className="text-white">GoDesc</strong></p>
                       <p className="text-slate-500 text-[11px]">Por favor, não responda diretamente a este e-mail.</p>
-                      <p className="text-slate-600 text-[10px] pt-1">© {new Date().getFullYear()} GoDesc 360. Todos os direitos reservados.</p>
+                      <p className="text-slate-600 text-[10px] pt-1">© {new Date().getFullYear()} GoDesc. Todos os direitos reservados.</p>
                       <div className="pt-3 flex items-center justify-center gap-2 text-[#45dfa4] font-bold text-sm">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/36px-WhatsApp.svg.png" alt="WhatsApp" className="w-5 h-5" />
+                        <img src="/whatsapp-icon.png" alt="WhatsApp" className="w-5 h-5" />
                         <span>3336-3233</span>
                       </div>
                     </div>

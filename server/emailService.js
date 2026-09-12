@@ -19,7 +19,7 @@ let emailConfig = {
   imapPort: 993,
   user: process.env.SMTP_USER || process.env.GMAIL_USER || '',
   pass: process.env.SMTP_PASS || process.env.GMAIL_APP_PASS || '',
-  fromName: 'GoDesc 360 Service Desk',
+  fromName: 'GoDesc',
   notifyOnCreate: true,
   notifyOnStatusChange: true,
   notifyOnMessage: true
@@ -129,6 +129,25 @@ function getLogoAttachment() {
   return null;
 }
 
+// Helper para localizar o ícone oficial do WhatsApp
+function getWhatsAppIconAttachment() {
+  const possiblePaths = [
+    path.join(__dirname, 'whatsapp-icon.png'),
+    path.join(__dirname, '../public/whatsapp-icon.png'),
+    path.join(__dirname, 'public/whatsapp-icon.png')
+  ];
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      return {
+        filename: 'whatsapp-icon.png',
+        path: p,
+        cid: 'whatsappicon'
+      };
+    }
+  }
+  return null;
+}
+
 // Template HTML de Alta Fidelidade (Card Escuro Premium com Contorno Branco Puro 100% compatível com Outlook e Webmail)
 function buildEmailTemplate({ title, subtitle, badgeText, badgeBg, highlightTitle, highlightBody, contentHtml, ticketInfo }) {
   const currentYear = new Date().getFullYear();
@@ -149,7 +168,7 @@ function buildEmailTemplate({ title, subtitle, badgeText, badgeBg, highlightTitl
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${title || 'GoDesc 360 Service Desk'}</title>
+  <title>${title || 'GoDesc'}</title>
   <!--[if mso]>
   <style type="text/css">
     body, table, td, p, a, span, h1, h2, h3 { font-family: Arial, Helvetica, sans-serif !important; }
@@ -320,21 +339,21 @@ function buildEmailTemplate({ title, subtitle, badgeText, badgeBg, highlightTitl
           <tr>
             <td align="center" bgcolor="#0e121b" style="background-color: #0e121b !important; padding: 26px 24px; border-top: 1px solid #232d3f; text-align: center;">
               <p style="margin: 0 0 5px 0; font-size: 12px; color: #8b949e !important; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
-                Este é um e-mail automático gerado pelo sistema <strong style="color: #ffffff !important;">GoDesc 360</strong>
+                Este é um e-mail automático gerado pelo sistema <strong style="color: #ffffff !important;">GoDesc</strong>
               </p>
               <p style="margin: 0 0 6px 0; font-size: 12px; color: #64748b !important; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
                 Por favor, não responda diretamente a este e-mail.
               </p>
               <p style="margin: 0 0 16px 0; font-size: 11px; color: #475569 !important; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
-                &copy; ${currentYear} GoDesc 360. Todos os direitos reservados.
+                &copy; ${currentYear} GoDesc. Todos os direitos reservados.
               </p>
 
-              <!-- WHATSAPP NUMBER -->
+              <!-- WHATSAPP NUMBER COM ICONE OFICIAL EMBUTIDO (CID) -->
               <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto;">
                 <tr>
-                  <td align="center" valign="middle" style="padding-right: 7px;">
+                  <td align="center" valign="middle" style="padding-right: 8px;">
                     <a href="https://wa.me/554733363233" target="_blank" style="text-decoration: none; display: inline-block;">
-                      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/36px-WhatsApp.svg.png" width="22" height="22" alt="WhatsApp" style="display: block; width: 22px; height: 22px; border: 0;" />
+                      <img src="cid:whatsappicon" onerror="this.src='https://raw.githubusercontent.com/antrax999br-boop/App.Godesc360-/main/public/whatsapp-icon.png'" alt="WhatsApp" width="22" height="22" style="display: block; width: 22px; height: 22px; border: 0;" />
                     </a>
                   </td>
                   <td align="center" valign="middle">
@@ -407,11 +426,13 @@ async function testConnection(customConfig, targetEmail) {
   const mailAttachments = [];
   const logoAtt = getLogoAttachment();
   if (logoAtt) mailAttachments.push(logoAtt);
+  const waAtt = getWhatsAppIconAttachment();
+  if (waAtt) mailAttachments.push(waAtt);
 
   const mailOptions = {
-    from: `"${cfg.fromName || 'GoDesc 360 Service Desk'}" <${cfg.user}>`,
+    from: `"${cfg.fromName || 'GoDesc'}" <${cfg.user}>`,
     to: recipient,
-    subject: `⏸️ [GoDesc 360] Teste de E-mail - Chamado Pausado #000007`,
+    subject: `⏸️ [GoDesc] Teste de E-mail - Chamado Pausado #000007`,
     html,
     attachments: mailAttachments
   };
@@ -553,6 +574,8 @@ async function sendTicketNotification({ to, actionType, ticket, technicianName, 
   const mailAttachments = [];
   const logoAtt = getLogoAttachment();
   if (logoAtt) mailAttachments.push(logoAtt);
+  const waAtt = getWhatsAppIconAttachment();
+  if (waAtt) mailAttachments.push(waAtt);
 
   if (attachments && Array.isArray(attachments)) {
     attachments.forEach((att, idx) => {
@@ -567,7 +590,7 @@ async function sendTicketNotification({ to, actionType, ticket, technicianName, 
 
   const transporter = createTransporter();
   const mailOptions = {
-    from: `"${emailConfig.fromName || 'GoDesc 360 Service Desk'}" <${emailConfig.user}>`,
+    from: `"${emailConfig.fromName || 'GoDesc'}" <${emailConfig.user}>`,
     to,
     subject: `${subjectPrefix} - ${ticket.title || ticket.subject || 'Suporte'}`,
     html,
