@@ -358,8 +358,16 @@ app.post('/api/email/config', (req, res) => {
 app.post('/api/email/test', async (req, res) => {
   const { user, pass, fromName, provider, smtpHost, smtpPort, smtpSecure, testRecipient } = req.body;
   try {
-    const customConfig = (user && pass) ? { user, pass, fromName, provider, smtpHost, smtpPort, smtpSecure } : null;
-    const result = await emailService.testConnection(customConfig, testRecipient);
+    const customConfig = {};
+    if (user) customConfig.user = user;
+    if (pass) customConfig.pass = pass;
+    if (fromName) customConfig.fromName = fromName;
+    if (provider) customConfig.provider = provider;
+    if (smtpHost) customConfig.smtpHost = smtpHost;
+    if (smtpPort) customConfig.smtpPort = smtpPort;
+    if (smtpSecure !== undefined) customConfig.smtpSecure = smtpSecure;
+
+    const result = await emailService.testConnection(Object.keys(customConfig).length > 0 ? customConfig : null, testRecipient);
     res.json(result);
   } catch (err) {
     console.error('Falha no teste de e-mail:', err);

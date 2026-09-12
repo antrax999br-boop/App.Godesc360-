@@ -198,7 +198,11 @@ function buildEmailTemplate({ title, subtitle, badgeText, badgeBg, contentHtml, 
 
 // Testa a conexão enviando um e-mail de verificação
 async function testConnection(customConfig, targetEmail) {
-  const cfg = customConfig || emailConfig;
+  const cfg = {
+    ...emailConfig,
+    ...(customConfig || {}),
+    pass: (customConfig && customConfig.pass) ? customConfig.pass : emailConfig.pass
+  };
   if (!cfg.user || !cfg.pass) {
     throw new Error('E-mail e Senha são obrigatórios para testar a conexão.');
   }

@@ -29,7 +29,8 @@ import {
   ExternalLink,
   HelpCircle,
   RefreshCw,
-  Sliders
+  Sliders,
+  Server
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -66,6 +67,8 @@ export const TIConfigView: React.FC = () => {
     companies,
     addCompany,
     deleteCompany,
+    whatsappServerUrl,
+    updateWhatsappServerUrl,
     getEmailConfig,
     saveEmailConfig,
     testEmailConnection
@@ -171,7 +174,7 @@ export const TIConfigView: React.FC = () => {
       } catch (e) {}
     };
     loadEmail();
-  }, []);
+  }, [whatsappServerUrl]);
 
   const handleSaveEmailConfig = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1290,6 +1293,50 @@ export const TIConfigView: React.FC = () => {
                     {hasStoredPassword && emailEnabled ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
                     <span>{hasStoredPassword && emailEnabled ? 'E-mail Configurado' : 'Requer Configuração'}</span>
                   </span>
+                </div>
+              </div>
+
+              {/* Status do Servidor Backend de Disparo */}
+              <div className="p-3.5 bg-[#141416] border border-[#27272a] rounded-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-2.5 h-2.5 rounded-full ${whatsappServerUrl.includes('localhost') ? 'bg-emerald-400 animate-pulse' : 'bg-blue-400'}`} />
+                  <Server className="w-4 h-4 text-[#45dfa4] shrink-0" />
+                  <div>
+                    <span className="text-[#8d90a0]">Servidor de Notificações / API: </span>
+                    <span className="font-mono text-white font-bold">{whatsappServerUrl}</span>
+                    {whatsappServerUrl.includes('onrender.com') && (
+                      <span className="ml-2 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[10px]">
+                        Nuvem (Render)
+                      </span>
+                    )}
+                    {whatsappServerUrl.includes('localhost') && (
+                      <span className="ml-2 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px]">
+                        Localhost (Ativo)
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {whatsappServerUrl !== 'http://localhost:10000' && (
+                    <button
+                      type="button"
+                      onClick={() => updateWhatsappServerUrl('http://localhost:10000')}
+                      className="px-2.5 py-1.5 bg-[#45dfa4]/15 hover:bg-[#45dfa4]/25 text-[#45dfa4] border border-[#45dfa4]/30 rounded-lg font-mono text-[11px] transition-colors flex items-center gap-1.5 cursor-pointer"
+                      title="Alternar para o servidor backend local na porta 10000"
+                    >
+                      💻 Conectar Localhost:10000
+                    </button>
+                  )}
+                  {whatsappServerUrl !== 'https://godesc360-whatsapp-api.onrender.com' && (
+                    <button
+                      type="button"
+                      onClick={() => updateWhatsappServerUrl('https://godesc360-whatsapp-api.onrender.com')}
+                      className="px-2.5 py-1.5 bg-[#27272a] hover:bg-[#323238] text-slate-300 border border-[#323238] rounded-lg font-mono text-[11px] transition-colors flex items-center gap-1.5 cursor-pointer"
+                      title="Alternar para o servidor remoto no Render"
+                    >
+                      ☁️ Conectar Servidor Nuvem
+                    </button>
+                  )}
                 </div>
               </div>
 

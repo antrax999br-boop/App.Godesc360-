@@ -2209,7 +2209,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const getEmailConfig = async () => {
     try {
       const res = await fetch(`${whatsappServerUrl}/api/email/config`);
-      if (res.ok) return await res.json();
+      const contentType = res.headers.get('content-type') || '';
+      if (res.ok && contentType.includes('application/json')) {
+        return await res.json();
+      }
     } catch (err) {
       console.warn('Erro ao buscar config de e-mail:', err);
     }
@@ -2223,9 +2226,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(configData)
       });
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const text = await res.text();
+        return { 
+          success: false, 
+          error: `O servidor (${whatsappServerUrl}) retornou status ${res.status}. Certifique-se de que a URL do backend está apontando para http://localhost:10000.` 
+        };
+      }
       return await res.json();
     } catch (err: any) {
-      return { success: false, error: err.message };
+      return { 
+        success: false, 
+        error: `Não foi possível conectar ao servidor backend em ${whatsappServerUrl}. Verifique se o servidor local está em execução.` 
+      };
     }
   };
 
@@ -2236,9 +2250,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...(customConfig || {}), testRecipient })
       });
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        return { 
+          success: false, 
+          error: `O servidor (${whatsappServerUrl}) retornou status ${res.status}. Certifique-se de que a URL do backend está apontando para http://localhost:10000.` 
+        };
+      }
       return await res.json();
     } catch (err: any) {
-      return { success: false, error: err.message };
+      return { 
+        success: false, 
+        error: `Não foi possível conectar ao servidor backend em ${whatsappServerUrl}. Verifique se o servidor local está em execução.` 
+      };
     }
   };
 
