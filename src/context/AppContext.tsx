@@ -1312,91 +1312,93 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateTicketStatus = (ticketId: string, status: Ticket['status'], technicianNote?: string) => {
     const nowFormatted = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    let updatedTicketObj: Ticket | null = null;
     
-    setTickets(prev =>
-      prev.map(tk => {
-        if (tk.id === ticketId) {
-          const updatedMessages = [...tk.messages];
-          if (technicianNote) {
-            updatedMessages.push({
-              id: `msg-${Date.now()}`,
-              sender: userSession.name || 'Técnico TI',
-              role: 'ti',
-              text: technicianNote,
-              timestamp: nowFormatted
-            });
-          }
-          updatedTicketObj = {
-            ...tk,
-            status,
-            updatedAt: `Hoje às ${nowFormatted}`,
-            messages: updatedMessages
-          };
-          return updatedTicketObj;
-        }
-        return tk;
-      })
-    );
+    // Localiza o ticket de forma síncrona no estado atual
+    const currentTicket = tickets.find(tk => tk.id === ticketId) || (selectedTicket?.id === ticketId ? selectedTicket : null);
+    
+    const currentMessages = currentTicket?.messages || [];
+    const updatedMessages = [...currentMessages];
+    if (technicianNote) {
+      updatedMessages.push({
+        id: `msg-${Date.now()}`,
+        sender: userSession.name || 'Técnico TI',
+        role: 'ti',
+        text: technicianNote,
+        timestamp: nowFormatted
+      });
+    }
 
-    setSelectedTicket(prev => {
-      if (prev && prev.id === ticketId) {
-        const updatedMessages = [...prev.messages];
-        if (technicianNote) {
-          updatedMessages.push({
-            id: `msg-${Date.now()}`,
-            sender: userSession.name || 'Técnico TI',
-            role: 'ti',
-            text: technicianNote,
-            timestamp: nowFormatted
-          });
-        }
-        return {
-          ...prev,
-          status,
-          updatedAt: `Hoje às ${nowFormatted}`,
-          messages: updatedMessages
-        };
-      }
-      return prev;
+    const updatedTicket: Ticket = currentTicket ? {
+      ...currentTicket,
+      status,
+      updatedAt: `Hoje às ${nowFormatted}`,
+      messages: updatedMessages
+    } : {
+      id: ticketId,
+      ticketNumber: `#${ticketId}`,
+      requesterName: 'Solicitante',
+      requesterEmail: '',
+      company: '',
+      machineName: '',
+      onlyMeOnComputer: true,
+      category: 'Geral',
+      subcategory: 'Geral',
+      priority: 'Média',
+      status,
+      title: 'Chamado',
+      description: '',
+      createdAt: `Hoje às ${nowFormatted}`,
+      updatedAt: `Hoje às ${nowFormatted}`,
+      attachments: [],
+      messages: updatedMessages
+    };
+
+    // Atualiza estados do React
+    setTickets(prev => prev.map(tk => (tk.id === ticketId ? updatedTicket : tk)));
+    setSelectedTicket(prev => (prev && prev.id === ticketId ? updatedTicket : prev));
+
+    // Salva no Supabase
+    supabase.from('tickets').update({
+      status: updatedTicket.status,
+      updated_at: updatedTicket.updatedAt,
+      messages: updatedTicket.messages
+    }).eq('id', ticketId).then(({ error }) => {
+      if (error) console.warn('Supabase status update error:', error);
     });
 
-    if (updatedTicketObj) {
-      const obj = updatedTicketObj as Ticket;
-      supabase.from('tickets').update({
-        status: obj.status,
-        updated_at: obj.updatedAt,
-        messages: obj.messages
-      }).eq('id', ticketId).then(({ error }) => {
-        if (error) console.warn('Supabase status update error:', error);
+    try {
+      const syncChannel = supabase.channel('ticket_sync_channel');
+      syncChannel.send({
+        type: 'broadcast',
+        event: 'ticket_updated',
+        payload: { ticket: updatedTicket }
       });
+    } catch (err) {
+      console.warn('Realtime broadcast ticket_updated failed:', err);
+    }
 
-      try {
-        const syncChannel = supabase.channel('ticket_sync_channel');
-        syncChannel.send({
-          type: 'broadcast',
-          event: 'ticket_updated',
-          payload: { ticket: obj }
-        });
-      } catch (err) {
-        console.warn('Realtime broadcast ticket_updated failed:', err);
-      }
+    // Identifica e-mail do solicitante de forma defensiva
+    const targetEmail = (
+      updatedTicket.requesterEmail || 
+      (updatedTicket.messages?.find((m: any) => (m as any).requesterEmail) as any)?.requesterEmail || 
+      (updatedTicket as any).client_email || 
+      ''
+    ).trim();
 
-      // Dispara E-mail automático para o solicitante com base no novo status
-      if (obj.requesterEmail && obj.requesterEmail.includes('@')) {
-        let actionType: 'STARTED' | 'PAUSED' | 'COMPLETED' | 'STATUS_CHANGED' = 'STATUS_CHANGED';
-        if (status === 'Em Atendimento') actionType = 'STARTED';
-        else if (status === 'Pendente') actionType = 'PAUSED';
-        else if (status === 'Resolvido' || status === 'Fechado') actionType = 'COMPLETED';
+    // Dispara E-mail automático para o solicitante com base no novo status
+    if (targetEmail && targetEmail.includes('@')) {
+      let actionType: 'STARTED' | 'PAUSED' | 'COMPLETED' | 'STATUS_CHANGED' = 'STATUS_CHANGED';
+      if (status === 'Em Atendimento') actionType = 'STARTED';
+      else if (status === 'Pendente') actionType = 'PAUSED';
+      else if (status === 'Resolvido' || status === 'Fechado') actionType = 'COMPLETED';
 
-        dispatchTicketEmail({
-          to: obj.requesterEmail,
-          actionType,
-          ticket: obj,
-          technicianName: userSession.name || 'Analista T.I.',
-          note: technicianNote
-        });
-      }
+      dispatchTicketEmail({
+        to: targetEmail,
+        actionType,
+        ticket: updatedTicket,
+        technicianName: userSession.name || 'Analista T.I.',
+        note: technicianNote
+      });
     }
   };
 
@@ -1487,69 +1489,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addTicketMessage = (ticketId: string, text: string, role: 'client' | 'ti', attachments?: TicketAttachment[]) => {
     const nowFormatted = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const currentTicket = tickets.find(tk => tk.id === ticketId) || (selectedTicket?.id === ticketId ? selectedTicket : null);
+
+    const senderName = role === 'client' 
+      ? (currentTicket?.requesterName || (userSession.isAuthenticated ? userSession.name || 'Solicitante' : 'Solicitante')) 
+      : (userSession.name || 'Técnico TI');
+
     const newMsg = {
       id: `msg-${Date.now()}`,
-      sender: role === 'client' ? (userSession.isAuthenticated ? userSession.name || 'Solicitante' : 'Solicitante') : (userSession.name || 'Técnico TI'),
+      sender: senderName,
       role,
       text,
       timestamp: nowFormatted,
       attachments: attachments && attachments.length > 0 ? attachments : undefined
     };
 
-    let updatedMessagesList: any[] = [];
-    let updatedAttachmentsList: TicketAttachment[] = [];
-    let updatedTimestampStr = `Hoje às ${nowFormatted}`;
-    let updatedTicketObj: Ticket | null = null;
+    const currentMessages = currentTicket?.messages || [];
+    const updatedMessagesList = [...currentMessages, newMsg];
+    const currentAttachments = currentTicket?.attachments || [];
+    const updatedAttachmentsList = attachments && attachments.length > 0 
+      ? [...currentAttachments, ...attachments] 
+      : currentAttachments;
+    const updatedTimestampStr = `Hoje às ${nowFormatted}`;
 
-    setTickets(prev =>
-      prev.map(tk => {
-        if (tk.id === ticketId) {
-          const senderName = role === 'client' ? tk.requesterName : (userSession.name || 'Técnico TI');
-          updatedMessagesList = [
-            ...tk.messages,
-            {
-              ...newMsg,
-              sender: senderName
-            }
-          ];
-          updatedAttachmentsList = attachments && attachments.length > 0
-            ? [...(tk.attachments || []), ...attachments]
-            : (tk.attachments || []);
+    const updatedTicket: Ticket = currentTicket ? {
+      ...currentTicket,
+      updatedAt: updatedTimestampStr,
+      attachments: updatedAttachmentsList,
+      messages: updatedMessagesList
+    } : {
+      id: ticketId,
+      ticketNumber: `#${ticketId}`,
+      requesterName: senderName,
+      requesterEmail: '',
+      company: '',
+      machineName: '',
+      onlyMeOnComputer: true,
+      category: 'Geral',
+      subcategory: 'Geral',
+      priority: 'Média',
+      status: 'Novo',
+      title: 'Chamado',
+      description: '',
+      createdAt: updatedTimestampStr,
+      updatedAt: updatedTimestampStr,
+      attachments: updatedAttachmentsList,
+      messages: updatedMessagesList
+    };
 
-          updatedTicketObj = {
-            ...tk,
-            updatedAt: updatedTimestampStr,
-            attachments: updatedAttachmentsList,
-            messages: updatedMessagesList
-          };
-          return updatedTicketObj;
-        }
-        return tk;
-      })
-    );
-
-    setSelectedTicket(prev => {
-      if (prev && prev.id === ticketId) {
-        const senderName = role === 'client' ? prev.requesterName : (userSession.name || 'Técnico TI');
-        const newAtts = attachments && attachments.length > 0
-          ? [...(prev.attachments || []), ...attachments]
-          : (prev.attachments || []);
-
-        return {
-          ...prev,
-          updatedAt: updatedTimestampStr,
-          attachments: newAtts,
-          messages: [
-            ...prev.messages,
-            {
-              ...newMsg,
-              sender: senderName
-            }
-          ]
-        };
-      }
-      return prev;
-    });
+    setTickets(prev => prev.map(tk => (tk.id === ticketId ? updatedTicket : tk)));
+    setSelectedTicket(prev => (prev && prev.id === ticketId ? updatedTicket : prev));
 
     supabase.from('tickets').update({
       updated_at: updatedTimestampStr,
@@ -1558,29 +1547,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (error) console.warn('Supabase add message error:', error);
     });
 
-    if (updatedTicketObj) {
-      try {
-        const syncChannel = supabase.channel('ticket_sync_channel');
-        syncChannel.send({
-          type: 'broadcast',
-          event: 'ticket_updated',
-          payload: { ticket: updatedTicketObj }
-        });
-      } catch (err) {
-        console.warn('Realtime broadcast ticket_updated failed:', err);
-      }
+    try {
+      const syncChannel = supabase.channel('ticket_sync_channel');
+      syncChannel.send({
+        type: 'broadcast',
+        event: 'ticket_updated',
+        payload: { ticket: updatedTicket }
+      });
+    } catch (err) {
+      console.warn('Realtime broadcast ticket_updated failed:', err);
+    }
 
-      // Se a resposta ou anexo foi enviado pelo técnico de TI, notifica o cliente por e-mail
-      if (role === 'ti' && updatedTicketObj.requesterEmail && updatedTicketObj.requesterEmail.includes('@')) {
-        dispatchTicketEmail({
-          to: updatedTicketObj.requesterEmail,
-          actionType: 'MESSAGE_ADDED',
-          ticket: updatedTicketObj,
-          technicianName: userSession.name || 'Analista T.I.',
-          messageText: text,
-          attachments
-        });
-      }
+    const targetEmail = (
+      updatedTicket.requesterEmail || 
+      (updatedTicket.messages?.find((m: any) => (m as any).requesterEmail) as any)?.requesterEmail || 
+      (updatedTicket as any).client_email || 
+      ''
+    ).trim();
+
+    // Se a resposta ou anexo foi enviado pelo técnico de TI, notifica o cliente por e-mail
+    if (role === 'ti' && targetEmail && targetEmail.includes('@')) {
+      dispatchTicketEmail({
+        to: targetEmail,
+        actionType: 'MESSAGE_ADDED',
+        ticket: updatedTicket,
+        technicianName: userSession.name || 'Analista T.I.',
+        messageText: text,
+        attachments
+      });
     }
   };
 
@@ -2201,14 +2195,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     attachments?: TicketAttachment[];
   }) => {
     if (!params.to || !params.to.includes('@')) return;
-    try {
-      await fetch(`${whatsappServerUrl}/api/email/notify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params)
-      });
-    } catch (err) {
-      console.warn('Falha no envio de notificação por e-mail:', err);
+    const tryUrls = [whatsappServerUrl];
+    if (whatsappServerUrl !== 'http://localhost:10000') {
+      tryUrls.push('http://localhost:10000');
+    }
+
+    for (const url of tryUrls) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
+        const res = await fetch(`${url}/api/email/notify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          console.log(`📧 E-mail [${params.actionType}] enviado com sucesso para ${params.to} via ${url}`);
+          return;
+        }
+      } catch (err) {
+        console.warn(`Falha no envio de notificação por e-mail via ${url}:`, err);
+      }
     }
   };
 

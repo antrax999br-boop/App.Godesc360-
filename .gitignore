@@ -6,3 +6,7 @@ coverage/
 *.log
 .env*
 !.env.example
+server/email_config.json
+server/baileys_auth_info/
+baileys_auth_info/
+
