@@ -226,12 +226,18 @@ function buildEmailTemplate({ title, subtitle, badgeText, badgeBg, highlightTitl
           <tr>
             <td bgcolor="#141824" style="background-color: #141824 !important; padding: 28px 26px;">
 
-              <!-- BADGE PILL DE STATUS -->
+              <!-- BADGE PILL DE STATUS (Compatível com Outlook Classic - sem vazamento de fundo branco) -->
               ${badgeText ? `
-              <table border="0" cellpadding="0" cellspacing="0" style="margin: 0 0 16px 0;">
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#141824" style="width: 100%; background-color: #141824 !important; margin: 0 0 16px 0;">
                 <tr>
-                  <td bgcolor="${badgeBg || '#f97316'}" style="background-color: ${badgeBg || '#f97316'} !important; border-radius: 20px; padding: 6px 16px; color: #ffffff !important; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
-                    ${badgeText}
+                  <td align="left" bgcolor="#141824" style="background-color: #141824 !important; padding: 0;">
+                    <table border="0" cellpadding="0" cellspacing="0" bgcolor="${badgeBg || '#f97316'}" style="background-color: ${badgeBg || '#f97316'} !important; border-radius: 20px;">
+                      <tr>
+                        <td bgcolor="${badgeBg || '#f97316'}" style="background-color: ${badgeBg || '#f97316'} !important; border-radius: 20px; padding: 6px 16px; color: #ffffff !important; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; mso-line-height-rule: exactly; line-height: 14px;">
+                          ${badgeText}
+                        </td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>
