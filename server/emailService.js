@@ -109,88 +109,205 @@ function getStatusColor(status) {
   }
 }
 
-// Template HTML moderno e responsivo
+// Helper para localizar o arquivo de logotipo oficial
+function getLogoAttachment() {
+  const possiblePaths = [
+    path.join(__dirname, 'logo-geral.png'),
+    path.join(__dirname, '../public/logo-geral.png'),
+    path.join(__dirname, 'public/logo-geral.png'),
+    path.join(__dirname, '../Logo/logo geral.png')
+  ];
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      return {
+        filename: 'logo-godesc.png',
+        path: p,
+        cid: 'godesclogo'
+      };
+    }
+  }
+  return null;
+}
+
+// Template HTML de Alta Fidelidade (Dark Theme Black 100% compatível com Outlook, Apple Mail e Gmail)
 function buildEmailTemplate({ title, subtitle, badgeText, badgeBg, contentHtml, ticketInfo }) {
   const currentYear = new Date().getFullYear();
+  const remoteLogoFallback = 'https://raw.githubusercontent.com/antrax999br-boop/App.Godesc360-/main/public/logo-geral.png';
 
   return `
-<!DOCTYPE html>
-<html lang="pt-BR">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark only" />
+  <meta name="supported-color-schemes" content="dark only" />
   <title>${title}</title>
-  <style>
-    body { margin: 0; padding: 0; background-color: #0e1117; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #e2e8f0; }
-    .container { max-width: 600px; margin: 20px auto; background-color: #161b22; border-radius: 12px; border: 1px solid #30363d; overflow: hidden; }
-    .header { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); padding: 24px; text-align: center; border-bottom: 1px solid #30363d; }
-    .header h1 { margin: 0; font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px; }
-    .header p { margin: 6px 0 0 0; font-size: 13px; color: #94a3b8; font-family: monospace; }
-    .body { padding: 28px 24px; }
-    .badge { display: inline-block; padding: 5px 12px; border-radius: 9999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; background-color: ${badgeBg || '#45dfa4'}; color: #ffffff; }
-    .headline { font-size: 18px; font-weight: 700; color: #ffffff; margin: 0 0 8px 0; }
-    .subheadline { font-size: 14px; color: #94a3b8; margin: 0 0 20px 0; line-height: 1.5; }
-    .card-info { background-color: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 16px; margin: 20px 0; }
-    .info-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #21262d; font-size: 13px; }
-    .info-row:last-child { border-bottom: none; }
-    .info-label { color: #8b949e; font-weight: 500; }
-    .info-value { color: #f0f6fc; font-weight: 600; text-align: right; }
-    .message-box { background-color: #1c2128; border-left: 4px solid #45dfa4; border-radius: 0 8px 8px 0; padding: 16px; margin: 20px 0; font-size: 14px; line-height: 1.6; color: #e6edf3; }
-    .footer { background-color: #0d1117; padding: 20px; text-align: center; border-top: 1px solid #21262d; font-size: 12px; color: #8b949e; line-height: 1.5; }
-    .footer a { color: #45dfa4; text-decoration: none; }
+  <!--[if mso]>
+  <style type="text/css">
+    body, table, td, p, a, span { font-family: Arial, Helvetica, sans-serif !important; }
+  </style>
+  <![endif]-->
+  <style type="text/css">
+    :root { color-scheme: dark only; supported-color-schemes: dark only; }
+    body { margin: 0; padding: 0; width: 100% !important; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; background-color: #06080d !important; }
+    table { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { border: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
   </style>
 </head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>GoDesc 360 Service Desk</h1>
-      <p>CENTRAL DE SUPORTE E ATENDIMENTO T.I.</p>
-    </div>
+<body bgcolor="#06080d" style="margin: 0; padding: 0; background-color: #06080d !important; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
 
-    <div class="body">
-      ${badgeText ? `<div class="badge">${badgeText}</div>` : ''}
-      <h2 class="headline">${title}</h2>
-      <p class="subheadline">${subtitle}</p>
+  <!-- Outer Table Wrapper (Fundo Preto Total) -->
+  <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#06080d" style="width: 100%; background-color: #06080d !important; margin: 0; padding: 24px 0;">
+    <tr>
+      <td align="center" bgcolor="#06080d" style="background-color: #06080d !important; padding: 0 12px;">
+        
+        <!-- Main Container Card (Fundo Escuro Premium) -->
+        <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#0f131a" style="max-width: 600px; width: 100%; background-color: #0f131a !important; border-radius: 12px; border: 1px solid #232938; overflow: hidden;">
+          
+          <!-- HEADER COM A LOGO OFICIAL DA GODESC -->
+          <tr>
+            <td align="center" bgcolor="#0a0d13" style="background-color: #0a0d13 !important; padding: 28px 24px 22px 24px; border-bottom: 1px solid #232938; text-align: center;">
+              <table border="0" cellpadding="0" cellspacing="0" align="center">
+                <tr>
+                  <td align="center">
+                    <a href="https://godesc.com.br" target="_blank" style="text-decoration: none; display: inline-block;">
+                      <img src="cid:godesclogo" onerror="this.src='${remoteLogoFallback}'" alt="GoDesc" width="180" style="display: block; width: 180px; max-width: 180px; height: auto; border: 0; margin: 0 auto;" />
+                    </a>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding-top: 10px;">
+                    <span style="font-size: 11px; font-weight: 700; color: #45dfa4; letter-spacing: 1.5px; text-transform: uppercase; font-family: monospace;">
+                      CENTRAL DE SUPORTE E ATENDIMENTO T.I.
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-      ${contentHtml || ''}
+          <!-- BODY CONTENT -->
+          <tr>
+            <td bgcolor="#0f131a" style="background-color: #0f131a !important; padding: 28px 24px;">
 
-      ${ticketInfo ? `
-      <div class="card-info">
-        <div class="info-row">
-          <span class="info-label">Número do Chamado:</span>
-          <span class="info-value" style="color: #45dfa4; font-family: monospace;">${ticketInfo.ticketNumber || '#000000'}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Assunto / Título:</span>
-          <span class="info-value">${ticketInfo.title || ticketInfo.subject || 'Suporte'}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Categoria:</span>
-          <span class="info-value">${ticketInfo.category || 'Geral'}${ticketInfo.subcategory ? ` > ${ticketInfo.subcategory}` : ''}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Prioridade:</span>
-          <span class="info-value">${ticketInfo.priority || 'Média'}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Solicitante:</span>
-          <span class="info-value">${ticketInfo.requesterName || 'Cliente'}</span>
-        </div>
-        ${ticketInfo.assignedTo ? `
-        <div class="info-row">
-          <span class="info-label">Técnico Responsável:</span>
-          <span class="info-value">${ticketInfo.assignedTo}</span>
-        </div>` : ''}
-      </div>
-      ` : ''}
-    </div>
+              <!-- BADGE DE STATUS -->
+              ${badgeText ? `
+              <table border="0" cellpadding="0" cellspacing="0" style="margin-bottom: 16px;">
+                <tr>
+                  <td bgcolor="${badgeBg || '#45dfa4'}" style="background-color: ${badgeBg || '#45dfa4'} !important; border-radius: 20px; padding: 5px 14px; color: #ffffff !important; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                    ${badgeText}
+                  </td>
+                </tr>
+              </table>
+              ` : ''}
 
-    <div class="footer">
-      <p>Este é um e-mail automático gerado pelo sistema <strong>GoDesc 360 Service Desk</strong>.</p>
-      <p>Por favor, não responda diretamente a este e-mail.</p>
-      <p style="margin-top: 10px; color: #6e7681;">&copy; ${currentYear} GoDesc 360. Todos os direitos reservados.</p>
-    </div>
-  </div>
+              <!-- TITULO E SUBTITULO -->
+              <h2 style="margin: 0 0 8px 0; font-size: 20px; font-weight: 700; color: #ffffff !important; line-height: 1.3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                ${title}
+              </h2>
+              <p style="margin: 0 0 20px 0; font-size: 14px; color: #94a3b8 !important; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                ${subtitle}
+              </p>
+
+              <!-- CAIXA DE MENSAGEM / NOTA / CONTEUDO (Com barra lateral colorida) -->
+              ${contentHtml ? `
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#151a24" style="background-color: #151a24 !important; border: 1px solid #232938; border-radius: 8px; margin: 18px 0; overflow: hidden;">
+                <tr>
+                  <td width="4" bgcolor="${badgeBg || '#45dfa4'}" style="background-color: ${badgeBg || '#45dfa4'} !important; width: 4px; font-size: 1px; line-height: 1px;">&nbsp;</td>
+                  <td bgcolor="#151a24" style="background-color: #151a24 !important; padding: 14px 18px; color: #e2e8f0 !important; font-size: 13px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                    ${contentHtml}
+                  </td>
+                </tr>
+              </table>
+              ` : ''}
+
+              <!-- TABELA DE DETALHES DO CHAMADO (Totalmente compatível com Outlook) -->
+              ${ticketInfo ? `
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#07090e" style="background-color: #07090e !important; border: 1px solid #1f2533; border-radius: 8px; margin: 20px 0;">
+                <tr>
+                  <td bgcolor="#07090e" style="background-color: #07090e !important; padding: 8px 16px;">
+                    <table width="100%" border="0" cellpadding="7" cellspacing="0">
+                      <tr>
+                        <td style="color: #8b949e !important; font-size: 13px; font-weight: 500; border-bottom: 1px solid #1a202c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                          Número do Chamado:
+                        </td>
+                        <td align="right" style="color: #45dfa4 !important; font-size: 14px; font-weight: 700; font-family: monospace; border-bottom: 1px solid #1a202c;">
+                          ${ticketInfo.ticketNumber || '#000000'}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="color: #8b949e !important; font-size: 13px; font-weight: 500; border-bottom: 1px solid #1a202c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                          Assunto / Título:
+                        </td>
+                        <td align="right" style="color: #ffffff !important; font-size: 13px; font-weight: 600; border-bottom: 1px solid #1a202c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                          ${ticketInfo.title || ticketInfo.subject || 'Suporte'}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="color: #8b949e !important; font-size: 13px; font-weight: 500; border-bottom: 1px solid #1a202c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                          Categoria:
+                        </td>
+                        <td align="right" style="color: #ffffff !important; font-size: 13px; font-weight: 600; border-bottom: 1px solid #1a202c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                          ${ticketInfo.category || 'Geral'}${ticketInfo.subcategory ? ` &gt; ${ticketInfo.subcategory}` : ''}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="color: #8b949e !important; font-size: 13px; font-weight: 500; border-bottom: 1px solid #1a202c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                          Prioridade:
+                        </td>
+                        <td align="right" style="color: #ffffff !important; font-size: 13px; font-weight: 600; border-bottom: 1px solid #1a202c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                          ${ticketInfo.priority || 'Média'}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="color: #8b949e !important; font-size: 13px; font-weight: 500; ${ticketInfo.assignedTo ? 'border-bottom: 1px solid #1a202c;' : ''} font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                          Solicitante:
+                        </td>
+                        <td align="right" style="color: #ffffff !important; font-size: 13px; font-weight: 600; ${ticketInfo.assignedTo ? 'border-bottom: 1px solid #1a202c;' : ''} font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                          ${ticketInfo.requesterName || 'Cliente'}
+                        </td>
+                      </tr>
+                      ${ticketInfo.assignedTo ? `
+                      <tr>
+                        <td style="color: #8b949e !important; font-size: 13px; font-weight: 500; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                          Técnico Responsável:
+                        </td>
+                        <td align="right" style="color: #ffffff !important; font-size: 13px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                          ${ticketInfo.assignedTo}
+                        </td>
+                      </tr>
+                      ` : ''}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              ` : ''}
+
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td align="center" bgcolor="#080a10" style="background-color: #080a10 !important; padding: 22px 24px; border-top: 1px solid #1c2230; text-align: center;">
+              <p style="margin: 0; font-size: 12px; color: #8b949e !important; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                Este é um e-mail automático gerado pelo sistema <strong style="color: #ffffff !important;">GoDesc 360 Service Desk</strong>.
+              </p>
+              <p style="margin: 4px 0 0 0; font-size: 12px; color: #6e7681 !important; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                Por favor, não responda diretamente a este e-mail.
+              </p>
+              <p style="margin: 10px 0 0 0; font-size: 11px; color: #4b5563 !important; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                &copy; ${currentYear} GoDesc 360. Todos os direitos reservados.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
 </body>
 </html>
 `;
@@ -223,19 +340,22 @@ async function testConnection(customConfig, targetEmail) {
     badgeText: 'INTEGRAÇÃO ATIVA',
     badgeBg: '#10b981',
     contentHtml: `
-      <div class="message-box" style="border-left-color: #10b981;">
-        <p style="margin: 0; font-weight: 600;">Autenticação Concluída com Sucesso!</p>
-        <p style="margin: 8px 0 0 0;">O teste de autenticação SMTP com o servidor <strong>${hostDisplay}</strong> foi concluído com êxito utilizando a conta <strong>${cfg.user}</strong>.</p>
-        <p style="margin: 8px 0 0 0; font-size: 13px; color: #94a3b8;">A partir de agora, os seus clientes serão notificados por e-mail automaticamente a cada abertura, mudança de status e resposta nos chamados através do seu e-mail corporativo.</p>
-      </div>
+      <p style="margin: 0; font-weight: 700; color: #ffffff;">Autenticação Concluída com Sucesso!</p>
+      <p style="margin: 8px 0 0 0; color: #c3c6d7;">O teste de autenticação SMTP com o servidor <strong style="color: #45dfa4;">${hostDisplay}</strong> foi concluído com êxito utilizando a conta <strong style="color: #ffffff;">${cfg.user}</strong>.</p>
+      <p style="margin: 8px 0 0 0; font-size: 13px; color: #8b949e;">A partir de agora, os seus clientes serão notificados por e-mail automaticamente a cada abertura, mudança de status e resposta nos chamados através do seu e-mail corporativo.</p>
     `
   });
+
+  const mailAttachments = [];
+  const logoAtt = getLogoAttachment();
+  if (logoAtt) mailAttachments.push(logoAtt);
 
   const mailOptions = {
     from: `"${cfg.fromName || 'GoDesc 360 Service Desk'}" <${cfg.user}>`,
     to: recipient,
     subject: `🧪 [GoDesc 360] Teste de Conexão SMTP Realizado com Sucesso (${providerLabel})`,
-    html
+    html,
+    attachments: mailAttachments
   };
 
   const info = await transporter.sendMail(mailOptions);
@@ -395,12 +515,28 @@ async function sendTicketNotification({ to, actionType, ticket, technicianName, 
     ticketInfo: ticket
   });
 
+  const mailAttachments = [];
+  const logoAtt = getLogoAttachment();
+  if (logoAtt) mailAttachments.push(logoAtt);
+
+  if (attachments && Array.isArray(attachments)) {
+    attachments.forEach((att, idx) => {
+      if (att.url && (att.url.startsWith('http://') || att.url.startsWith('https://'))) {
+        mailAttachments.push({
+          filename: att.name || `anexo-${idx + 1}`,
+          path: att.url
+        });
+      }
+    });
+  }
+
   const transporter = createTransporter();
   const mailOptions = {
     from: `"${emailConfig.fromName || 'GoDesc 360 Service Desk'}" <${emailConfig.user}>`,
     to,
     subject: `${subjectPrefix} - ${ticket.title || ticket.subject || 'Suporte'}`,
-    html
+    html,
+    attachments: mailAttachments
   };
 
   try {
