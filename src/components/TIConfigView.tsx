@@ -30,7 +30,8 @@ import {
   HelpCircle,
   RefreshCw,
   Sliders,
-  Server
+  Server,
+  Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -130,6 +131,8 @@ export const TIConfigView: React.FC = () => {
   const [emailTesting, setEmailTesting] = useState(false);
   const [emailTestStatus, setEmailTestStatus] = useState<{ success?: boolean; message?: string } | null>(null);
   const [emailSaveStatus, setEmailSaveStatus] = useState<string | null>(null);
+  const [serverOnline, setServerOnline] = useState<boolean | null>(null);
+  const [previewStatus, setPreviewStatus] = useState<'PAUSED' | 'STARTED' | 'CREATED' | 'COMPLETED'>('PAUSED');
 
   // Ao mudar provedor, preenche valores padrão do servidor
   const handleProviderChange = (prov: 'godesc' | 'custom' | 'gmail') => {
@@ -150,12 +153,15 @@ export const TIConfigView: React.FC = () => {
     }
   };
 
-  // Carrega configurações de e-mail do servidor na inicialização
+  // Carrega configurações de e-mail do servidor ou do cache local na inicialização
   React.useEffect(() => {
+    let isCancelled = false;
     const loadEmail = async () => {
+      // 1. Carrega imediatamente do cache local para não perder nenhuma informação na tela
       try {
-        const cfg = await getEmailConfig();
-        if (cfg) {
+        const cached = localStorage.getItem('godesc_cached_email_config');
+        if (cached) {
+          const cfg = JSON.parse(cached);
           if (cfg.provider) setEmailProvider(cfg.provider as 'godesc' | 'custom' | 'gmail');
           if (cfg.user) setEmailUser(cfg.user);
           if (cfg.fromName) setEmailFromName(cfg.fromName);
@@ -168,12 +174,44 @@ export const TIConfigView: React.FC = () => {
           if (cfg.notifyOnCreate !== undefined) setNotifyOnCreate(cfg.notifyOnCreate);
           if (cfg.notifyOnStatusChange !== undefined) setNotifyOnStatusChange(cfg.notifyOnStatusChange);
           if (cfg.notifyOnMessage !== undefined) setNotifyOnMessage(cfg.notifyOnMessage);
-          if (cfg.hasPassword) setHasStoredPassword(true);
+          if (cfg.hasPassword || cfg.pass) setHasStoredPassword(true);
           if (cfg.user) setTestRecipientEmail(cfg.user);
         }
       } catch (e) {}
+
+      // 2. Verifica conectividade com a API
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const pingRes = await fetch(`${whatsappServerUrl}/api/email/config`, { signal: controller.signal }).catch(() => null);
+        clearTimeout(timeoutId);
+        if (!isCancelled) {
+          setServerOnline(!!pingRes && pingRes.ok);
+        }
+
+        const cfg = await getEmailConfig();
+        if (cfg && !isCancelled) {
+          if (cfg.provider) setEmailProvider(cfg.provider as 'godesc' | 'custom' | 'gmail');
+          if (cfg.user) setEmailUser(cfg.user);
+          if (cfg.fromName) setEmailFromName(cfg.fromName);
+          if (cfg.enabled !== undefined) setEmailEnabled(cfg.enabled);
+          if (cfg.smtpHost) setEmailSmtpHost(cfg.smtpHost);
+          if (cfg.smtpPort) setEmailSmtpPort(cfg.smtpPort);
+          if (cfg.smtpSecure !== undefined) setEmailSmtpSecure(cfg.smtpSecure);
+          if (cfg.imapHost) setEmailImapHost(cfg.imapHost);
+          if (cfg.imapPort) setEmailImapPort(cfg.imapPort);
+          if (cfg.notifyOnCreate !== undefined) setNotifyOnCreate(cfg.notifyOnCreate);
+          if (cfg.notifyOnStatusChange !== undefined) setNotifyOnStatusChange(cfg.notifyOnStatusChange);
+          if (cfg.notifyOnMessage !== undefined) setNotifyOnMessage(cfg.notifyOnMessage);
+          if (cfg.hasPassword || cfg.pass) setHasStoredPassword(true);
+          if (cfg.user) setTestRecipientEmail(cfg.user);
+        }
+      } catch (e) {
+        if (!isCancelled) setServerOnline(false);
+      }
     };
     loadEmail();
+    return () => { isCancelled = true; };
   }, [whatsappServerUrl]);
 
   const handleSaveEmailConfig = async (e: React.FormEvent) => {
@@ -1311,47 +1349,74 @@ export const TIConfigView: React.FC = () => {
               </div>
 
               {/* Status do Servidor Backend de Disparo */}
-              <div className="p-3.5 bg-[#141416] border border-[#27272a] rounded-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2.5">
-                  <div className={`w-2.5 h-2.5 rounded-full ${whatsappServerUrl.includes('localhost') ? 'bg-emerald-400 animate-pulse' : 'bg-blue-400'}`} />
-                  <Server className="w-4 h-4 text-[#45dfa4] shrink-0" />
-                  <div>
-                    <span className="text-[#8d90a0]">Servidor de Notificações / API: </span>
-                    <span className="font-mono text-white font-bold">{whatsappServerUrl}</span>
-                    {whatsappServerUrl.includes('onrender.com') && (
-                      <span className="ml-2 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[10px]">
-                        Nuvem (Render)
-                      </span>
+              <div className="p-3.5 bg-[#141416] border border-[#27272a] rounded-xl flex flex-col gap-2.5 text-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-2.5 h-2.5 rounded-full ${serverOnline === true ? 'bg-emerald-400 animate-pulse' : serverOnline === false ? 'bg-rose-500' : 'bg-amber-400'}`} />
+                    <Server className="w-4 h-4 text-[#45dfa4] shrink-0" />
+                    <div>
+                      <span className="text-[#8d90a0]">Servidor de Notificações / API: </span>
+                      <span className="font-mono text-white font-bold">{whatsappServerUrl}</span>
+                      {whatsappServerUrl.includes('onrender.com') && (
+                        <span className="ml-2 px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/30 text-[10px]">
+                          Nuvem (Render)
+                        </span>
+                      )}
+                      {whatsappServerUrl.includes('localhost') && (
+                        <span className="ml-2 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px]">
+                          Localhost:10000
+                        </span>
+                      )}
+                      {serverOnline === true && (
+                        <span className="ml-1.5 px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                          ● Online
+                        </span>
+                      )}
+                      {serverOnline === false && (
+                        <span className="ml-1.5 px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-400 border border-rose-500/30 text-[10px] font-bold">
+                          ✕ Desconectado
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {whatsappServerUrl !== 'http://localhost:10000' && (
+                      <button
+                        type="button"
+                        onClick={() => updateWhatsappServerUrl('http://localhost:10000')}
+                        className="px-2.5 py-1.5 bg-[#45dfa4]/15 hover:bg-[#45dfa4]/25 text-[#45dfa4] border border-[#45dfa4]/30 rounded-lg font-mono text-[11px] transition-colors flex items-center gap-1.5 cursor-pointer"
+                        title="Alternar para o servidor backend local na porta 10000"
+                      >
+                        💻 Conectar Localhost:10000
+                      </button>
                     )}
-                    {whatsappServerUrl.includes('localhost') && (
-                      <span className="ml-2 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px]">
-                        Localhost (Ativo)
-                      </span>
+                    {whatsappServerUrl !== 'https://godesc360-whatsapp-api.onrender.com' && (
+                      <button
+                        type="button"
+                        onClick={() => updateWhatsappServerUrl('https://godesc360-whatsapp-api.onrender.com')}
+                        className="px-2.5 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 rounded-lg font-mono text-[11px] transition-colors flex items-center gap-1.5 cursor-pointer"
+                        title="Alternar para o servidor remoto no Render"
+                      >
+                        ☁️ Conectar Servidor Nuvem
+                      </button>
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {whatsappServerUrl !== 'http://localhost:10000' && (
-                    <button
-                      type="button"
-                      onClick={() => updateWhatsappServerUrl('http://localhost:10000')}
-                      className="px-2.5 py-1.5 bg-[#45dfa4]/15 hover:bg-[#45dfa4]/25 text-[#45dfa4] border border-[#45dfa4]/30 rounded-lg font-mono text-[11px] transition-colors flex items-center gap-1.5 cursor-pointer"
-                      title="Alternar para o servidor backend local na porta 10000"
-                    >
-                      💻 Conectar Localhost:10000
-                    </button>
-                  )}
-                  {whatsappServerUrl !== 'https://godesc360-whatsapp-api.onrender.com' && (
+
+                {serverOnline === false && whatsappServerUrl.includes('localhost') && (
+                  <div className="p-2.5 bg-rose-500/10 border border-rose-500/25 rounded-lg text-rose-300 text-[11px] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <span>
+                      ⚠️ O servidor local não está respondendo. Como o sistema foi reiniciado, execute o arquivo <strong>INICIAR_SERVIDOR_LOCAL.bat</strong> ou clique para usar o servidor em nuvem.
+                    </span>
                     <button
                       type="button"
                       onClick={() => updateWhatsappServerUrl('https://godesc360-whatsapp-api.onrender.com')}
-                      className="px-2.5 py-1.5 bg-[#27272a] hover:bg-[#323238] text-slate-300 border border-[#323238] rounded-lg font-mono text-[11px] transition-colors flex items-center gap-1.5 cursor-pointer"
-                      title="Alternar para o servidor remoto no Render"
+                      className="px-2.5 py-1 bg-rose-500/25 hover:bg-rose-500/40 text-rose-200 border border-rose-500/40 rounded text-[11px] font-bold shrink-0 self-start sm:self-auto cursor-pointer"
                     >
-                      ☁️ Conectar Servidor Nuvem
+                      ☁️ Conectar Servidor Nuvem Agora
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* Seletor de Provedor */}
@@ -1729,6 +1794,148 @@ export const TIConfigView: React.FC = () => {
                     <span className="leading-relaxed">{emailTestStatus.message}</span>
                   </div>
                 )}
+              </div>
+
+              {/* Pré-visualização do Modelo de E-mail (Outlook & Webmail) */}
+              <div className="bg-[#181c22] border border-[#2A2F3A] rounded-xl p-5 space-y-4 text-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#2A2F3A]">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Eye className="w-4 h-4 text-[#45dfa4]" />
+                      <span>Modelo de E-mail para Clientes (Outlook & Webmail)</span>
+                    </h3>
+                    <p className="text-[#8d90a0] text-[11px] mt-0.5">
+                      Visualização de alta fidelidade com contorno branco e card central dark exclusivo GoDesc.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-[#111827] p-1 rounded-lg border border-[#2A2F3A] self-start sm:self-auto">
+                    {(['PAUSED', 'STARTED', 'CREATED', 'COMPLETED'] as const).map(st => (
+                      <button
+                        key={st}
+                        type="button"
+                        onClick={() => setPreviewStatus(st)}
+                        className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${
+                          previewStatus === st
+                            ? 'bg-[#45dfa4] text-gray-950 shadow'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {st === 'PAUSED' ? 'Pausado' : st === 'STARTED' ? 'Em Atendimento' : st === 'CREATED' ? 'Aberto' : 'Concluído'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Container Branco Externo (Contorno Branco dando destaque ao card) */}
+                <div className="bg-white rounded-2xl p-4 sm:p-8 shadow-inner overflow-x-auto">
+                  {/* Card Central Dark */}
+                  <div className="max-w-[560px] mx-auto bg-[#141824] rounded-2xl border border-[#232d3f] overflow-hidden shadow-2xl text-slate-200 font-sans">
+                    {/* Header */}
+                    <div className="bg-[#0e121b] border-b border-[#232d3f] p-6 text-center">
+                      <div className="flex justify-center mb-2">
+                        <img src="/logo-geral.png" alt="GoDesc" className="h-10 object-contain mx-auto" onError={(e: any) => { e.currentTarget.style.display = 'none'; }} />
+                      </div>
+                      <div className="text-[11px] font-bold text-[#45dfa4] tracking-widest uppercase">
+                        CENTRAL DE SUPORTE E ATENDIMENTO T.I.
+                      </div>
+                    </div>
+
+                    {/* Body */}
+                    <div className="p-6 space-y-5">
+                      {/* Badge Pill */}
+                      <div>
+                        <span className={`inline-block px-4 py-1.5 rounded-full text-[11px] font-extrabold uppercase tracking-wider text-white shadow-sm ${
+                          previewStatus === 'PAUSED' ? 'bg-[#f97316]' :
+                          previewStatus === 'STARTED' ? 'bg-[#f59e0b]' :
+                          previewStatus === 'CREATED' ? 'bg-[#2563eb]' : 'bg-[#10b981]'
+                        }`}>
+                          {previewStatus === 'PAUSED' ? 'CHAMADO PAUSADO' :
+                           previewStatus === 'STARTED' ? 'EM ATENDIMENTO' :
+                           previewStatus === 'CREATED' ? 'CHAMADO REGISTRADO' : 'CHAMADO CONCLUÍDO'}
+                        </span>
+                      </div>
+
+                      {/* Title & Subtitle */}
+                      <div>
+                        <h2 className="text-xl font-bold text-white leading-snug">
+                          {previewStatus === 'PAUSED' ? 'O seu chamado foi pausado temporariamente' :
+                           previewStatus === 'STARTED' ? 'O atendimento do seu chamado foi iniciado!' :
+                           previewStatus === 'CREATED' ? 'Seu chamado foi registrado com sucesso!' : 'Seu chamado foi concluído com sucesso!'}
+                        </h2>
+                        <p className="text-slate-400 text-sm mt-2 leading-relaxed">
+                          Olá <strong className="text-white">BleeyckINSIDER</strong>, {
+                            previewStatus === 'PAUSED' ? 'informamos que o andamento do seu chamado foi pausado pelo analista.' :
+                            previewStatus === 'STARTED' ? 'o analista Laercio Schumacher iniciou o atendimento do seu chamado.' :
+                            previewStatus === 'CREATED' ? 'recebemos sua solicitação e nossa equipe técnica já foi notificada.' :
+                            'o atendimento do seu chamado foi finalizado pela nossa equipe de T.I.'
+                          }
+                        </p>
+                      </div>
+
+                      {/* Highlight Box */}
+                      <div className={`p-4 rounded-r-lg border-l-4 bg-[#19202e] ${
+                        previewStatus === 'PAUSED' ? 'border-[#f97316]' :
+                        previewStatus === 'STARTED' ? 'border-[#f59e0b]' :
+                        previewStatus === 'CREATED' ? 'border-[#2563eb]' : 'border-[#10b981]'
+                      }`}>
+                        <div className={`text-xs font-bold mb-1.5 ${
+                          previewStatus === 'PAUSED' ? 'text-[#f97316]' :
+                          previewStatus === 'STARTED' ? 'text-[#f59e0b]' :
+                          previewStatus === 'CREATED' ? 'text-[#2563eb]' : 'text-[#10b981]'
+                        }`}>
+                          {previewStatus === 'PAUSED' ? 'Motivo da Pausa:' :
+                           previewStatus === 'STARTED' ? 'Nota do Analista:' :
+                           previewStatus === 'CREATED' ? 'Descrição Informada:' : 'Parecer Final / Resolução:'}
+                        </div>
+                        <div className="text-sm text-slate-300 leading-relaxed">
+                          {previewStatus === 'PAUSED' ? 'Aguardando informações adicionais ou peças necessárias.' :
+                           previewStatus === 'STARTED' ? 'O analista iniciou o diagnóstico e testes de conectividade.' :
+                           previewStatus === 'CREATED' ? 'Solicitação de suporte registrada para verificação da conta de e-mail.' :
+                           'Chamado finalizado e validado com o cliente com sucesso.'}
+                        </div>
+                      </div>
+
+                      {/* Ticket Details Box */}
+                      <div className="rounded-xl border border-[#232d3f] bg-[#10141e] overflow-hidden text-xs">
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#1c2433]">
+                          <span className="text-slate-400 font-medium">Número do Chamado:</span>
+                          <span className="font-mono font-bold text-[#45dfa4] text-sm">#000007</span>
+                        </div>
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#1c2433]">
+                          <span className="text-slate-400 font-medium">Assunto / Título:</span>
+                          <span className="font-semibold text-white">Teste de email</span>
+                        </div>
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#1c2433]">
+                          <span className="text-slate-400 font-medium">Categoria:</span>
+                          <span className="font-semibold text-white">Software &amp; Apps &gt; Office 365 / Outlook</span>
+                        </div>
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#1c2433]">
+                          <span className="text-slate-400 font-medium">Prioridade:</span>
+                          <span className="font-semibold text-white">Média</span>
+                        </div>
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#1c2433]">
+                          <span className="text-slate-400 font-medium">Solicitante:</span>
+                          <span className="font-semibold text-white">BleeyckINSIDER</span>
+                        </div>
+                        <div className="flex items-center justify-between px-4 py-2.5">
+                          <span className="text-slate-400 font-medium">Técnico Responsável:</span>
+                          <span className="font-semibold text-white">Laercio Schumacher</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="bg-[#0e121b] border-t border-[#232d3f] p-6 text-center text-xs space-y-1">
+                      <p className="text-slate-400">Este é um e-mail automático gerado pelo sistema <strong className="text-white">GoDesc 360</strong></p>
+                      <p className="text-slate-500 text-[11px]">Por favor, não responda diretamente a este e-mail.</p>
+                      <p className="text-slate-600 text-[10px] pt-1">© {new Date().getFullYear()} GoDesc 360. Todos os direitos reservados.</p>
+                      <div className="pt-3 flex items-center justify-center gap-2 text-[#45dfa4] font-bold text-sm">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/36px-WhatsApp.svg.png" alt="WhatsApp" className="w-5 h-5" />
+                        <span>3336-3233</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

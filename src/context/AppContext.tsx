@@ -2165,6 +2165,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 
 
+  const CLOUD_API_URL = 'https://godesc360-whatsapp-api.onrender.com';
+  const LOCAL_API_URL = 'http://localhost:10000';
+
+  const getCandidateUrls = (currentUrl: string): string[] => {
+    const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const urls: string[] = [];
+    if (currentUrl) urls.push(currentUrl.trim().replace(/\/+$/, ''));
+    if (isLocalhost) {
+      if (!urls.includes(LOCAL_API_URL)) urls.push(LOCAL_API_URL);
+      if (!urls.includes(CLOUD_API_URL)) urls.push(CLOUD_API_URL);
+    } else {
+      if (!urls.includes(CLOUD_API_URL)) urls.push(CLOUD_API_URL);
+      if (!urls.includes(LOCAL_API_URL)) urls.push(LOCAL_API_URL);
+    }
+    return urls;
+  };
+
   // URL configurável do microservidor Baileys / Backend
   const [whatsappServerUrl, setWhatsappServerUrlState] = useState<string>(() => {
     const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
@@ -2172,10 +2189,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Se o usuário estiver no localhost e tiver uma URL antiga do Render salva no navegador, redireciona para o backend local
     if (isLocalhost && saved && saved.includes('onrender.com')) {
       localStorage.removeItem('godesc_whatsapp_server_url');
-      return 'http://localhost:10000';
+      return LOCAL_API_URL;
+    }
+    // Se estiver em produção (Vercel) e nenhuma URL estiver salva, usar a Nuvem
+    if (!isLocalhost && (!saved || saved.includes('localhost') || saved.includes('127.0.0.1'))) {
+      return CLOUD_API_URL;
     }
     if (saved) return saved;
-    return import.meta.env.VITE_WHATSAPP_API_URL || 'http://localhost:10000';
+    return import.meta.env.VITE_WHATSAPP_API_URL || (isLocalhost ? LOCAL_API_URL : CLOUD_API_URL);
   });
 
   const updateWhatsappServerUrl = (url: string) => {
@@ -2195,10 +2216,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     attachments?: TicketAttachment[];
   }) => {
     if (!params.to || !params.to.includes('@')) return;
-    const tryUrls = [whatsappServerUrl];
-    if (whatsappServerUrl !== 'http://localhost:10000') {
-      tryUrls.push('http://localhost:10000');
-    }
+    const tryUrls = getCandidateUrls(whatsappServerUrl);
 
     for (const url of tryUrls) {
       try {
@@ -2222,10 +2240,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const getEmailConfig = async () => {
-    const tryUrls = [whatsappServerUrl];
-    if (whatsappServerUrl !== 'http://localhost:10000') {
-      tryUrls.push('http://localhost:10000');
-    }
+    const tryUrls = getCandidateUrls(whatsappServerUrl);
 
     for (const url of tryUrls) {
       try {
@@ -2235,21 +2250,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         clearTimeout(timeoutId);
         const contentType = res.headers.get('content-type') || '';
         if (res.ok && contentType.includes('application/json')) {
+          const config = await res.json();
           if (url !== whatsappServerUrl) updateWhatsappServerUrl(url);
-          return await res.json();
+          try {
+            localStorage.setItem('godesc_cached_email_config', JSON.stringify(config));
+          } catch (e) {}
+          return config;
         }
       } catch (err) {
         // tenta próxima url
       }
     }
+
+    // Retorna do cache se o servidor estiver temporariamente inacessível
+    try {
+      const cached = localStorage.getItem('godesc_cached_email_config');
+      if (cached) return JSON.parse(cached);
+    } catch (e) {}
+
     return null;
   };
 
   const saveEmailConfig = async (configData: any) => {
-    const tryUrls = [whatsappServerUrl];
-    if (whatsappServerUrl !== 'http://localhost:10000') {
-      tryUrls.push('http://localhost:10000');
-    }
+    const tryUrls = getCandidateUrls(whatsappServerUrl);
 
     let lastError = '';
     for (const url of tryUrls) {
@@ -2267,6 +2290,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const contentType = res.headers.get('content-type') || '';
         if (contentType.includes('application/json')) {
           if (url !== whatsappServerUrl) updateWhatsappServerUrl(url);
+          try {
+            localStorage.setItem('godesc_cached_email_config', JSON.stringify(configData));
+          } catch (e) {}
           return await res.json();
         }
         lastError = `Servidor (${url}) retornou status ${res.status}.`;
@@ -2281,10 +2307,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const testEmailConnection = async (customConfig?: any, testRecipient?: string) => {
-    const tryUrls = [whatsappServerUrl];
-    if (whatsappServerUrl !== 'http://localhost:10000') {
-      tryUrls.push('http://localhost:10000');
-    }
+    const tryUrls = getCandidateUrls(whatsappServerUrl);
 
     let lastError = '';
     for (const url of tryUrls) {

@@ -129,45 +129,57 @@ function getLogoAttachment() {
   return null;
 }
 
-// Template HTML de Alta Fidelidade (Dark Theme Black 100% compatível com Outlook, Apple Mail e Gmail)
-function buildEmailTemplate({ title, subtitle, badgeText, badgeBg, contentHtml, ticketInfo }) {
+// Template HTML de Alta Fidelidade (Card Escuro Premium com Contorno Branco Puro 100% compatível com Outlook e Webmail)
+function buildEmailTemplate({ title, subtitle, badgeText, badgeBg, highlightTitle, highlightBody, contentHtml, ticketInfo }) {
   const currentYear = new Date().getFullYear();
   const remoteLogoFallback = 'https://raw.githubusercontent.com/antrax999br-boop/App.Godesc360-/main/public/logo-geral.png';
 
-  return `
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+  let formattedTicketNumber = '#000000';
+  if (ticketInfo) {
+    if (ticketInfo.ticketNumber) {
+      formattedTicketNumber = ticketInfo.ticketNumber;
+    } else if (ticketInfo.id) {
+      const idStr = String(ticketInfo.id);
+      formattedTicketNumber = idStr.startsWith('#') ? idStr : `#${idStr.padStart(6, '0')}`;
+    }
+  }
+
+  return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR">
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="color-scheme" content="dark only" />
-  <meta name="supported-color-schemes" content="dark only" />
-  <title>${title}</title>
+  <title>${title || 'GoDesc 360 Service Desk'}</title>
   <!--[if mso]>
   <style type="text/css">
-    body, table, td, p, a, span { font-family: Arial, Helvetica, sans-serif !important; }
+    body, table, td, p, a, span, h1, h2, h3 { font-family: Arial, Helvetica, sans-serif !important; }
   </style>
   <![endif]-->
   <style type="text/css">
-    :root { color-scheme: dark only; supported-color-schemes: dark only; }
-    body { margin: 0; padding: 0; width: 100% !important; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; background-color: #06080d !important; }
+    body { margin: 0; padding: 0; width: 100% !important; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; background-color: #ffffff !important; }
     table { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
     img { border: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
   </style>
 </head>
-<body bgcolor="#06080d" style="margin: 0; padding: 0; background-color: #06080d !important; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+<body bgcolor="#ffffff" style="margin: 0; padding: 0; width: 100% !important; background-color: #ffffff !important; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
 
-  <!-- Outer Table Wrapper (Fundo Preto Total) -->
-  <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#06080d" style="width: 100%; background-color: #06080d !important; margin: 0; padding: 24px 0;">
+  <!-- Contorno do e-mail em branco puro dando destaque ao modelo do e-mail -->
+  <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="width: 100%; background-color: #ffffff !important; margin: 0; padding: 32px 10px;">
     <tr>
-      <td align="center" bgcolor="#06080d" style="background-color: #06080d !important; padding: 0 12px;">
-        
-        <!-- Main Container Card (Fundo Escuro Premium) -->
-        <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#0f131a" style="max-width: 600px; width: 100%; background-color: #0f131a !important; border-radius: 12px; border: 1px solid #232938; overflow: hidden;">
+      <td align="center" bgcolor="#ffffff" style="background-color: #ffffff !important;">
+
+        <!--[if mso]>
+        <table width="600" border="0" cellpadding="0" cellspacing="0" align="center" bgcolor="#141824">
+        <tr>
+        <td bgcolor="#141824">
+        <![endif]-->
+
+        <!-- Card Central GoDesc 360 (Dark Premium com cantos arredondados) -->
+        <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#141824" style="max-width: 600px; width: 100%; background-color: #141824 !important; border-radius: 16px; border: 1px solid #232d3f; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12); margin: 0 auto;">
           
-          <!-- HEADER COM A LOGO OFICIAL DA GODESC -->
+          <!-- CABEÇALHO COM LOGO OFICIAL -->
           <tr>
-            <td align="center" bgcolor="#0a0d13" style="background-color: #0a0d13 !important; padding: 28px 24px 22px 24px; border-bottom: 1px solid #232938; text-align: center;">
+            <td align="center" bgcolor="#0e121b" style="background-color: #0e121b !important; padding: 28px 24px 22px 24px; border-bottom: 1px solid #232d3f; text-align: center;">
               <table border="0" cellpadding="0" cellspacing="0" align="center">
                 <tr>
                   <td align="center">
@@ -178,7 +190,7 @@ function buildEmailTemplate({ title, subtitle, badgeText, badgeBg, contentHtml, 
                 </tr>
                 <tr>
                   <td align="center" style="padding-top: 10px;">
-                    <span style="font-size: 11px; font-weight: 700; color: #45dfa4; letter-spacing: 1.5px; text-transform: uppercase; font-family: monospace;">
+                    <span style="font-size: 11px; font-weight: 700; color: #45dfa4; letter-spacing: 2px; text-transform: uppercase; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
                       CENTRAL DE SUPORTE E ATENDIMENTO T.I.
                     </span>
                   </td>
@@ -187,93 +199,110 @@ function buildEmailTemplate({ title, subtitle, badgeText, badgeBg, contentHtml, 
             </td>
           </tr>
 
-          <!-- BODY CONTENT -->
+          <!-- CONTEÚDO DO CARD -->
           <tr>
-            <td bgcolor="#0f131a" style="background-color: #0f131a !important; padding: 28px 24px;">
+            <td bgcolor="#141824" style="background-color: #141824 !important; padding: 28px 26px;">
 
-              <!-- BADGE DE STATUS -->
+              <!-- BADGE PILL DE STATUS -->
               ${badgeText ? `
-              <table border="0" cellpadding="0" cellspacing="0" style="margin-bottom: 16px;">
+              <table border="0" cellpadding="0" cellspacing="0" style="margin: 0 0 16px 0;">
                 <tr>
-                  <td bgcolor="${badgeBg || '#45dfa4'}" style="background-color: ${badgeBg || '#45dfa4'} !important; border-radius: 20px; padding: 5px 14px; color: #ffffff !important; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                  <td bgcolor="${badgeBg || '#f97316'}" style="background-color: ${badgeBg || '#f97316'} !important; border-radius: 20px; padding: 6px 16px; color: #ffffff !important; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
                     ${badgeText}
                   </td>
                 </tr>
               </table>
               ` : ''}
 
-              <!-- TITULO E SUBTITULO -->
-              <h2 style="margin: 0 0 8px 0; font-size: 20px; font-weight: 700; color: #ffffff !important; line-height: 1.3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+              <!-- TÍTULO PRINCIPAL -->
+              <h1 style="margin: 0 0 10px 0; font-size: 22px; font-weight: 700; color: #ffffff !important; line-height: 1.35; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
                 ${title}
-              </h2>
-              <p style="margin: 0 0 20px 0; font-size: 14px; color: #94a3b8 !important; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+              </h1>
+
+              <!-- SAUDAÇÃO / SUBTÍTULO -->
+              <p style="margin: 0 0 22px 0; font-size: 14px; color: #94a3b8 !important; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
                 ${subtitle}
               </p>
 
-              <!-- CAIXA DE MENSAGEM / NOTA / CONTEUDO (Com barra lateral colorida) -->
-              ${contentHtml ? `
-              <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#151a24" style="background-color: #151a24 !important; border: 1px solid #232938; border-radius: 8px; margin: 18px 0; overflow: hidden;">
+              <!-- CAIXA DE DESTAQUE (Motivo da Pausa / Nota do Analista / Parecer) -->
+              ${(highlightTitle || highlightBody) ? `
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#19202e" style="width: 100%; background-color: #19202e !important; border-left: 4px solid ${badgeBg || '#f97316'}; border-radius: 0 8px 8px 0; margin: 0 0 24px 0;">
                 <tr>
-                  <td width="4" bgcolor="${badgeBg || '#45dfa4'}" style="background-color: ${badgeBg || '#45dfa4'} !important; width: 4px; font-size: 1px; line-height: 1px;">&nbsp;</td>
-                  <td bgcolor="#151a24" style="background-color: #151a24 !important; padding: 14px 18px; color: #e2e8f0 !important; font-size: 13px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
-                    ${contentHtml}
+                  <td style="padding: 16px 20px;">
+                    ${highlightTitle ? `
+                    <div style="font-size: 13px; font-weight: 700; color: ${badgeBg || '#f97316'}; margin-bottom: 6px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                      ${highlightTitle}
+                    </div>
+                    ` : ''}
+                    ${highlightBody ? `
+                    <div style="font-size: 14px; color: #cbd5e1 !important; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                      ${highlightBody}
+                    </div>
+                    ` : ''}
                   </td>
                 </tr>
               </table>
               ` : ''}
 
-              <!-- TABELA DE DETALHES DO CHAMADO (Totalmente compatível com Outlook) -->
+              <!-- CONTEÚDO ADICIONAL SE HOUVER -->
+              ${contentHtml ? `
+              <div style="margin: 0 0 24px 0;">
+                ${contentHtml}
+              </div>
+              ` : ''}
+
+              <!-- TABELA DE DETALHES DO CHAMADO -->
               ${ticketInfo ? `
-              <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#07090e" style="background-color: #07090e !important; border: 1px solid #1f2533; border-radius: 8px; margin: 20px 0;">
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#10141e" style="width: 100%; background-color: #10141e !important; border: 1px solid #232d3f; border-radius: 10px; margin: 0 0 8px 0; overflow: hidden;">
                 <tr>
-                  <td bgcolor="#07090e" style="background-color: #07090e !important; padding: 8px 16px;">
-                    <table width="100%" border="0" cellpadding="7" cellspacing="0">
+                  <td style="padding: 4px 0;">
+                    <table width="100%" border="0" cellpadding="0" cellspacing="0">
                       <tr>
-                        <td style="color: #8b949e !important; font-size: 13px; font-weight: 500; border-bottom: 1px solid #1a202c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                        <td valign="middle" style="padding: 10px 18px; color: #8b949e !important; font-size: 13px; font-weight: 500; border-bottom: 1px solid #1c2433; width: 40%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
                           Número do Chamado:
                         </td>
-                        <td align="right" style="color: #45dfa4 !important; font-size: 14px; font-weight: 700; font-family: monospace; border-bottom: 1px solid #1a202c;">
-                          ${ticketInfo.ticketNumber || '#000000'}
+                        <td valign="middle" align="left" style="padding: 10px 18px; color: #45dfa4 !important; font-size: 14px; font-weight: 700; font-family: 'Courier New', Courier, monospace; border-bottom: 1px solid #1c2433; width: 60%;">
+                          ${formattedTicketNumber}
                         </td>
                       </tr>
                       <tr>
-                        <td style="color: #8b949e !important; font-size: 13px; font-weight: 500; border-bottom: 1px solid #1a202c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                        <td valign="middle" style="padding: 10px 18px; color: #8b949e !important; font-size: 13px; font-weight: 500; border-bottom: 1px solid #1c2433; width: 40%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
                           Assunto / Título:
                         </td>
-                        <td align="right" style="color: #ffffff !important; font-size: 13px; font-weight: 600; border-bottom: 1px solid #1a202c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
-                          ${ticketInfo.title || ticketInfo.subject || 'Suporte'}
+                        <td valign="middle" align="left" style="padding: 10px 18px; color: #ffffff !important; font-size: 13px; font-weight: 600; border-bottom: 1px solid #1c2433; width: 60%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                          ${ticketInfo.title || ticketInfo.subject || 'Chamado de Suporte'}
                         </td>
                       </tr>
                       <tr>
-                        <td style="color: #8b949e !important; font-size: 13px; font-weight: 500; border-bottom: 1px solid #1a202c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                        <td valign="middle" style="padding: 10px 18px; color: #8b949e !important; font-size: 13px; font-weight: 500; border-bottom: 1px solid #1c2433; width: 40%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
                           Categoria:
                         </td>
-                        <td align="right" style="color: #ffffff !important; font-size: 13px; font-weight: 600; border-bottom: 1px solid #1a202c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                        <td valign="middle" align="left" style="padding: 10px 18px; color: #ffffff !important; font-size: 13px; font-weight: 600; border-bottom: 1px solid #1c2433; width: 60%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
                           ${ticketInfo.category || 'Geral'}${ticketInfo.subcategory ? ` &gt; ${ticketInfo.subcategory}` : ''}
                         </td>
                       </tr>
                       <tr>
-                        <td style="color: #8b949e !important; font-size: 13px; font-weight: 500; border-bottom: 1px solid #1a202c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                        <td valign="middle" style="padding: 10px 18px; color: #8b949e !important; font-size: 13px; font-weight: 500; border-bottom: 1px solid #1c2433; width: 40%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
                           Prioridade:
                         </td>
-                        <td align="right" style="color: #ffffff !important; font-size: 13px; font-weight: 600; border-bottom: 1px solid #1a202c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                        <td valign="middle" align="left" style="padding: 10px 18px; color: #ffffff !important; font-size: 13px; font-weight: 600; border-bottom: 1px solid #1c2433; width: 60%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
                           ${ticketInfo.priority || 'Média'}
                         </td>
                       </tr>
                       <tr>
-                        <td style="color: #8b949e !important; font-size: 13px; font-weight: 500; ${ticketInfo.assignedTo ? 'border-bottom: 1px solid #1a202c;' : ''} font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                        <td valign="middle" style="padding: 10px 18px; color: #8b949e !important; font-size: 13px; font-weight: 500; ${ticketInfo.assignedTo ? 'border-bottom: 1px solid #1c2433;' : ''} width: 40%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
                           Solicitante:
                         </td>
-                        <td align="right" style="color: #ffffff !important; font-size: 13px; font-weight: 600; ${ticketInfo.assignedTo ? 'border-bottom: 1px solid #1a202c;' : ''} font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                        <td valign="middle" align="left" style="padding: 10px 18px; color: #ffffff !important; font-size: 13px; font-weight: 600; ${ticketInfo.assignedTo ? 'border-bottom: 1px solid #1c2433;' : ''} width: 60%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
                           ${ticketInfo.requesterName || 'Cliente'}
                         </td>
                       </tr>
                       ${ticketInfo.assignedTo ? `
                       <tr>
-                        <td style="color: #8b949e !important; font-size: 13px; font-weight: 500; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                        <td valign="middle" style="padding: 10px 18px; color: #8b949e !important; font-size: 13px; font-weight: 500; width: 40%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
                           Técnico Responsável:
                         </td>
-                        <td align="right" style="color: #ffffff !important; font-size: 13px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                        <td valign="middle" align="left" style="padding: 10px 18px; color: #ffffff !important; font-size: 13px; font-weight: 600; width: 60%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
                           ${ticketInfo.assignedTo}
                         </td>
                       </tr>
@@ -287,33 +316,54 @@ function buildEmailTemplate({ title, subtitle, badgeText, badgeBg, contentHtml, 
             </td>
           </tr>
 
-          <!-- FOOTER -->
+          <!-- RODAPÉ (FOOTER) -->
           <tr>
-            <td align="center" bgcolor="#080a10" style="background-color: #080a10 !important; padding: 22px 24px; border-top: 1px solid #1c2230; text-align: center;">
-              <p style="margin: 0; font-size: 12px; color: #8b949e !important; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
-                Este é um e-mail automático gerado pelo sistema <strong style="color: #ffffff !important;">GoDesc 360 Service Desk</strong>.
+            <td align="center" bgcolor="#0e121b" style="background-color: #0e121b !important; padding: 26px 24px; border-top: 1px solid #232d3f; text-align: center;">
+              <p style="margin: 0 0 5px 0; font-size: 12px; color: #8b949e !important; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                Este é um e-mail automático gerado pelo sistema <strong style="color: #ffffff !important;">GoDesc 360</strong>
               </p>
-              <p style="margin: 4px 0 0 0; font-size: 12px; color: #6e7681 !important; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+              <p style="margin: 0 0 6px 0; font-size: 12px; color: #64748b !important; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
                 Por favor, não responda diretamente a este e-mail.
               </p>
-              <p style="margin: 10px 0 0 0; font-size: 11px; color: #4b5563 !important; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+              <p style="margin: 0 0 16px 0; font-size: 11px; color: #475569 !important; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
                 &copy; ${currentYear} GoDesc 360. Todos os direitos reservados.
               </p>
+
+              <!-- WHATSAPP NUMBER -->
+              <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto;">
+                <tr>
+                  <td align="center" valign="middle" style="padding-right: 7px;">
+                    <a href="https://wa.me/554733363233" target="_blank" style="text-decoration: none; display: inline-block;">
+                      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/36px-WhatsApp.svg.png" width="22" height="22" alt="WhatsApp" style="display: block; width: 22px; height: 22px; border: 0;" />
+                    </a>
+                  </td>
+                  <td align="center" valign="middle">
+                    <a href="https://wa.me/554733363233" target="_blank" style="font-size: 17px; font-weight: 700; color: #45dfa4 !important; text-decoration: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; letter-spacing: 0.5px;">
+                      3336-3233
+                    </a>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
         </table>
+
+        <!--[if mso]>
+        </td>
+        </tr>
+        </table>
+        <![endif]-->
 
       </td>
     </tr>
   </table>
 
 </body>
-</html>
-`;
+</html>`;
 }
 
-// Testa a conexão enviando um e-mail de verificação
+// Testa a conexão enviando um e-mail de verificação com layout idêntico ao modelo oficial
 async function testConnection(customConfig, targetEmail) {
   const cfg = {
     ...emailConfig,
@@ -334,16 +384,24 @@ async function testConnection(customConfig, targetEmail) {
 
   const hostDisplay = provider === 'gmail' ? 'smtp.gmail.com:465' : `${cfg.smtpHost || 'mail.desccloud.com.br'}:${cfg.smtpPort || 587}`;
 
+  const sampleTicket = {
+    ticketNumber: '#000007',
+    title: 'Teste de email',
+    category: 'Software & Apps',
+    subcategory: 'Office 365 / Outlook',
+    priority: 'Média',
+    requesterName: 'BleeyckINSIDER',
+    assignedTo: cfg.fromName || 'Laercio Schumacher'
+  };
+
   const html = buildEmailTemplate({
-    title: '✅ Conexão de E-mail Estabelecida com Sucesso!',
-    subtitle: `Seu sistema GoDesc 360 agora está autenticado via ${providerLabel} e pronto para disparar notificações aos clientes.`,
-    badgeText: 'INTEGRAÇÃO ATIVA',
-    badgeBg: '#10b981',
-    contentHtml: `
-      <p style="margin: 0; font-weight: 700; color: #ffffff;">Autenticação Concluída com Sucesso!</p>
-      <p style="margin: 8px 0 0 0; color: #c3c6d7;">O teste de autenticação SMTP com o servidor <strong style="color: #45dfa4;">${hostDisplay}</strong> foi concluído com êxito utilizando a conta <strong style="color: #ffffff;">${cfg.user}</strong>.</p>
-      <p style="margin: 8px 0 0 0; font-size: 13px; color: #8b949e;">A partir de agora, os seus clientes serão notificados por e-mail automaticamente a cada abertura, mudança de status e resposta nos chamados através do seu e-mail corporativo.</p>
-    `
+    title: 'O seu chamado foi pausado temporariamente',
+    subtitle: `Olá <strong>${sampleTicket.requesterName}</strong>, informamos que o andamento do seu chamado foi pausado pelo analista.`,
+    badgeText: 'CHAMADO PAUSADO',
+    badgeBg: '#f97316',
+    highlightTitle: 'Motivo da Pausa:',
+    highlightBody: 'Aguardando informações adicionais ou peças necessárias.',
+    ticketInfo: sampleTicket
   });
 
   const mailAttachments = [];
@@ -353,7 +411,7 @@ async function testConnection(customConfig, targetEmail) {
   const mailOptions = {
     from: `"${cfg.fromName || 'GoDesc 360 Service Desk'}" <${cfg.user}>`,
     to: recipient,
-    subject: `🧪 [GoDesc 360] Teste de Conexão SMTP Realizado com Sucesso (${providerLabel})`,
+    subject: `⏸️ [GoDesc 360] Teste de E-mail - Chamado Pausado #000007`,
     html,
     attachments: mailAttachments
   };
@@ -375,7 +433,7 @@ async function sendTicketNotification({ to, actionType, ticket, technicianName, 
   }
 
   if (!emailConfig.user || !emailConfig.pass) {
-    return { success: false, reason: 'Gmail não configurado no servidor' };
+    return { success: false, reason: 'Credenciais de e-mail não configuradas no servidor' };
   }
 
   if (!to || !to.includes('@')) {
@@ -391,25 +449,23 @@ async function sendTicketNotification({ to, actionType, ticket, technicianName, 
   let subtitle = '';
   let badgeText = '';
   let badgeBg = '#45dfa4';
+  let highlightTitle = '';
+  let highlightBody = '';
   let contentHtml = '';
   let subjectPrefix = '';
 
-  const ticketCode = ticket.ticketNumber || `#${ticket.id || ''}`;
+  const ticketCode = ticket.ticketNumber || (ticket.id ? (String(ticket.id).startsWith('#') ? ticket.id : `#${String(ticket.id).padStart(6, '0')}`) : '#000001');
 
   switch (actionType) {
     case 'CREATED':
       subjectPrefix = `🆕 Chamado Registrado ${ticketCode}`;
       title = `Seu chamado foi registrado com sucesso!`;
       subtitle = `Olá <strong>${ticket.requesterName || 'Cliente'}</strong>, recebemos sua solicitação e nossa equipe técnica já foi notificada.`;
-      badgeText = 'CHAMADO ABERTO';
-      badgeBg = '#3b82f6';
+      badgeText = 'CHAMADO REGISTRADO';
+      badgeBg = '#2563eb';
       if (ticket.description) {
-        contentHtml = `
-          <p style="font-size: 13px; color: #8b949e; margin-bottom: 6px;">Descrição informada:</p>
-          <div class="message-box" style="border-left-color: #3b82f6;">
-            ${ticket.description.replace(/\n/g, '<br/>')}
-          </div>
-        `;
+        highlightTitle = 'Descrição Informada:';
+        highlightBody = ticket.description.replace(/\n/g, '<br/>');
       }
       break;
 
@@ -420,12 +476,8 @@ async function sendTicketNotification({ to, actionType, ticket, technicianName, 
       badgeText = 'EM ATENDIMENTO';
       badgeBg = '#f59e0b';
       if (note) {
-        contentHtml = `
-          <div class="message-box" style="border-left-color: #f59e0b;">
-            <strong>Nota do Analista:</strong><br/>
-            ${note.replace(/\n/g, '<br/>')}
-          </div>
-        `;
+        highlightTitle = 'Nota do Analista:';
+        highlightBody = note.replace(/\n/g, '<br/>');
       }
       break;
 
@@ -435,27 +487,19 @@ async function sendTicketNotification({ to, actionType, ticket, technicianName, 
       subtitle = `Olá <strong>${ticket.requesterName || 'Cliente'}</strong>, informamos que o andamento do seu chamado foi pausado pelo analista.`;
       badgeText = 'CHAMADO PAUSADO';
       badgeBg = '#f97316';
-      contentHtml = `
-        <div class="message-box" style="border-left-color: #f97316;">
-          <strong style="color: #f97316;">Motivo da Pausa:</strong><br/>
-          ${(note || 'Aguardando informações adicionais ou peças necessárias.').replace(/\n/g, '<br/>')}
-        </div>
-      `;
+      highlightTitle = 'Motivo da Pausa:';
+      highlightBody = (note || 'Aguardando informações adicionais ou peças necessárias.').replace(/\n/g, '<br/>');
       break;
 
     case 'COMPLETED':
       subjectPrefix = `✅ Chamado Concluído ${ticketCode}`;
       title = `Seu chamado foi concluído com sucesso!`;
       subtitle = `Olá <strong>${ticket.requesterName || 'Cliente'}</strong>, o atendimento do seu chamado foi finalizado pela nossa equipe de T.I.`;
-      badgeText = 'CONCLUÍDO';
+      badgeText = 'CHAMADO CONCLUÍDO';
       badgeBg = '#10b981';
       if (note) {
-        contentHtml = `
-          <div class="message-box" style="border-left-color: #10b981;">
-            <strong>Parecer Final / Resolução:</strong><br/>
-            ${note.replace(/\n/g, '<br/>')}
-          </div>
-        `;
+        highlightTitle = 'Parecer Final / Resolução:';
+        highlightBody = note.replace(/\n/g, '<br/>');
       }
       break;
 
@@ -465,26 +509,19 @@ async function sendTicketNotification({ to, actionType, ticket, technicianName, 
       subtitle = `Olá <strong>${ticket.requesterName || 'Cliente'}</strong>, o técnico <strong>${technicianName || 'de T.I.'}</strong> enviou uma nova resposta.`;
       badgeText = 'NOVA MENSAGEM';
       badgeBg = '#8b5cf6';
-      
-      let attHtml = '';
+      highlightTitle = 'Mensagem do Técnico:';
+      highlightBody = (messageText || '').replace(/\n/g, '<br/>');
+
       if (attachments && attachments.length > 0) {
-        attHtml = `
-          <div style="margin-top: 12px; font-size: 12px; color: #94a3b8;">
-            <strong>📎 Anexos enviados:</strong>
-            <ul style="margin: 4px 0; padding-left: 20px;">
+        contentHtml = `
+          <div style="padding: 12px 16px; background-color: #19202e; border: 1px solid #232d3f; border-radius: 8px; font-size: 12px; color: #94a3b8; margin-top: 12px;">
+            <strong style="color: #ffffff;">📎 Anexos enviados:</strong>
+            <ul style="margin: 6px 0 0 0; padding-left: 20px;">
               ${attachments.map(a => `<li>${a.name || 'Arquivo'} (${a.size || ''})</li>`).join('')}
             </ul>
           </div>
         `;
       }
-
-      contentHtml = `
-        <div class="message-box" style="border-left-color: #8b5cf6;">
-          <strong>Mensagem do Técnico:</strong><br/>
-          ${(messageText || '').replace(/\n/g, '<br/>')}
-          ${attHtml}
-        </div>
-      `;
       break;
 
     case 'STATUS_CHANGED':
@@ -493,15 +530,11 @@ async function sendTicketNotification({ to, actionType, ticket, technicianName, 
       subjectPrefix = `🔔 Atualização no Chamado ${ticketCode}: ${ticket.status}`;
       title = `Atualização de status no seu chamado`;
       subtitle = `Olá <strong>${ticket.requesterName || 'Cliente'}</strong>, o status do seu chamado mudou para <strong>${ticket.status}</strong>.`;
-      badgeText = statusStyle.label;
+      badgeText = (statusStyle.label || 'ATUALIZADO').toUpperCase();
       badgeBg = statusStyle.bg;
       if (note) {
-        contentHtml = `
-          <div class="message-box" style="border-left-color: ${statusStyle.bg};">
-            <strong>Observações do Técnico:</strong><br/>
-            ${note.replace(/\n/g, '<br/>')}
-          </div>
-        `;
+        highlightTitle = 'Observações:';
+        highlightBody = note.replace(/\n/g, '<br/>');
       }
       break;
   }
@@ -511,6 +544,8 @@ async function sendTicketNotification({ to, actionType, ticket, technicianName, 
     subtitle,
     badgeText,
     badgeBg,
+    highlightTitle,
+    highlightBody,
     contentHtml,
     ticketInfo: ticket
   });
