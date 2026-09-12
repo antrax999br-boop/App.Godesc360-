@@ -208,21 +208,35 @@ export const TIConfigView: React.FC = () => {
   const handleTestEmail = async () => {
     setEmailTestStatus(null);
     setEmailTesting(true);
-    const customConfig = emailPass
-      ? { user: emailUser, pass: emailPass, fromName: emailFromName, provider: emailProvider, smtpHost: emailSmtpHost, smtpPort: emailSmtpPort, smtpSecure: emailSmtpSecure }
-      : undefined;
-    const result = await testEmailConnection(customConfig, testRecipientEmail || emailUser);
-    setEmailTesting(false);
-    if (result && result.success) {
-      setEmailTestStatus({
-        success: true,
-        message: `✅ E-mail de teste enviado com sucesso para ${result.recipient || testRecipientEmail || emailUser}! Verifique a caixa de entrada.`
-      });
-    } else {
+    try {
+      const customConfig = {
+        user: emailUser,
+        fromName: emailFromName,
+        provider: emailProvider,
+        smtpHost: emailSmtpHost,
+        smtpPort: emailSmtpPort,
+        smtpSecure: emailSmtpSecure,
+        ...(emailPass ? { pass: emailPass } : {})
+      };
+      const result = await testEmailConnection(customConfig, testRecipientEmail || emailUser);
+      if (result && result.success) {
+        setEmailTestStatus({
+          success: true,
+          message: `✅ E-mail de teste enviado com sucesso para ${result.recipient || testRecipientEmail || emailUser}! Verifique a caixa de entrada.`
+        });
+      } else {
+        setEmailTestStatus({
+          success: false,
+          message: result?.error || 'Falha ao conectar com o servidor SMTP. Verifique e-mail, senha e configurações do servidor.'
+        });
+      }
+    } catch (err: any) {
       setEmailTestStatus({
         success: false,
-        message: result?.error || 'Falha ao conectar com o servidor SMTP. Verifique e-mail, senha e configurações do servidor.'
+        message: err?.message || 'Erro inesperado ao realizar teste de e-mail.'
       });
+    } finally {
+      setEmailTesting(false);
     }
   };
 

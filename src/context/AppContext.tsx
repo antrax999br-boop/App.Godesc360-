@@ -2171,9 +2171,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 
 
-  // URL configurável do microservidor Baileys
+  // URL configurável do microservidor Baileys / Backend
   const [whatsappServerUrl, setWhatsappServerUrlState] = useState<string>(() => {
+    const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
     const saved = localStorage.getItem('godesc_whatsapp_server_url');
+    // Se o usuário estiver no localhost e tiver uma URL antiga do Render salva no navegador, redireciona para o backend local
+    if (isLocalhost && saved && saved.includes('onrender.com')) {
+      localStorage.removeItem('godesc_whatsapp_server_url');
+      return 'http://localhost:10000';
+    }
     if (saved) return saved;
     return import.meta.env.VITE_WHATSAPP_API_URL || 'http://localhost:10000';
   });
@@ -2184,7 +2190,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('godesc_whatsapp_server_url', cleanUrl);
   };
 
-  // Funções de Gerenciamento e Disparo de E-mails (Gmail SMTP)
+  // Funções de Gerenciamento e Disparo de E-mails (Gmail SMTP / Corporativo GoDesc)
   const dispatchTicketEmail = async (params: {
     to: string;
     actionType: 'CREATED' | 'STARTED' | 'PAUSED' | 'COMPLETED' | 'MESSAGE_ADDED' | 'STATUS_CHANGED';
@@ -2207,63 +2213,97 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const getEmailConfig = async () => {
-    try {
-      const res = await fetch(`${whatsappServerUrl}/api/email/config`);
-      const contentType = res.headers.get('content-type') || '';
-      if (res.ok && contentType.includes('application/json')) {
-        return await res.json();
+    const tryUrls = [whatsappServerUrl];
+    if (whatsappServerUrl !== 'http://localhost:10000') {
+      tryUrls.push('http://localhost:10000');
+    }
+
+    for (const url of tryUrls) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
+        const res = await fetch(`${url}/api/email/config`, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        const contentType = res.headers.get('content-type') || '';
+        if (res.ok && contentType.includes('application/json')) {
+          if (url !== whatsappServerUrl) updateWhatsappServerUrl(url);
+          return await res.json();
+        }
+      } catch (err) {
+        // tenta próxima url
       }
-    } catch (err) {
-      console.warn('Erro ao buscar config de e-mail:', err);
     }
     return null;
   };
 
   const saveEmailConfig = async (configData: any) => {
-    try {
-      const res = await fetch(`${whatsappServerUrl}/api/email/config`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(configData)
-      });
-      const contentType = res.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) {
-        const text = await res.text();
-        return { 
-          success: false, 
-          error: `O servidor (${whatsappServerUrl}) retornou status ${res.status}. Certifique-se de que a URL do backend está apontando para http://localhost:10000.` 
-        };
-      }
-      return await res.json();
-    } catch (err: any) {
-      return { 
-        success: false, 
-        error: `Não foi possível conectar ao servidor backend em ${whatsappServerUrl}. Verifique se o servidor local está em execução.` 
-      };
+    const tryUrls = [whatsappServerUrl];
+    if (whatsappServerUrl !== 'http://localhost:10000') {
+      tryUrls.push('http://localhost:10000');
     }
+
+    let lastError = '';
+    for (const url of tryUrls) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const res = await fetch(`${url}/api/email/config`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(configData),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          if (url !== whatsappServerUrl) updateWhatsappServerUrl(url);
+          return await res.json();
+        }
+        lastError = `Servidor (${url}) retornou status ${res.status}.`;
+      } catch (err: any) {
+        lastError = err.name === 'AbortError' ? 'Tempo limite esgotado (10s)' : err.message;
+      }
+    }
+    return { 
+      success: false, 
+      error: `Não foi possível salvar no servidor (${whatsappServerUrl}): ${lastError}` 
+    };
   };
 
   const testEmailConnection = async (customConfig?: any, testRecipient?: string) => {
-    try {
-      const res = await fetch(`${whatsappServerUrl}/api/email/test`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...(customConfig || {}), testRecipient })
-      });
-      const contentType = res.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) {
-        return { 
-          success: false, 
-          error: `O servidor (${whatsappServerUrl}) retornou status ${res.status}. Certifique-se de que a URL do backend está apontando para http://localhost:10000.` 
-        };
-      }
-      return await res.json();
-    } catch (err: any) {
-      return { 
-        success: false, 
-        error: `Não foi possível conectar ao servidor backend em ${whatsappServerUrl}. Verifique se o servidor local está em execução.` 
-      };
+    const tryUrls = [whatsappServerUrl];
+    if (whatsappServerUrl !== 'http://localhost:10000') {
+      tryUrls.push('http://localhost:10000');
     }
+
+    let lastError = '';
+    for (const url of tryUrls) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
+        const res = await fetch(`${url}/api/email/test`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...(customConfig || {}), testRecipient }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          if (url !== whatsappServerUrl) updateWhatsappServerUrl(url);
+          return await res.json();
+        }
+        lastError = `Servidor (${url}) retornou resposta inválida (status ${res.status}).`;
+      } catch (err: any) {
+        lastError = err.name === 'AbortError' ? 'Tempo limite esgotado (12s)' : err.message;
+      }
+    }
+    return { 
+      success: false, 
+      error: `Falha ao conectar no servidor de e-mail (${whatsappServerUrl}): ${lastError}` 
+    };
   };
 
   // Poll contínuo do status do servidor Baileys para manter o frontend 100% em sincronia
