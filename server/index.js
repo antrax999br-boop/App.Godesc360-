@@ -6,7 +6,9 @@ const express = require('express');
 const cors = require('cors');
 const QRCode = require('qrcode');
 const fs = require('fs');
-const { makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const { makeWASocket, useMultiFileAuthState, DisconnectReason, jidNormalizedUser } = require('@whiskeysockets/baileys');
+const emailService = require('./emailService');
+
 
 const app = express();
 app.use(cors());
@@ -208,9 +210,9 @@ app.get('/api/sync-messages', (req, res) => {
 async function resolveJid(toPhone) {
   if (!toPhone) return null;
 
-  // Se já for o JID exato recebido do WhatsApp (ex: 5545999887766@s.whatsapp.net)
+  // Se já for o JID exato recebido do WhatsApp (ex: 5545999887766@s.whatsapp.net), normaliza removendo device ID
   if (typeof toPhone === 'string' && toPhone.includes('@')) {
-    return toPhone;
+    return jidNormalizedUser(toPhone);
   }
   let clean = toPhone.replace(/\D/g, '');
   if (!clean) return null;
@@ -220,13 +222,13 @@ async function resolveJid(toPhone) {
     clean = '55' + clean;
   }
 
-  let targetJid = `${clean}@s.whatsapp.net`;
+  let targetJid = jidNormalizedUser(`${clean}@s.whatsapp.net`);
   if (!sock) return targetJid;
 
   try {
     const onWa = await sock.onWhatsApp(clean);
     if (onWa && onWa.length > 0 && onWa[0].exists && onWa[0].jid) {
-      return onWa[0].jid;
+      return jidNormalizedUser(onWa[0].jid);
     }
 
     if (clean.startsWith('55') && clean.length === 13 && clean[4] === '9') {
@@ -234,14 +236,14 @@ async function resolveJid(toPhone) {
       const without9 = clean.slice(0, 4) + clean.slice(5);
       const onWaAlt = await sock.onWhatsApp(without9);
       if (onWaAlt && onWaAlt.length > 0 && onWaAlt[0].exists && onWaAlt[0].jid) {
-        return onWaAlt[0].jid;
+        return jidNormalizedUser(onWaAlt[0].jid);
       }
     } else if (clean.startsWith('55') && clean.length === 12) {
       // Tenta com o 9º dígito
       const with9 = clean.slice(0, 4) + '9' + clean.slice(4);
       const onWaAlt = await sock.onWhatsApp(with9);
       if (onWaAlt && onWaAlt.length > 0 && onWaAlt[0].exists && onWaAlt[0].jid) {
-        return onWaAlt[0].jid;
+        return jidNormalizedUser(onWaAlt[0].jid);
       }
     }
   } catch (e) {
@@ -302,6 +304,89 @@ app.post('/api/logout', async (req, res) => {
     console.log('🔴 Sessão WhatsApp encerrada pelo usuário.');
     res.json({ success: true, message: 'WhatsApp desconectado com sucesso' });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// ENDPOINTS DE E-MAIL (SMTP CORPORATIVO GoDesc / PERSONALIZADO / GMAIL)
+// ==========================================
+
+// Retorna configurações atuais do e-mail
+app.get('/api/email/config', (req, res) => {
+  res.json(emailService.getEmailConfig());
+});
+
+// Salva novas credenciais e preferências de e-mail
+app.post('/api/email/config', (req, res) => {
+  const {
+    user, pass, fromName, enabled,
+    provider, smtpHost, smtpPort, smtpSecure,
+    imapHost, imapPort,
+    notifyOnCreate, notifyOnStatusChange, notifyOnMessage
+  } = req.body;
+  const updateData = {};
+
+  // Credenciais básicas
+  if (user !== undefined) updateData.user = user.trim();
+  if (pass !== undefined && pass !== '') updateData.pass = pass.trim();
+  if (fromName !== undefined) updateData.fromName = fromName.trim();
+  if (enabled !== undefined) updateData.enabled = !!enabled;
+
+  // Provedor e servidor SMTP/IMAP
+  if (provider !== undefined) updateData.provider = provider;
+  if (smtpHost !== undefined && smtpHost !== '') updateData.smtpHost = smtpHost.trim();
+  if (smtpPort !== undefined) updateData.smtpPort = Number(smtpPort);
+  if (smtpSecure !== undefined) updateData.smtpSecure = !!smtpSecure;
+  if (imapHost !== undefined && imapHost !== '') updateData.imapHost = imapHost.trim();
+  if (imapPort !== undefined) updateData.imapPort = Number(imapPort);
+
+  // Notificações
+  if (notifyOnCreate !== undefined) updateData.notifyOnCreate = !!notifyOnCreate;
+  if (notifyOnStatusChange !== undefined) updateData.notifyOnStatusChange = !!notifyOnStatusChange;
+  if (notifyOnMessage !== undefined) updateData.notifyOnMessage = !!notifyOnMessage;
+
+  const saved = emailService.saveConfig(updateData);
+  if (saved) {
+    res.json({ success: true, config: emailService.getEmailConfig() });
+  } else {
+    res.status(500).json({ error: 'Erro ao salvar configurações de e-mail.' });
+  }
+});
+
+// Testa conexão SMTP enviando um e-mail de verificação
+app.post('/api/email/test', async (req, res) => {
+  const { user, pass, fromName, provider, smtpHost, smtpPort, smtpSecure, testRecipient } = req.body;
+  try {
+    const customConfig = (user && pass) ? { user, pass, fromName, provider, smtpHost, smtpPort, smtpSecure } : null;
+    const result = await emailService.testConnection(customConfig, testRecipient);
+    res.json(result);
+  } catch (err) {
+    console.error('Falha no teste de e-mail:', err);
+    res.status(400).json({ error: err.message || 'Falha ao conectar com o servidor de e-mail' });
+  }
+});
+
+// Dispara e-mail de notificação de chamado
+app.post('/api/email/notify', async (req, res) => {
+  const { to, actionType, ticket, technicianName, note, messageText, attachments } = req.body;
+  if (!to || !ticket) {
+    return res.status(400).json({ error: 'Parâmetros "to" e "ticket" são obrigatórios.' });
+  }
+
+  try {
+    const result = await emailService.sendTicketNotification({
+      to,
+      actionType,
+      ticket,
+      technicianName,
+      note,
+      messageText,
+      attachments
+    });
+    res.json(result);
+  } catch (err) {
+    console.error('Erro na rota de notificação de chamado:', err);
     res.status(500).json({ error: err.message });
   }
 });

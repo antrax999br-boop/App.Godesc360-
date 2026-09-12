@@ -123,6 +123,19 @@ interface AppContextType {
   publishChatbotFlow: (flow: ChatbotFlow) => void;
   updateBusinessHours: (config: Partial<BusinessHoursConfig>) => void;
   saveAttendanceQueue: (queue: AttendanceQueue) => void;
+  // Configurações & Notificações de E-mail (Gmail / SMTP)
+  getEmailConfig: () => Promise<any>;
+  saveEmailConfig: (config: any) => Promise<any>;
+  testEmailConnection: (customConfig?: any, testRecipient?: string) => Promise<any>;
+  dispatchTicketEmail: (params: {
+    to: string;
+    actionType: 'CREATED' | 'STARTED' | 'PAUSED' | 'COMPLETED' | 'MESSAGE_ADDED' | 'STATUS_CHANGED';
+    ticket: Ticket;
+    technicianName?: string;
+    note?: string;
+    messageText?: string;
+    attachments?: TicketAttachment[];
+  }) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -1284,6 +1297,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Realtime ticket broadcast failed:', err);
     }
 
+    // Dispara Notificação Automática por E-mail (Gmail)
+    if (cleanRequesterEmail && cleanRequesterEmail.includes('@')) {
+      dispatchTicketEmail({
+        to: cleanRequesterEmail,
+        actionType: 'CREATED',
+        ticket: newTicket
+      });
+    }
+
     return newTicket;
   };
 
@@ -1358,6 +1380,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       } catch (err) {
         console.warn('Realtime broadcast ticket_updated failed:', err);
+      }
+
+      // Dispara E-mail automático para o solicitante com base no novo status
+      if (obj.requesterEmail && obj.requesterEmail.includes('@')) {
+        let actionType: 'STARTED' | 'PAUSED' | 'COMPLETED' | 'STATUS_CHANGED' = 'STATUS_CHANGED';
+        if (status === 'Em Atendimento') actionType = 'STARTED';
+        else if (status === 'Pendente') actionType = 'PAUSED';
+        else if (status === 'Resolvido' || status === 'Fechado') actionType = 'COMPLETED';
+
+        dispatchTicketEmail({
+          to: obj.requesterEmail,
+          actionType,
+          ticket: obj,
+          technicianName: userSession.name || 'Analista T.I.',
+          note: technicianNote
+        });
       }
     }
   };
@@ -1530,6 +1568,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       } catch (err) {
         console.warn('Realtime broadcast ticket_updated failed:', err);
+      }
+
+      // Se a resposta ou anexo foi enviado pelo técnico de TI, notifica o cliente por e-mail
+      if (role === 'ti' && updatedTicketObj.requesterEmail && updatedTicketObj.requesterEmail.includes('@')) {
+        dispatchTicketEmail({
+          to: updatedTicketObj.requesterEmail,
+          actionType: 'MESSAGE_ADDED',
+          ticket: updatedTicketObj,
+          technicianName: userSession.name || 'Analista T.I.',
+          messageText: text,
+          attachments
+        });
       }
     }
   };
@@ -2125,13 +2175,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [whatsappServerUrl, setWhatsappServerUrlState] = useState<string>(() => {
     const saved = localStorage.getItem('godesc_whatsapp_server_url');
     if (saved) return saved;
-    return import.meta.env.VITE_WHATSAPP_API_URL || 'https://godesc360-whatsapp-api.onrender.com';
+    return import.meta.env.VITE_WHATSAPP_API_URL || 'http://localhost:10000';
   });
 
   const updateWhatsappServerUrl = (url: string) => {
     const cleanUrl = url.trim().replace(/\/+$/, '');
     setWhatsappServerUrlState(cleanUrl);
     localStorage.setItem('godesc_whatsapp_server_url', cleanUrl);
+  };
+
+  // Funções de Gerenciamento e Disparo de E-mails (Gmail SMTP)
+  const dispatchTicketEmail = async (params: {
+    to: string;
+    actionType: 'CREATED' | 'STARTED' | 'PAUSED' | 'COMPLETED' | 'MESSAGE_ADDED' | 'STATUS_CHANGED';
+    ticket: Ticket;
+    technicianName?: string;
+    note?: string;
+    messageText?: string;
+    attachments?: TicketAttachment[];
+  }) => {
+    if (!params.to || !params.to.includes('@')) return;
+    try {
+      await fetch(`${whatsappServerUrl}/api/email/notify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params)
+      });
+    } catch (err) {
+      console.warn('Falha no envio de notificação por e-mail:', err);
+    }
+  };
+
+  const getEmailConfig = async () => {
+    try {
+      const res = await fetch(`${whatsappServerUrl}/api/email/config`);
+      if (res.ok) return await res.json();
+    } catch (err) {
+      console.warn('Erro ao buscar config de e-mail:', err);
+    }
+    return null;
+  };
+
+  const saveEmailConfig = async (configData: any) => {
+    try {
+      const res = await fetch(`${whatsappServerUrl}/api/email/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(configData)
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  };
+
+  const testEmailConnection = async (customConfig?: any, testRecipient?: string) => {
+    try {
+      const res = await fetch(`${whatsappServerUrl}/api/email/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...(customConfig || {}), testRecipient })
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
   };
 
   // Poll contínuo do status do servidor Baileys para manter o frontend 100% em sincronia
@@ -2585,7 +2693,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         saveChatbotFlow,
         publishChatbotFlow,
         updateBusinessHours,
-        saveAttendanceQueue
+        saveAttendanceQueue,
+        // Configurações & Notificações de E-mail
+        getEmailConfig,
+        saveEmailConfig,
+        testEmailConnection,
+        dispatchTicketEmail
       }}
     >
       {children}

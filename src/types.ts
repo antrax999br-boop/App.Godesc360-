@@ -435,3 +435,23 @@ export interface DomainItem {
   status: 'OK' | 'Propagando' | 'Alerta';
   sslValid: boolean;
 }
+
+export type EmailProvider = 'godesc' | 'custom' | 'gmail';
+
+export interface EmailConfig {
+  enabled: boolean;
+  provider: EmailProvider;
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecure: boolean;
+  imapHost?: string;
+  imapPort?: number;
+  user: string;
+  pass?: string;
+  passMasked?: string;
+  hasPassword?: boolean;
+  fromName: string;
+  notifyOnCreate: boolean;
+  notifyOnStatusChange: boolean;
+  notifyOnMessage: boolean;
+}
