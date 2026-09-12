@@ -122,7 +122,9 @@ function getLogoAttachment() {
       return {
         filename: 'logo-godesc.png',
         path: p,
-        cid: 'godesclogo'
+        cid: 'godesclogo',
+        contentType: 'image/png',
+        contentDisposition: 'inline'
       };
     }
   }
@@ -141,7 +143,9 @@ function getWhatsAppIconAttachment() {
       return {
         filename: 'whatsapp-icon.png',
         path: p,
-        cid: 'whatsappicon'
+        cid: 'whatsappicon',
+        contentType: 'image/png',
+        contentDisposition: 'inline'
       };
     }
   }
@@ -352,13 +356,13 @@ function buildEmailTemplate({ title, subtitle, badgeText, badgeBg, highlightTitl
               <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto;">
                 <tr>
                   <td align="center" valign="middle" style="padding-right: 8px;">
-                    <a href="https://wa.me/554733363233" target="_blank" style="text-decoration: none; display: inline-block;">
-                      <img src="cid:whatsappicon" onerror="this.src='https://raw.githubusercontent.com/antrax999br-boop/App.Godesc360-/main/public/whatsapp-icon.png'" alt="WhatsApp" width="22" height="22" style="display: block; width: 22px; height: 22px; border: 0;" />
+                    <a href="https://wa.me/551133363233" target="_blank" style="text-decoration: none; display: inline-block;">
+                      <img src="cid:whatsappicon" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3670/3670051.png'" alt="WhatsApp" width="22" height="22" border="0" style="display: block; width: 22px; height: 22px; border: 0; outline: none; text-decoration: none;" />
                     </a>
                   </td>
                   <td align="center" valign="middle">
-                    <a href="https://wa.me/554733363233" target="_blank" style="font-size: 17px; font-weight: 700; color: #45dfa4 !important; text-decoration: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; letter-spacing: 0.5px;">
-                      3336-3233
+                    <a href="https://wa.me/551133363233" target="_blank" style="font-size: 17px; font-weight: 700; color: #45dfa4 !important; text-decoration: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; letter-spacing: 0.5px;">
+                      (11) 3336-3233
                     </a>
                   </td>
                 </tr>

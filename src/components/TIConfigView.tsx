@@ -1930,8 +1930,8 @@ export const TIConfigView: React.FC = () => {
                       <p className="text-slate-500 text-[11px]">Por favor, não responda diretamente a este e-mail.</p>
                       <p className="text-slate-600 text-[10px] pt-1">© {new Date().getFullYear()} GoDesc. Todos os direitos reservados.</p>
                       <div className="pt-3 flex items-center justify-center gap-2 text-[#45dfa4] font-bold text-sm">
-                        <img src="/whatsapp-icon.png" alt="WhatsApp" className="w-5 h-5" />
-                        <span>3336-3233</span>
+                        <img src="/whatsapp-icon.png" alt="WhatsApp" className="w-5 h-5 object-contain" />
+                        <span>(11) 3336-3233</span>
                       </div>
                     </div>
                   </div>
