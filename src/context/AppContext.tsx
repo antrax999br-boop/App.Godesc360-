@@ -2573,14 +2573,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 processedMsgIds.current.delete(firstKey);
               }
 
-              const rawPhone = incMsg.phone.replace(/\D/g, '');
-              const convId = `conv-${rawPhone}`;
-              const contactName = (incMsg.name && incMsg.name.trim()) ? incMsg.name.trim() : `+${rawPhone}`;
+              // Extrai apenas dígitos do telefone, ignorando sufixo JID como @s.whatsapp.net
+              const rawPhone = (incMsg.jid || incMsg.phone).split('@')[0].replace(/\D/g, '');
+              // Sanitiza o nome: se o nome vier com @, JID ou for igual ao phone bruto, usa apenas o número formatado
+              const rawName = (incMsg.name && incMsg.name.trim()) ? incMsg.name.trim() : '';
+              const contactName = (rawName && !rawName.includes('@') && rawName !== rawPhone && rawName !== incMsg.phone) ? rawName : `+${rawPhone}`;
               const contactJid = incMsg.jid || `${rawPhone}@s.whatsapp.net`;
+
+              // Busca conversa existente pelo convId padrão
+              const baseConvId = `conv-${rawPhone}`;
               
+              // Determina o convId a usar — se a conversa existente estiver CLOSED, cria uma nova com timestamp
+              let convId = baseConvId;
+
               setAttendanceConversations(cPrev => {
                 const existing = cPrev.find(c => 
-                  c.id === convId || 
+                  c.id === baseConvId || 
                   c.contactPhone.replace(/\D/g, '') === rawPhone ||
                   (rawPhone.length >= 8 && c.contactPhone.replace(/\D/g, '').endsWith(rawPhone.slice(-8)))
                 );
@@ -2589,15 +2597,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 if (existing) {
                   const lowerContent = incMsg.content.trim().toLowerCase();
                   const isMenuCmd = ['menu', 'início', 'inicio', '#', 'voltar', 'opções', 'opcoes', 'ajuda', 'começar', 'comecar'].includes(lowerContent);
+
+                  // Se conversa estava CLOSED: abre uma NOVA conversa com ID único para não misturar histórico
+                  if (existing.status === 'CLOSED') {
+                    convId = `conv-${rawPhone}-${Date.now()}`;
+                    const newConv: AttendanceConversation = {
+                      id: convId,
+                      companyId: 'default-company',
+                      contactId: `cnt-${rawPhone}`,
+                      contactName: (existing.contactName && existing.contactName !== existing.contactPhone) ? existing.contactName : contactName,
+                      contactPhone: `+${rawPhone}`,
+                      contactJid,
+                      status: 'BOT',
+                      queueName: 'Triagem Automática',
+                      lastMessageText: incMsg.content,
+                      lastMessageAt: timeStr,
+                      unreadCount: 1,
+                      botActive: true,
+                      priority: 'Média',
+                      startedAt: incMsg.timestamp
+                    };
+                    return [newConv, ...cPrev];
+                  }
                   
-                  // Se o atendimento estava fechado (CLOSED), ou o status não for IN_PROGRESS,
-                  // ou se não houver analista atendente atribuído, ou se digitou comando de reinício/menu:
-                  // O contato entra automaticamente na triagem do Chatbot!
-                  const shouldStartBot = existing.status === 'CLOSED' || 
-                    existing.status === 'BOT' || 
+                  const shouldStartBot = existing.status === 'BOT' || 
                     existing.status !== 'IN_PROGRESS' || 
                     !existing.assignedUserName || 
                     isMenuCmd;
+
+                  // Mantém o mesmo convId da conversa existente
+                  convId = existing.id;
 
                   return cPrev.map(c => {
                     if (c.id === existing.id) {
@@ -2626,7 +2655,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     contactName,
                     contactPhone: `+${rawPhone}`,
                     contactJid,
-                    status: 'BOT', // Inicia no estado BOT enquanto está na triagem do Chatbot
+                    status: 'BOT',
                     queueName: 'Triagem Automática',
                     lastMessageText: incMsg.content,
                     lastMessageAt: timeStr,
@@ -2641,7 +2670,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
               const newMsgObj: AttendanceMessage = {
                 id: msgKey,
-                conversationId: convId,
+                conversationId: convId, // convId pode ter sido atualizado acima (nova conversa de CLOSED)
                 senderType: 'CUSTOMER',
                 senderName: contactName,
                 messageType: 'TEXT',
@@ -2782,10 +2811,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Envia mensagem real para o celular do cliente via API do Baileys
     if (senderType === 'AGENT' || senderType === 'BOT') {
+      // Prefixo do analista em negrito para o cliente identificar quem está falando
+      const textToSend = senderType === 'AGENT'
+        ? `*${userSession.name || 'Atendente'}:* ${content}`
+        : content;
       fetch(`${whatsappServerUrl}/api/send-message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ toPhone: conv.contactJid || conv.contactPhone, text: content })
+        body: JSON.stringify({ toPhone: conv.contactJid || conv.contactPhone, text: textToSend })
       })
         .then(async res => {
           const data = await res.json().catch(() => ({}));
@@ -2848,6 +2881,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const closeConversation = (conversationId: string) => {
+    // Marca a conversa como encerrada
     setAttendanceConversations(prev =>
       prev.map(c => {
         if (c.id === conversationId) {
@@ -2863,6 +2897,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return c;
       })
     );
+    // Limpa o histórico de mensagens da conversa encerrada para não aparecer no próximo atendimento
+    setAttendanceMessages(prev => prev.filter(m => m.conversationId !== conversationId));
   };
 
   const toggleBotState = (conversationId: string, active: boolean) => {
