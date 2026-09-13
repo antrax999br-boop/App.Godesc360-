@@ -22,67 +22,94 @@ export interface ChatbotProcessingResult {
 
 export class ChatbotEngine {
   public static isWithinBusinessHours(config?: BusinessHoursConfig): { isWorking: boolean; outMessage: string } {
-    if (!config || !config.enabled) {
-      return { isWorking: true, outMessage: '' };
-    }
+    try {
+      if (!config || !config.enabled) {
+        return { isWorking: true, outMessage: '' };
+      }
 
-    // Usar fuso horário do Brasil (America/Sao_Paulo)
-    const now = new Date();
-    const brTimeString = now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" });
-    const brDate = new Date(brTimeString);
+      const defaultMsg = config.outOfHoursMessage || 'Olá! Nosso horário de atendimento é de segunda a sexta-feira, das 08:00 às 18:00.';
 
-    const daysMap: Record<number, string> = {
-      0: 'Domingo',
-      1: 'Segunda-feira',
-      2: 'Terça-feira',
-      3: 'Quarta-feira',
-      4: 'Quinta-feira',
-      5: 'Sexta-feira',
-      6: 'Sábado'
-    };
+      if (!config.schedules || !Array.isArray(config.schedules) || config.schedules.length === 0) {
+        return { isWorking: true, outMessage: '' };
+      }
 
-    const dayName = daysMap[brDate.getDay()];
-    const schedule = config.schedules.find(s => s.day === dayName);
+      // Usar fuso horário do Brasil (America/Sao_Paulo)
+      const now = new Date();
+      let brDate: Date;
+      try {
+        const brTimeString = now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" });
+        brDate = new Date(brTimeString);
+        if (isNaN(brDate.getTime())) brDate = now;
+      } catch (e) {
+        brDate = now;
+      }
 
-    if (!schedule || !schedule.enabled) {
-      return {
-        isWorking: false,
-        outMessage: config.outOfHoursMessage || 'Olá! Nosso horário de atendimento é de segunda a sexta-feira, das 08:00 às 18:00.'
+      const daysMap: Record<number, string> = {
+        0: 'Domingo',
+        1: 'Segunda-feira',
+        2: 'Terça-feira',
+        3: 'Quarta-feira',
+        4: 'Quinta-feira',
+        5: 'Sexta-feira',
+        6: 'Sábado'
       };
-    }
 
-    const currentMinutes = brDate.getHours() * 60 + brDate.getMinutes();
+      const dayName = daysMap[brDate.getDay()];
+      const schedule = config.schedules.find(s => s && s.day === dayName);
 
-    const [openH, openM] = schedule.openTime.split(':').map(Number);
-    const openMinutes = openH * 60 + openM;
-
-    const [closeH, closeM] = schedule.closeTime.split(':').map(Number);
-    const closeMinutes = closeH * 60 + closeM;
-
-    if (currentMinutes < openMinutes || currentMinutes > closeMinutes) {
-      return {
-        isWorking: false,
-        outMessage: config.outOfHoursMessage || 'Olá! Nosso horário de atendimento é de segunda a sexta-feira, das 08:00 às 18:00.'
-      };
-    }
-
-    // Check lunch break
-    if (schedule.hasLunchBreak && schedule.lunchStart && schedule.lunchEnd) {
-      const [lStartH, lStartM] = schedule.lunchStart.split(':').map(Number);
-      const lStartMinutes = lStartH * 60 + lStartM;
-
-      const [lEndH, lEndM] = schedule.lunchEnd.split(':').map(Number);
-      const lEndMinutes = lEndH * 60 + lEndM;
-
-      if (currentMinutes >= lStartMinutes && currentMinutes <= lEndMinutes) {
+      if (!schedule || !schedule.enabled) {
         return {
           isWorking: false,
-          outMessage: 'Estamos em horário de almoço no momento. Retornaremos em breve!'
+          outMessage: defaultMsg
         };
       }
-    }
 
-    return { isWorking: true, outMessage: '' };
+      const currentMinutes = brDate.getHours() * 60 + brDate.getMinutes();
+
+      // Sanitiza openTime e closeTime com fallback seguro
+      const openTime = (schedule.openTime && typeof schedule.openTime === 'string' && schedule.openTime.includes(':'))
+        ? schedule.openTime
+        : '08:00';
+      const closeTime = (schedule.closeTime && typeof schedule.closeTime === 'string' && schedule.closeTime.includes(':'))
+        ? schedule.closeTime
+        : '18:00';
+
+      const [openH, openM] = openTime.split(':').map(Number);
+      const openMinutes = (isNaN(openH) ? 8 : openH) * 60 + (isNaN(openM) ? 0 : openM);
+
+      const [closeH, closeM] = closeTime.split(':').map(Number);
+      const closeMinutes = (isNaN(closeH) ? 18 : closeH) * 60 + (isNaN(closeM) ? 0 : closeM);
+
+      if (currentMinutes < openMinutes || currentMinutes > closeMinutes) {
+        return {
+          isWorking: false,
+          outMessage: defaultMsg
+        };
+      }
+
+      // Check lunch break de forma segura
+      if (schedule.hasLunchBreak && schedule.lunchStart && schedule.lunchEnd &&
+          typeof schedule.lunchStart === 'string' && schedule.lunchStart.includes(':') &&
+          typeof schedule.lunchEnd === 'string' && schedule.lunchEnd.includes(':')) {
+        const [lStartH, lStartM] = schedule.lunchStart.split(':').map(Number);
+        const lStartMinutes = (isNaN(lStartH) ? 12 : lStartH) * 60 + (isNaN(lStartM) ? 0 : lStartM);
+
+        const [lEndH, lEndM] = schedule.lunchEnd.split(':').map(Number);
+        const lEndMinutes = (isNaN(lEndH) ? 13 : lEndH) * 60 + (isNaN(lEndM) ? 0 : lEndM);
+
+        if (currentMinutes >= lStartMinutes && currentMinutes <= lEndMinutes) {
+          return {
+            isWorking: false,
+            outMessage: 'Estamos em horário de almoço no momento. Retornaremos em breve!'
+          };
+        }
+      }
+
+      return { isWorking: true, outMessage: '' };
+    } catch (err) {
+      console.warn('Erro ao verificar horário de atendimento:', err);
+      return { isWorking: true, outMessage: '' };
+    }
   }
 
   public static processIncomingMessage(
@@ -96,7 +123,10 @@ export class ChatbotEngine {
     const hoursCheck = this.isWithinBusinessHours(businessHours);
     if (!hoursCheck.isWorking) {
       return {
-        replyMessage: hoursCheck.outMessage
+        replyMessage: hoursCheck.outMessage || 'Olá! Nosso horário de atendimento é de segunda a sexta-feira, das 08:00 às 18:00.',
+        updateConversationStatus: 'WAITING',
+        targetQueueName: 'Fora do Expediente',
+        botActive: false
       };
     }
 

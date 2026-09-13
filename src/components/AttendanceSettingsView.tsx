@@ -17,20 +17,45 @@ export const AttendanceSettingsView: React.FC = () => {
   const [config, setConfig] = useState<BusinessHoursConfig>(businessHours);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
+  React.useEffect(() => {
+    if (businessHours) {
+      setConfig(businessHours);
+    }
+  }, [businessHours]);
+
+  const handleToggleEnabled = () => {
+    setConfig(prev => ({ ...prev, enabled: !prev.enabled }));
+  };
+
   const handleToggleDay = (index: number) => {
-    const newSchedules = [...config.schedules];
-    newSchedules[index].enabled = !newSchedules[index].enabled;
-    setConfig({ ...config, schedules: newSchedules });
+    const newSchedules = [...(config.schedules || [])];
+    if (newSchedules[index]) {
+      newSchedules[index] = { ...newSchedules[index], enabled: !newSchedules[index].enabled };
+      setConfig({ ...config, schedules: newSchedules });
+    }
   };
 
   const handleTimeChange = (index: number, field: 'openTime' | 'closeTime' | 'lunchStart' | 'lunchEnd', value: string) => {
-    const newSchedules = [...config.schedules];
-    newSchedules[index] = { ...newSchedules[index], [field]: value };
-    setConfig({ ...config, schedules: newSchedules });
+    const newSchedules = [...(config.schedules || [])];
+    if (newSchedules[index]) {
+      newSchedules[index] = { ...newSchedules[index], [field]: value };
+      setConfig({ ...config, schedules: newSchedules });
+    }
   };
 
   const handleSave = () => {
-    updateBusinessHours(config);
+    const sanitized: BusinessHoursConfig = {
+      ...config,
+      enabled: config.enabled !== undefined ? config.enabled : true,
+      outOfHoursMessage: config.outOfHoursMessage || 'Olá! Nosso horário de atendimento é de segunda a sexta-feira, das 08:00 às 18:00.',
+      schedules: (config.schedules || []).map(s => ({
+        ...s,
+        openTime: s.openTime && s.openTime.includes(':') ? s.openTime : '08:00',
+        closeTime: s.closeTime && s.closeTime.includes(':') ? s.closeTime : '18:00'
+      }))
+    };
+    updateBusinessHours(sanitized);
+    setConfig(sanitized);
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
   };
@@ -70,9 +95,32 @@ export const AttendanceSettingsView: React.FC = () => {
       {savedSuccess && (
         <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400 text-xs font-mono flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4" />
-          Configurações de horário salvas com sucesso!
+          Configurações de horário salvas com sucesso no sistema!
         </div>
       )}
+
+      {/* Toggle Enable Business Hours Control */}
+      <div className="bg-[#18181b] p-6 rounded-2xl border border-[#27272a] flex items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h3 className="text-sm font-bold text-white flex items-center gap-2">
+            <Clock className="w-4 h-4 text-[#45dfa4]" />
+            Controle de Horário Ativo
+          </h3>
+          <p className="text-xs text-[#8d90a0]">
+            Quando ativado, mensagens recebidas fora da grade horária configurada receberão a resposta de ausência automaticamente.
+          </p>
+        </div>
+        <button
+          onClick={handleToggleEnabled}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+            config.enabled
+              ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30'
+              : 'bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30'
+          }`}
+        >
+          {config.enabled ? '🟢 Controle Ativado' : '🔴 Controle Desativado'}
+        </button>
+      </div>
 
       {/* Out of Hours Message Config */}
       <div className="bg-[#18181b] p-6 rounded-2xl border border-[#27272a] space-y-4">
@@ -83,7 +131,7 @@ export const AttendanceSettingsView: React.FC = () => {
 
         <textarea
           rows={3}
-          value={config.outOfHoursMessage}
+          value={config.outOfHoursMessage || ''}
           onChange={e => setConfig({ ...config, outOfHoursMessage: e.target.value })}
           className="w-full bg-[#1e1e24] border border-[#27272a] rounded-xl p-3 text-xs text-white placeholder-[#8d90a0] focus:outline-none focus:border-[#45dfa4] leading-relaxed"
         />
@@ -96,9 +144,9 @@ export const AttendanceSettingsView: React.FC = () => {
         </h3>
 
         <div className="space-y-3">
-          {config.schedules.map((sch, idx) => (
+          {(config.schedules || []).map((sch, idx) => (
             <div
-              key={sch.day}
+              key={sch.day || idx}
               className="p-4 bg-[#141416] border border-[#27272a] rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4"
             >
               <div className="flex items-center gap-3 w-44">
@@ -119,7 +167,7 @@ export const AttendanceSettingsView: React.FC = () => {
                     <span className="text-[#8d90a0]">Abertura:</span>
                     <input
                       type="time"
-                      value={sch.openTime}
+                      value={sch.openTime || '08:00'}
                       onChange={e => handleTimeChange(idx, 'openTime', e.target.value)}
                       className="bg-[#1e1e24] border border-[#27272a] px-2 py-1 rounded text-white focus:border-[#45dfa4]"
                     />
@@ -129,7 +177,7 @@ export const AttendanceSettingsView: React.FC = () => {
                     <span className="text-[#8d90a0]">Fechamento:</span>
                     <input
                       type="time"
-                      value={sch.closeTime}
+                      value={sch.closeTime || '18:00'}
                       onChange={e => handleTimeChange(idx, 'closeTime', e.target.value)}
                       className="bg-[#1e1e24] border border-[#27272a] px-2 py-1 rounded text-white focus:border-[#45dfa4]"
                     />

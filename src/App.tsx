@@ -195,10 +195,75 @@ const ScreenRenderer: React.FC = () => {
   );
 };
 
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  errorMessage: string;
+}
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, errorMessage: '' };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, errorMessage: error?.message || 'Erro inesperado de renderização.' };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('ErrorBoundary capturou uma exceção:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-[#141416] text-[#dfe2eb] flex flex-col items-center justify-center p-6 text-center space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-2xl">
+            ⚠️
+          </div>
+          <h2 className="text-lg font-bold text-white">Falha Temporária de Renderização</h2>
+          <p className="text-xs text-[#8d90a0] max-w-md font-mono bg-[#1e1e24] p-3 rounded-xl border border-[#27272a]">
+            {this.state.errorMessage}
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                this.setState({ hasError: false, errorMessage: '' });
+                window.location.reload();
+              }}
+              className="px-4 py-2 bg-[#45dfa4] text-gray-950 font-bold rounded-xl text-xs hover:bg-[#00bd85] transition-all cursor-pointer shadow-lg shadow-[#45dfa4]/20"
+            >
+              Recarregar Página
+            </button>
+            <button
+              onClick={() => {
+                try {
+                  localStorage.removeItem('godesc_business_hours');
+                } catch (e) {}
+                window.location.reload();
+              }}
+              className="px-4 py-2 bg-[#27272a] hover:bg-[#323238] text-white rounded-xl text-xs transition-all cursor-pointer"
+            >
+              Resetar Horários & Recarregar
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
   return (
-    <AppProvider>
-      <ScreenRenderer />
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        <ScreenRenderer />
+      </AppProvider>
+    </ErrorBoundary>
   );
 }

@@ -1994,21 +1994,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     { id: 'q-3', companyId: 'default-company', name: 'Financeiro', description: 'Faturamento e Cobrança', color: '#a855f7', assignedUsers: ['admin.gestor'], priority: 'Média', distributionStrategy: 'ROUND_ROBIN' }
   ]);
 
-  const [businessHours, setBusinessHours] = useState<BusinessHoursConfig>({
-    id: 'bh-1',
-    companyId: 'default-company',
-    enabled: true,
-    outOfHoursMessage: 'Olá! Nosso horário de atendimento é de segunda a sexta-feira, das 08:00 às 18:00.',
-    schedules: [
-      { day: 'Segunda-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: false },
-      { day: 'Terça-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: false },
-      { day: 'Quarta-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: false },
-      { day: 'Quinta-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: false },
-      { day: 'Sexta-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: false },
-      { day: 'Sábado', enabled: false, openTime: '08:00', closeTime: '12:00' },
-      { day: 'Domingo', enabled: false, openTime: '08:00', closeTime: '12:00' }
-    ]
+  const [businessHours, setBusinessHours] = useState<BusinessHoursConfig>(() => {
+    try {
+      const saved = localStorage.getItem('godesc_business_hours');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && Array.isArray(parsed.schedules) && parsed.schedules.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return {
+      id: 'bh-1',
+      companyId: 'default-company',
+      enabled: true,
+      outOfHoursMessage: 'Olá! Nosso horário de atendimento é de segunda a sexta-feira, das 08:00 às 18:00.',
+      schedules: [
+        { day: 'Segunda-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: false },
+        { day: 'Terça-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: false },
+        { day: 'Quarta-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: false },
+        { day: 'Quinta-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: false },
+        { day: 'Sexta-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: false },
+        { day: 'Sábado', enabled: false, openTime: '08:00', closeTime: '12:00' },
+        { day: 'Domingo', enabled: false, openTime: '08:00', closeTime: '12:00' }
+      ]
+    };
   });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('godesc_business_hours', JSON.stringify(businessHours));
+    } catch (e) {}
+  }, [businessHours]);
 
   const [chatbotFlow, setChatbotFlow] = useState<ChatbotFlow>(() => {
     const saved = localStorage.getItem('godesc_chatbot_flow');
@@ -2879,7 +2896,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateBusinessHours = (config: Partial<BusinessHoursConfig>) => {
-    setBusinessHours(prev => ({ ...prev, ...config }));
+    setBusinessHours(prev => {
+      const updated = { ...prev, ...config };
+      try {
+        localStorage.setItem('godesc_business_hours', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
   };
 
   const saveAttendanceQueue = (queue: AttendanceQueue) => {

@@ -516,7 +516,16 @@ export const AttendanceChatView: React.FC = () => {
                           <span className="font-bold text-[#45dfa4]">
                             {msg.senderName} {isBot && '(Assistente Virtual)'}
                           </span>
-                          <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          <span>{
+                            (() => {
+                              try {
+                                const d = new Date(msg.createdAt);
+                                return isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                              } catch {
+                                return '';
+                              }
+                            })()
+                          }</span>
                         </div>
 
                         <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
