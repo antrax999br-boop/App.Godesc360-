@@ -189,7 +189,8 @@ export const TIDashboard: React.FC = () => {
     setSelectedTicket,
     soundEnabled,
     setSoundEnabled,
-    companies
+    companies,
+    attendanceConversations
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -214,47 +215,86 @@ export const TIDashboard: React.FC = () => {
     return true;
   });
 
-  // Dynamic Metrics Calculation
+  // Dynamic Metrics Calculation — usando dados reais dos tickets
   const newCount = filteredTickets.filter((t) => t.status === 'Novo').length;
   const resolvedCount = filteredTickets.filter((t) => t.status === 'Resolvido' || t.status === 'Fechado').length;
   const inServiceCount = filteredTickets.filter((t) => t.status === 'Em Atendimento').length;
-  const pendingCount = filteredTickets.filter((t) => t.status !== 'Resolvido' && t.status !== 'Fechado').length;
+  const pendingCount = filteredTickets.filter((t) => t.status === 'Pendente').length;
   const criticalCount = filteredTickets.filter((t) => t.priority === 'Crítica' && t.status !== 'Resolvido' && t.status !== 'Fechado').length;
 
-  const totalClientsCount = new Set(filteredTickets.map((t) => t.company).filter(Boolean)).size || (companies?.length || 23);
+  const totalClientsCount = new Set(filteredTickets.map((t) => t.company).filter(Boolean)).size || (companies?.length || 0);
+
+  // Conversas WhatsApp ativas
+  const openConversations = (attendanceConversations || []).filter(c => c.status !== 'CLOSED').length;
+  const totalConversations = (attendanceConversations || []).length;
+
+  // Cálculo de tempo médio de atendimento (em horas) baseado nos tickets resolvidos
+  const resolvedWithDates = filteredTickets.filter(t =>
+    (t.status === 'Resolvido' || t.status === 'Fechado') && t.createdAt && t.updatedAt
+  );
+  const avgHours = resolvedWithDates.length > 0
+    ? resolvedWithDates.reduce((sum, t) => {
+        const created = new Date(t.createdAt).getTime();
+        const updated = new Date(t.updatedAt).getTime();
+        const diff = (updated - created) / (1000 * 60 * 60);
+        return sum + (isNaN(diff) ? 0 : Math.abs(diff));
+      }, 0) / resolvedWithDates.length
+    : 0;
+  const avgTimeLabel = avgHours >= 1 ? `${Math.round(avgHours)}h` : avgHours > 0 ? `${Math.round(avgHours * 60)}min` : '--';
+
+  // SLA: tickets respondidos em até 4h / total resolvidos
+  const slaFirst = resolvedWithDates.length > 0
+    ? Math.round((resolvedWithDates.filter(t => {
+        const diff = (new Date(t.updatedAt).getTime() - new Date(t.createdAt).getTime()) / (1000 * 60 * 60);
+        return diff <= 4;
+      }).length / resolvedWithDates.length) * 100)
+    : 0;
+  const slaSolution = resolvedWithDates.length > 0
+    ? Math.round((resolvedWithDates.filter(t => {
+        const diff = (new Date(t.updatedAt).getTime() - new Date(t.createdAt).getTime()) / (1000 * 60 * 60);
+        return diff <= 24;
+      }).length / resolvedWithDates.length) * 100)
+    : 0;
+  const outOfSlaFirst = 100 - slaFirst;
+  const outOfSlaSolution = 100 - slaSolution;
 
   // Status Donut Chart Data
   const statusDonutData: DonutSegment[] = [
-    { label: 'Finalizado', value: resolvedCount > 0 ? resolvedCount : 10, color: '#22c55e' },
+    { label: 'Finalizado', value: resolvedCount, color: '#22c55e' },
     { label: 'Em Atendimento', value: inServiceCount, color: '#3b82f6' },
-    { label: 'Pendente', value: pendingCount - newCount - inServiceCount > 0 ? pendingCount - newCount - inServiceCount : 0, color: '#f59e0b' },
+    { label: 'Pendente', value: pendingCount, color: '#f59e0b' },
     { label: 'Novo', value: newCount, color: '#06b6d4' }
-  ];
+  ].filter(d => d.value > 0);
 
-  // Priority Donut Chart Data
+  const totalTickets = filteredTickets.length;
+
+  // Priority Donut Chart Data — sem fallbacks falsos
   const priorityCounts = {
-    Media: filteredTickets.filter((t) => t.priority === 'Média').length || 39,
-    Alta: filteredTickets.filter((t) => t.priority === 'Alta').length || 35,
-    Baixa: filteredTickets.filter((t) => t.priority === 'Baixa').length || 20,
-    VeryLow: filteredTickets.filter((t) => t.priority === 'Crítica').length || 1,
-    Outros: 6
+    Media: filteredTickets.filter((t) => t.priority === 'Média').length,
+    Alta: filteredTickets.filter((t) => t.priority === 'Alta').length,
+    Baixa: filteredTickets.filter((t) => t.priority === 'Baixa').length,
+    Critica: filteredTickets.filter((t) => t.priority === 'Crítica').length,
   };
 
   const priorityDonutData: DonutSegment[] = [
     { label: 'Média', value: priorityCounts.Media, color: '#f59e0b' },
     { label: 'Alta', value: priorityCounts.Alta, color: '#ef4444' },
     { label: 'Baixa', value: priorityCounts.Baixa, color: '#10b981' },
-    { label: 'VERY_LOW', value: priorityCounts.VeryLow, color: '#8b5cf6' },
-    { label: 'Outros', value: priorityCounts.Outros, color: '#06b6d4' }
-  ];
+    { label: 'Crítica', value: priorityCounts.Critica, color: '#8b5cf6' },
+  ].filter(d => d.value > 0);
 
-  // Channel Donut Chart Data
-  const channelDonutData: DonutSegment[] = [
-    { label: 'Portal', value: 78, color: '#2563eb' },
-    { label: 'WhatsApp', value: 20, color: '#22c55e' },
-    { label: 'Agente', value: 1, color: '#f97316' },
-    { label: 'E-mail', value: 1, color: '#8b5cf6' }
-  ];
+  // Canal de Abertura — baseado em dados reais dos tickets (campo 'channel' ou fallback por categoria)
+  const channelMap: Record<string, number> = {};
+  filteredTickets.forEach(t => {
+    const ch = (t as any).channel || (t.machineName?.toLowerCase().includes('whatsapp') ? 'WhatsApp' : 'Portal');
+    channelMap[ch] = (channelMap[ch] || 0) + 1;
+  });
+  const channelDonutData: DonutSegment[] = Object.entries(channelMap).map(([label, value], i) => ({
+    label,
+    value,
+    color: ['#2563eb','#22c55e','#f97316','#8b5cf6','#06b6d4'][i % 5]
+  }));
+  const totalChannels = Object.values(channelMap).reduce((a, b) => a + b, 0);
 
   // Top Categories Bar Data
   const categoryMap: Record<string, number> = {};
@@ -262,17 +302,6 @@ export const TIDashboard: React.FC = () => {
     const cat = t.category || 'Outros';
     categoryMap[cat] = (categoryMap[cat] || 0) + 1;
   });
-
-  const defaultTopCategories = [
-    { name: 'E-MAIL', count: 142, percentage: 45 },
-    { name: 'WINDOWS', count: 78, percentage: 25 },
-    { name: 'SERVIDOR', count: 42, percentage: 14 },
-    { name: 'SOFTWARE', count: 35, percentage: 11 },
-    { name: 'IMPRESSORA', count: 20, percentage: 6 },
-    { name: 'VPN - FIREWALL', count: 15, percentage: 4 },
-    { name: 'HARDWARE', count: 12, percentage: 3 },
-    { name: 'INFRAESTRUTURA', count: 5, percentage: 1 }
-  ];
 
   const topCategoriesData = Object.keys(categoryMap).length > 0
     ? Object.entries(categoryMap)
@@ -283,7 +312,7 @@ export const TIDashboard: React.FC = () => {
         }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 8)
-    : defaultTopCategories;
+    : [];
 
   const handleOpenTicketDetails = (ticket: Ticket) => {
     setSelectedTicket(ticket);
@@ -877,10 +906,10 @@ export const TIDashboard: React.FC = () => {
                 <CheckCircle2 className="w-4 h-4 text-[#22c55e]" />
               </div>
               <div className="text-3xl font-extrabold text-[#22c55e] font-mono tracking-tight my-1">
-                {resolvedCount > 0 ? resolvedCount : 255}
+                {resolvedCount}
               </div>
               <div className="text-[11px] font-mono text-[#22c55e] flex items-center gap-1">
-                <span>↗ +140.6%</span>
+                <span>{resolvedCount > 0 ? `${resolvedCount} ticket${resolvedCount !== 1 ? 's' : ''} encerrado${resolvedCount !== 1 ? 's' : ''}` : 'Nenhum encerrado'}</span>
               </div>
             </div>
 
@@ -905,10 +934,10 @@ export const TIDashboard: React.FC = () => {
                 <Zap className="w-4 h-4 text-[#3b82f6]" />
               </div>
               <div className="text-3xl font-extrabold text-[#3b82f6] font-mono tracking-tight my-1">
-                91.8%
+                {slaFirst}%
               </div>
               <div className="w-full h-1.5 bg-[#18181b] rounded-full overflow-hidden mt-1">
-                <div className="h-full bg-[#3b82f6] rounded-full" style={{ width: '91.8%' }}></div>
+                <div className="h-full bg-[#3b82f6] rounded-full" style={{ width: `${slaFirst}%` }}></div>
               </div>
             </div>
 
@@ -919,10 +948,10 @@ export const TIDashboard: React.FC = () => {
                 <TrendingUp className="w-4 h-4 text-[#22c55e]" />
               </div>
               <div className="text-3xl font-extrabold text-[#22c55e] font-mono tracking-tight my-1">
-                99.6%
+                {slaSolution}%
               </div>
               <div className="w-full h-1.5 bg-[#18181b] rounded-full overflow-hidden mt-1">
-                <div className="h-full bg-[#22c55e] rounded-full" style={{ width: '99.6%' }}></div>
+                <div className="h-full bg-[#22c55e] rounded-full" style={{ width: `${slaSolution}%` }}></div>
               </div>
             </div>
           </div>
@@ -939,19 +968,19 @@ export const TIDashboard: React.FC = () => {
                 <div>
                   <div className="flex justify-between text-[11px] font-mono text-[#8d90a0] mb-0.5">
                     <span>1º Resposta</span>
-                    <span className="text-[#ef4444] font-bold">8.2%</span>
+                    <span className="text-[#ef4444] font-bold">{outOfSlaFirst}%</span>
                   </div>
                   <div className="w-full h-1.5 bg-[#18181b] rounded-full overflow-hidden">
-                    <div className="h-full bg-[#ef4444] rounded-full" style={{ width: '8.2%' }}></div>
+                    <div className="h-full bg-[#ef4444] rounded-full" style={{ width: `${outOfSlaFirst}%` }}></div>
                   </div>
                 </div>
                 <div>
                   <div className="flex justify-between text-[11px] font-mono text-[#8d90a0] mb-0.5">
                     <span>Solução</span>
-                    <span className="text-[#ef4444] font-bold">0.4%</span>
+                    <span className="text-[#ef4444] font-bold">{outOfSlaSolution}%</span>
                   </div>
                   <div className="w-full h-1.5 bg-[#18181b] rounded-full overflow-hidden">
-                    <div className="h-full bg-[#ef4444] rounded-full" style={{ width: '0.4%' }}></div>
+                    <div className="h-full bg-[#ef4444] rounded-full" style={{ width: `${outOfSlaSolution}%` }}></div>
                   </div>
                 </div>
               </div>
@@ -964,7 +993,7 @@ export const TIDashboard: React.FC = () => {
                 <Clock className="w-4 h-4 text-[#38bdf8]" />
               </div>
               <div className="text-3xl font-extrabold text-white font-mono tracking-tight my-1">
-                14h
+                {avgTimeLabel}
               </div>
               <div className="text-[11px] font-mono text-[#22c55e]">
                 ↘ -72.4%
@@ -1045,7 +1074,7 @@ export const TIDashboard: React.FC = () => {
                 <MessageSquare className="w-4 h-4 text-[#22c55e]" />
                 <span className="text-xs font-mono text-[#8d90a0]">WhatsApp</span>
               </div>
-              <span className="text-base font-bold text-white font-mono">134</span>
+              <span className="text-base font-bold text-white font-mono">{totalConversations}</span>
             </div>
 
             <div className="bg-[#151c25] border border-[#27272a] rounded-xl p-3 flex items-center justify-between">
@@ -1053,7 +1082,7 @@ export const TIDashboard: React.FC = () => {
                 <MessageSquare className="w-4 h-4 text-[#3b82f6]" />
                 <span className="text-xs font-mono text-[#8d90a0]">Conversas Abertas</span>
               </div>
-              <span className="text-base font-bold text-white font-mono">1</span>
+              <span className="text-base font-bold text-white font-mono">{openConversations}</span>
             </div>
           </div>
 
@@ -1064,7 +1093,7 @@ export const TIDashboard: React.FC = () => {
               <h3 className="text-xs font-bold text-white font-mono uppercase tracking-wider mb-2">
                 Tickets por Status
               </h3>
-              <SVGDonutChart data={statusDonutData} centerLabel="TOTAL" centerValue={`${filteredTickets.length || 255}`} />
+              <SVGDonutChart data={statusDonutData.length > 0 ? statusDonutData : [{ label: 'Sem dados', value: 1, color: '#27272a' }]} centerLabel="TOTAL" centerValue={`${totalTickets}`} />
             </div>
 
             {/* Chart 2: Tickets por Prioridade */}
@@ -1072,7 +1101,7 @@ export const TIDashboard: React.FC = () => {
               <h3 className="text-xs font-bold text-white font-mono uppercase tracking-wider mb-2">
                 Tickets por Prioridade
               </h3>
-              <SVGDonutChart data={priorityDonutData} centerLabel="REPARTIÇÃO" centerValue="100%" />
+              <SVGDonutChart data={priorityDonutData.length > 0 ? priorityDonutData : [{ label: 'Sem dados', value: 1, color: '#27272a' }]} centerLabel="REPART." centerValue={`${totalTickets}`} />
             </div>
 
             {/* Chart 3: Canal de Abertura */}
@@ -1080,7 +1109,7 @@ export const TIDashboard: React.FC = () => {
               <h3 className="text-xs font-bold text-white font-mono uppercase tracking-wider mb-2">
                 Canal de Abertura
               </h3>
-              <SVGDonutChart data={channelDonutData} centerLabel="CANAL" centerValue="4" />
+              <SVGDonutChart data={channelDonutData.length > 0 ? channelDonutData : [{ label: 'Sem dados', value: 1, color: '#27272a' }]} centerLabel="CANAL" centerValue={`${totalChannels}`} />
             </div>
           </div>
 
