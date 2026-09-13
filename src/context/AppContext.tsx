@@ -2090,17 +2090,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   ]);
 
-  // Conversas em tempo real — sem persistência em localStorage (dados vêm do servidor Baileys via polling)
-  const [attendanceConversations, setAttendanceConversations] = useState<AttendanceConversation[]>([]);
+  // Conversas ativas persistidas no localStorage — CLOSED não são salvas
+  const [attendanceConversations, setAttendanceConversations] = useState<AttendanceConversation[]>(() => {
+    try {
+      const saved = localStorage.getItem('godesc_attendance_conversations');
+      if (saved) {
+        const parsed: AttendanceConversation[] = JSON.parse(saved);
+        // Ao carregar, descarta conversas encerradas
+        return parsed.filter(c => c.status !== 'CLOSED');
+      }
+    } catch (e) {}
+    return [];
+  });
 
-  // Mensagens em tempo real — sem persistência em localStorage (dados vêm do servidor Baileys via polling)
-  const [attendanceMessages, setAttendanceMessages] = useState<AttendanceMessage[]>([]);
+  // Mensagens persistidas no localStorage — apenas de conversas ativas
+  const [attendanceMessages, setAttendanceMessages] = useState<AttendanceMessage[]>(() => {
+    try {
+      const saved = localStorage.getItem('godesc_attendance_messages');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [];
+  });
 
-  // Limpa dados antigos do localStorage (migração para modelo sem persistência)
+  // Persiste apenas conversas ativas (não CLOSED) ao alterar o estado
   useEffect(() => {
-    localStorage.removeItem('godesc_attendance_conversations');
-    localStorage.removeItem('godesc_attendance_messages');
-  }, []);
+    const activeConvs = attendanceConversations.filter(c => c.status !== 'CLOSED');
+    localStorage.setItem('godesc_attendance_conversations', JSON.stringify(activeConvs));
+  }, [attendanceConversations]);
+
+  // Persiste mensagens apenas das conversas ativas
+  useEffect(() => {
+    const activeIds = new Set(attendanceConversations.filter(c => c.status !== 'CLOSED').map(c => c.id));
+    const activeMsgs = attendanceMessages.filter(m => activeIds.has(m.conversationId));
+    localStorage.setItem('godesc_attendance_messages', JSON.stringify(activeMsgs));
+  }, [attendanceMessages, attendanceConversations]);
+
 
 
   const CLOUD_API_URL = 'https://godesc360-whatsapp-api.onrender.com';
