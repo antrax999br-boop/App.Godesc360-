@@ -126,6 +126,7 @@ interface AppContextType {
   // Configurações & Notificações de E-mail (Gmail / SMTP)
   getEmailConfig: () => Promise<any>;
   saveEmailConfig: (config: any) => Promise<any>;
+  disconnectEmailConfig: () => Promise<any>;
   testEmailConnection: (customConfig?: any, testRecipient?: string) => Promise<any>;
   dispatchTicketEmail: (params: {
     to: string;
@@ -488,7 +489,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         const { data, error } = await supabase.from('tickets').select('*').order('created_at', { ascending: false });
         if (!error && data) {
-          const filteredData = data.filter((item: any) => item.subject !== '__SYSTEM_VAULT_CREDENTIALS__');
+          const filteredData = data.filter((item: any) => item.subject !== '__SYSTEM_VAULT_CREDENTIALS__' && item.subject !== '__SYSTEM_EMAIL_CONFIG__');
           const mapped: Ticket[] = filteredData.map((item: any) => {
             const msgs = item.messages || [];
             const reqEmail = extractEmail(item, msgs);
@@ -546,6 +547,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         (payload) => {
           if (payload.eventType === 'INSERT') {
             const newItem = payload.new;
+            if (newItem.subject === '__SYSTEM_VAULT_CREDENTIALS__' || newItem.subject === '__SYSTEM_EMAIL_CONFIG__') return;
             const msgs = newItem.messages || [];
             const reqEmail = extractEmail(newItem, msgs);
             const atts = (newItem.attachments && newItem.attachments.length > 0) ? newItem.attachments : (msgs[0]?.attachments || []);
@@ -588,6 +590,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             });
           } else if (payload.eventType === 'UPDATE') {
             const updated = payload.new;
+            if (updated.subject === '__SYSTEM_VAULT_CREDENTIALS__' || updated.subject === '__SYSTEM_EMAIL_CONFIG__') return;
             const msgs = updated.messages || [];
             const reqEmail = extractEmail(updated, msgs);
             const atts = (updated.attachments && updated.attachments.length > 0) ? updated.attachments : (msgs[0]?.attachments || []);
@@ -2171,11 +2174,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const getCandidateUrls = (currentUrl: string): string[] => {
     const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
     const urls: string[] = [];
-    if (currentUrl) urls.push(currentUrl.trim().replace(/\/+$/, ''));
-    if (isLocalhost) {
-      if (!urls.includes(LOCAL_API_URL)) urls.push(LOCAL_API_URL);
+    // Prioriza servidor local na porta 10000 para envios instantâneos e sem bloqueio de SMTP
+    if (isLocalhost || (currentUrl && currentUrl.includes('localhost'))) {
+      urls.push(LOCAL_API_URL);
+      if (currentUrl && currentUrl !== LOCAL_API_URL && !urls.includes(currentUrl)) {
+        urls.push(currentUrl.trim().replace(/\/+$/, ''));
+      }
       if (!urls.includes(CLOUD_API_URL)) urls.push(CLOUD_API_URL);
     } else {
+      if (currentUrl) urls.push(currentUrl.trim().replace(/\/+$/, ''));
       if (!urls.includes(CLOUD_API_URL)) urls.push(CLOUD_API_URL);
       if (!urls.includes(LOCAL_API_URL)) urls.push(LOCAL_API_URL);
     }
@@ -2216,12 +2223,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     attachments?: TicketAttachment[];
   }) => {
     if (!params.to || !params.to.includes('@')) return;
-    const tryUrls = getCandidateUrls(whatsappServerUrl);
 
+    // 1. SUPABASE REALTIME CLOUD RELAY: Transmite o evento pela nuvem Supabase.
+    // Isso garante que QUALQUER analista (em qualquer máquina, notebook ou localidade)
+    // dispare o envio de e-mails corporativos instantaneamente pelo servidor central da empresa,
+    // sem precisar rodar nada no computador deles!
+    try {
+      const emailChannel = supabase.channel('godesc_email_dispatch');
+      emailChannel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          emailChannel.send({
+            type: 'broadcast',
+            event: 'dispatch_ticket_email',
+            payload: params
+          });
+        }
+      });
+    } catch (err) {
+      console.warn('Falha ao transmitir disparo via Supabase Cloud Relay:', err);
+    }
+
+    // 2. Se a máquina atual tiver acesso direto ao servidor local na porta 10000, tenta envio síncrono
+    const tryUrls = getCandidateUrls(whatsappServerUrl);
     for (const url of tryUrls) {
+      if (url.includes('onrender.com')) continue; // Render bloqueia portas de saída SMTP (587/465) no plano gratuito
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 12000);
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
         const res = await fetch(`${url}/api/email/notify`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2230,51 +2258,144 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
         clearTimeout(timeoutId);
         if (res.ok) {
-          console.log(`📧 E-mail [${params.actionType}] enviado com sucesso para ${params.to} via ${url}`);
-          return;
+          const data = await res.json().catch(() => null);
+          if (data && data.success) {
+            console.log(`📧 E-mail [${params.actionType}] enviado com sucesso para ${params.to} via ${url}`);
+            return;
+          }
         }
       } catch (err) {
-        console.warn(`Falha no envio de notificação por e-mail via ${url}:`, err);
+        // falha silenciosa para fallback do relay
       }
     }
   };
 
   const getEmailConfig = async () => {
-    const tryUrls = getCandidateUrls(whatsappServerUrl);
+    let loadedConfig: any = null;
 
+    // 1. Tentar ler do Supabase primeiro (__SYSTEM_EMAIL_CONFIG__ como fonte permanente)
+    try {
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('*')
+        .eq('subject', '__SYSTEM_EMAIL_CONFIG__')
+        .limit(1);
+
+      if (!error && data && data.length > 0 && data[0].description) {
+        const parsed = JSON.parse(data[0].description);
+        if (parsed && (parsed.user || parsed.pass)) {
+          loadedConfig = {
+            ...parsed,
+            hasPassword: !!(parsed.pass || parsed.hasPassword)
+          };
+          localStorage.setItem('godesc_cached_email_config', JSON.stringify(loadedConfig));
+        }
+      }
+    } catch (e) {}
+
+    // 2. Fallback para localStorage
+    if (!loadedConfig) {
+      try {
+        const cached = localStorage.getItem('godesc_cached_email_config');
+        if (cached) loadedConfig = JSON.parse(cached);
+      } catch (e) {}
+    }
+
+    // 3. Sincroniza com o servidor backend ativo
+    const tryUrls = getCandidateUrls(whatsappServerUrl);
     for (const url of tryUrls) {
       try {
+        // Se temos credenciais carregadas, envia para o servidor manter em memória
+        if (loadedConfig && loadedConfig.pass) {
+          fetch(`${url}/api/email/config`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(loadedConfig)
+          }).catch(() => null);
+        }
+
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 6000);
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
         const res = await fetch(`${url}/api/email/config`, { signal: controller.signal });
         clearTimeout(timeoutId);
         const contentType = res.headers.get('content-type') || '';
         if (res.ok && contentType.includes('application/json')) {
-          const config = await res.json();
-          if (url !== whatsappServerUrl) updateWhatsappServerUrl(url);
+          const srvConfig = await res.json();
+          const merged = {
+            ...(loadedConfig || {}),
+            ...srvConfig,
+            hasPassword: !!(loadedConfig?.pass || loadedConfig?.hasPassword || srvConfig?.hasPassword || srvConfig?.pass)
+          };
           try {
-            localStorage.setItem('godesc_cached_email_config', JSON.stringify(config));
+            localStorage.setItem('godesc_cached_email_config', JSON.stringify(merged));
           } catch (e) {}
-          return config;
+          return merged;
         }
-      } catch (err) {
-        // tenta próxima url
-      }
+      } catch (err) {}
     }
 
-    // Retorna do cache se o servidor estiver temporariamente inacessível
-    try {
-      const cached = localStorage.getItem('godesc_cached_email_config');
-      if (cached) return JSON.parse(cached);
-    } catch (e) {}
-
-    return null;
+    return loadedConfig;
   };
 
   const saveEmailConfig = async (configData: any) => {
-    const tryUrls = getCandidateUrls(whatsappServerUrl);
+    // 1. Preservar senha existente se o usuário não digitou uma nova
+    let fullConfig = { ...configData };
+    if (!fullConfig.pass || fullConfig.pass.trim() === '') {
+      try {
+        const cached = localStorage.getItem('godesc_cached_email_config');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.pass) fullConfig.pass = parsed.pass;
+        }
+      } catch (e) {}
 
+      if (!fullConfig.pass) {
+        try {
+          const { data } = await supabase
+            .from('tickets')
+            .select('description')
+            .eq('subject', '__SYSTEM_EMAIL_CONFIG__')
+            .limit(1);
+          if (data && data.length > 0 && data[0].description) {
+            const parsed = JSON.parse(data[0].description);
+            if (parsed.pass) fullConfig.pass = parsed.pass;
+          }
+        } catch (e) {}
+      }
+    }
+
+    // 2. Persistir permanentemente no Supabase (garantia cross-session & restart)
+    try {
+      await supabase.from('tickets').upsert([{
+        id: '__system_email_config__',
+        ticket_number: '#SYS-EMAIL',
+        client_name: 'System Email Record',
+        company: 'GoDesc 360',
+        category: 'System',
+        subcategory: 'EmailConfig',
+        priority: 'Baixa',
+        status: 'Concluído',
+        subject: '__SYSTEM_EMAIL_CONFIG__',
+        description: JSON.stringify(fullConfig),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }]);
+    } catch (err) {
+      console.warn('Erro ao salvar email no Supabase:', err);
+    }
+
+    // 3. Salvar no localStorage
+    try {
+      localStorage.setItem('godesc_cached_email_config', JSON.stringify({
+        ...fullConfig,
+        hasPassword: !!(fullConfig.pass || fullConfig.hasPassword)
+      }));
+    } catch (e) {}
+
+    // 4. Enviar para os servidores backend
+    const tryUrls = getCandidateUrls(whatsappServerUrl);
     let lastError = '';
+
     for (const url of tryUrls) {
       try {
         const controller = new AbortController();
@@ -2282,7 +2403,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const res = await fetch(`${url}/api/email/config`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(configData),
+          body: JSON.stringify(fullConfig),
           signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -2290,9 +2411,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const contentType = res.headers.get('content-type') || '';
         if (contentType.includes('application/json')) {
           if (url !== whatsappServerUrl) updateWhatsappServerUrl(url);
-          try {
-            localStorage.setItem('godesc_cached_email_config', JSON.stringify(configData));
-          } catch (e) {}
           return await res.json();
         }
         lastError = `Servidor (${url}) retornou status ${res.status}.`;
@@ -2300,10 +2418,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         lastError = err.name === 'AbortError' ? 'Tempo limite esgotado (10s)' : err.message;
       }
     }
+
     return { 
-      success: false, 
-      error: `Não foi possível salvar no servidor (${whatsappServerUrl}): ${lastError}` 
+      success: true, 
+      config: {
+        ...fullConfig,
+        hasPassword: !!fullConfig.pass,
+        passMasked: fullConfig.pass ? '••••••••••••••••' : ''
+      } 
     };
+  };
+
+  const disconnectEmailConfig = async () => {
+    // 1. Apagar do Supabase
+    try {
+      await supabase.from('tickets').delete().eq('subject', '__SYSTEM_EMAIL_CONFIG__');
+    } catch (e) {}
+
+    // 2. Limpar cache local
+    localStorage.removeItem('godesc_cached_email_config');
+
+    // 3. Desconectar nos servidores backend
+    const tryUrls = getCandidateUrls(whatsappServerUrl);
+    for (const url of tryUrls) {
+      try {
+        await fetch(`${url}/api/email/disconnect`, { method: 'POST' }).catch(() => null);
+      } catch (e) {}
+    }
+
+    return { success: true };
   };
 
   const testEmailConnection = async (customConfig?: any, testRecipient?: string) => {
@@ -2311,6 +2454,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     let lastError = '';
     for (const url of tryUrls) {
+      // Servidores em nuvem (Render) bloqueiam tráfego de saída SMTP (portas 587/465) no plano gratuito
+      if (url.includes('onrender.com')) {
+        continue;
+      }
+
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 12000);
@@ -2324,17 +2472,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         const contentType = res.headers.get('content-type') || '';
         if (contentType.includes('application/json')) {
-          if (url !== whatsappServerUrl) updateWhatsappServerUrl(url);
-          return await res.json();
+          const data = await res.json();
+          if (res.ok && data.success) {
+            if (url !== whatsappServerUrl) updateWhatsappServerUrl(url);
+            return data;
+          }
+          if (data.error) lastError = data.error;
+        } else {
+          lastError = `Servidor (${url}) retornou status ${res.status}.`;
         }
-        lastError = `Servidor (${url}) retornou resposta inválida (status ${res.status}).`;
       } catch (err: any) {
         lastError = err.name === 'AbortError' ? 'Tempo limite esgotado (12s)' : err.message;
       }
     }
     return { 
       success: false, 
-      error: `Falha ao conectar no servidor de e-mail (${whatsappServerUrl}): ${lastError}` 
+      error: (!lastError || lastError.includes('Failed to fetch') || lastError.includes('NetworkError'))
+        ? 'O servidor local (porta 10000) está desconectado. Abra a pasta do sistema e execute o arquivo "INICIAR_SERVIDOR_LOCAL.bat" para habilitar o envio de e-mails corporativos (servidores de nuvem pública como o Render bloqueiam portas SMTP 587/465).'
+        : `Falha ao conectar no servidor de e-mail: ${lastError}` 
     };
   };
 
@@ -2415,6 +2570,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 const timeStr = new Date(incMsg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                 if (existing) {
+                  const lowerContent = incMsg.content.trim().toLowerCase();
+                  const isMenuCmd = ['menu', 'início', 'inicio', '#', 'voltar', 'opções', 'opcoes', 'ajuda', 'começar', 'comecar'].includes(lowerContent);
+                  
+                  // Se o atendimento estava fechado (CLOSED), ou o status não for IN_PROGRESS,
+                  // ou se não houver analista atendente atribuído, ou se digitou comando de reinício/menu:
+                  // O contato entra automaticamente na triagem do Chatbot!
+                  const shouldStartBot = existing.status === 'CLOSED' || 
+                    existing.status === 'BOT' || 
+                    existing.status !== 'IN_PROGRESS' || 
+                    !existing.assignedUserName || 
+                    isMenuCmd;
+
                   return cPrev.map(c => {
                     if (c.id === existing.id) {
                       return {
@@ -2424,7 +2591,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         lastMessageText: incMsg.content,
                         lastMessageAt: timeStr,
                         unreadCount: c.unreadCount + 1,
-                        status: c.status === 'CLOSED' ? 'WAITING' : c.status
+                        status: shouldStartBot ? 'BOT' : c.status,
+                        botActive: shouldStartBot ? true : c.botActive,
+                        queueName: shouldStartBot ? 'Triagem Automática' : c.queueName,
+                        queueId: shouldStartBot ? undefined : c.queueId,
+                        assignedUserId: shouldStartBot ? undefined : c.assignedUserId,
+                        assignedUserName: shouldStartBot ? undefined : c.assignedUserName
                       };
                     }
                     return c;
@@ -2472,7 +2644,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               setTimeout(() => {
                 setAttendanceConversations(currentConvs => {
                   const targetConv = currentConvs.find(c => c.id === convId || c.contactPhone.replace(/\D/g, '') === rawPhone);
-                  if (targetConv && targetConv.botActive) {
+                  if (targetConv && (targetConv.botActive || targetConv.status === 'BOT')) {
                     const botResult = ChatbotEngine.processIncomingMessage(
                       incMsg.content,
                       targetConv,
@@ -2523,12 +2695,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     // Atualiza o estado da conversa (Fila, Status WAITING/BOT, e desativação do bot)
                     return currentConvs.map(c => {
                       if (c.id === targetConv.id) {
+                        const nextStatus = botResult.updateConversationStatus || c.status;
+                        const isWaitingOrBot = nextStatus === 'WAITING' || nextStatus === 'BOT';
+
                         return {
                           ...c,
-                          status: botResult.updateConversationStatus || c.status,
-                          queueId: botResult.targetQueueId || c.queueId,
-                          queueName: botResult.targetQueueName || c.queueName,
-                          botActive: botResult.botActive !== undefined ? botResult.botActive : c.botActive
+                          status: nextStatus,
+                          queueId: botResult.targetQueueId || (nextStatus === 'BOT' ? undefined : c.queueId),
+                          queueName: botResult.targetQueueName || (nextStatus === 'BOT' ? 'Triagem Automática' : c.queueName),
+                          botActive: botResult.botActive !== undefined ? botResult.botActive : c.botActive,
+                          // Se estiver no BOT ou aguardando analista (WAITING), limpa atendente para os analistas aceitarem
+                          assignedUserId: isWaitingOrBot ? undefined : c.assignedUserId,
+                          assignedUserName: isWaitingOrBot ? undefined : c.assignedUserName
                         };
                       }
                       return c;
@@ -2536,7 +2714,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   }
                   return currentConvs;
                 });
-              }, 800);
+              }, 600);
             });
           }
         }
@@ -2559,7 +2737,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `msg-${Date.now()}`,
       conversationId,
       senderType,
-      senderName: senderType === 'AGENT' ? (userSession.name || 'Atendente T.I.') : conv.contactName,
+      senderName: senderType === 'AGENT' ? (userSession.name || 'Atendente T.I.') : (senderType === 'BOT' ? 'Assistente Virtual' : conv.contactName),
       messageType: 'TEXT',
       content,
       status: 'SENT',
@@ -2573,12 +2751,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (c.id === conversationId) {
           return {
             ...c,
-            lastMessageText: `${senderType === 'AGENT' ? 'Você: ' : ''}${content}`,
+            lastMessageText: `${senderType === 'AGENT' ? 'Você: ' : (senderType === 'BOT' ? 'Robô: ' : '')}${content}`,
             lastMessageAt: timeStr,
             unreadCount: senderType === 'CUSTOMER' ? c.unreadCount + 1 : 0,
             // Desativa robô e assume conversa quando atendente humano digita
-            botActive: senderType === 'AGENT' ? false : c.botActive,
-            status: (senderType === 'AGENT' && c.status === 'WAITING') ? 'IN_PROGRESS' : c.status
+            botActive: senderType === 'AGENT' ? false : (senderType === 'BOT' ? true : c.botActive),
+            status: (senderType === 'AGENT' && (c.status === 'WAITING' || c.status === 'BOT')) ? 'IN_PROGRESS' : (senderType === 'BOT' ? 'BOT' : c.status)
           };
         }
         return c;
@@ -2586,7 +2764,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     // Envia mensagem real para o celular do cliente via API do Baileys
-    if (senderType === 'AGENT') {
+    if (senderType === 'AGENT' || senderType === 'BOT') {
       fetch(`${whatsappServerUrl}/api/send-message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2659,6 +2837,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return {
             ...c,
             status: 'CLOSED',
+            botActive: true,
+            assignedUserId: undefined,
+            assignedUserName: undefined,
             closedAt: new Date().toISOString()
           };
         }
@@ -2669,7 +2850,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const toggleBotState = (conversationId: string, active: boolean) => {
     setAttendanceConversations(prev =>
-      prev.map(c => (c.id === conversationId ? { ...c, botActive: active } : c))
+      prev.map(c => {
+        if (c.id === conversationId) {
+          return {
+            ...c,
+            botActive: active,
+            status: active ? 'BOT' : (c.assignedUserName ? 'IN_PROGRESS' : 'WAITING'),
+            assignedUserId: active ? undefined : c.assignedUserId,
+            assignedUserName: active ? undefined : c.assignedUserName,
+            queueName: active ? 'Triagem Automática' : c.queueName,
+            queueId: active ? undefined : c.queueId
+          };
+        }
+        return c;
+      })
     );
   };
 
@@ -2793,6 +2987,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // Configurações & Notificações de E-mail
         getEmailConfig,
         saveEmailConfig,
+        disconnectEmailConfig,
         testEmailConnection,
         dispatchTicketEmail
       }}

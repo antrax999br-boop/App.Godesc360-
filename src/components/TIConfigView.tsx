@@ -72,6 +72,7 @@ export const TIConfigView: React.FC = () => {
     updateWhatsappServerUrl,
     getEmailConfig,
     saveEmailConfig,
+    disconnectEmailConfig,
     testEmailConnection
   } = useApp();
 
@@ -133,6 +134,8 @@ export const TIConfigView: React.FC = () => {
   const [emailSaveStatus, setEmailSaveStatus] = useState<string | null>(null);
   const [serverOnline, setServerOnline] = useState<boolean | null>(null);
   const [previewStatus, setPreviewStatus] = useState<'PAUSED' | 'STARTED' | 'CREATED' | 'COMPLETED'>('PAUSED');
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
 
   // Ao mudar provedor, preenche valores padrão do servidor
   const handleProviderChange = (prov: 'godesc' | 'custom' | 'gmail') => {
@@ -214,6 +217,46 @@ export const TIConfigView: React.FC = () => {
     return () => { isCancelled = true; };
   }, [whatsappServerUrl]);
 
+  const handleDisconnectEmail = async () => {
+    await disconnectEmailConfig();
+    setEmailUser('');
+    setEmailPass('');
+    setHasStoredPassword(false);
+    setIsEditingEmail(false);
+    setShowDisconnectConfirm(false);
+    setEmailSaveStatus('Conta de e-mail desconectada com sucesso.');
+    triggerSystemNotification('E-mail Desconectado', 'A conta de e-mail corporativo foi desconectada.', 'Configurações', 'Média');
+    setTimeout(() => setEmailSaveStatus(null), 4000);
+  };
+
+  const handleToggleTrigger = async (trigger: 'notifyOnCreate' | 'notifyOnStatusChange' | 'notifyOnMessage' | 'enabled', val: boolean) => {
+    let newCreate = notifyOnCreate;
+    let newStatus = notifyOnStatusChange;
+    let newMessage = notifyOnMessage;
+    let newEnabled = emailEnabled;
+
+    if (trigger === 'notifyOnCreate') { newCreate = val; setNotifyOnCreate(val); }
+    if (trigger === 'notifyOnStatusChange') { newStatus = val; setNotifyOnStatusChange(val); }
+    if (trigger === 'notifyOnMessage') { newMessage = val; setNotifyOnMessage(val); }
+    if (trigger === 'enabled') { newEnabled = val; setEmailEnabled(val); }
+
+    await saveEmailConfig({
+      provider: emailProvider,
+      user: emailUser,
+      pass: emailPass,
+      fromName: emailFromName,
+      enabled: newEnabled,
+      smtpHost: emailSmtpHost,
+      smtpPort: emailSmtpPort,
+      smtpSecure: emailSmtpSecure,
+      imapHost: emailImapHost,
+      imapPort: emailImapPort,
+      notifyOnCreate: newCreate,
+      notifyOnStatusChange: newStatus,
+      notifyOnMessage: newMessage
+    });
+  };
+
   const handleSaveEmailConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     setEmailSaveStatus(null);
@@ -233,8 +276,9 @@ export const TIConfigView: React.FC = () => {
       notifyOnMessage
     });
     if (result && result.success) {
-      if (emailPass) setHasStoredPassword(true);
+      if (emailPass || hasStoredPassword) setHasStoredPassword(true);
       setEmailPass('');
+      setIsEditingEmail(false);
       setEmailSaveStatus('Configurações salvas com sucesso!');
       triggerSystemNotification('E-mail Configurado', 'Credenciais de e-mail corporativo atualizadas.', 'Configurações', 'Baixa');
       setTimeout(() => setEmailSaveStatus(null), 4000);
@@ -1406,335 +1450,534 @@ export const TIConfigView: React.FC = () => {
                 {serverOnline === false && whatsappServerUrl.includes('localhost') && (
                   <div className="p-2.5 bg-rose-500/10 border border-rose-500/25 rounded-lg text-rose-300 text-[11px] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <span>
-                      ⚠️ O servidor local não está respondendo. Como o sistema foi reiniciado, execute o arquivo <strong>INICIAR_SERVIDOR_LOCAL.bat</strong> ou clique para usar o servidor em nuvem.
+                      ⚠️ O servidor local não está respondendo. Execute o arquivo <strong>INICIAR_SERVIDOR_LOCAL.bat</strong> na pasta do sistema para habilitar o envio e teste de e-mails corporativos.
+                    </span>
+                  </div>
+                )}
+
+                {whatsappServerUrl.includes('onrender.com') && (
+                  <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-300 text-[11px] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <span>
+                      ℹ️ O envio de e-mails corporativos (@godesc.com.br / porta 587) requer o <strong>Servidor Local</strong> em execução (o servidor em nuvem no Render bloqueia portas de saída SMTP).
                     </span>
                     <button
                       type="button"
-                      onClick={() => updateWhatsappServerUrl('https://godesc360-whatsapp-api.onrender.com')}
-                      className="px-2.5 py-1 bg-rose-500/25 hover:bg-rose-500/40 text-rose-200 border border-rose-500/40 rounded text-[11px] font-bold shrink-0 self-start sm:self-auto cursor-pointer"
+                      onClick={() => updateWhatsappServerUrl('http://localhost:10000')}
+                      className="px-2.5 py-1 bg-amber-500/25 hover:bg-amber-500/40 text-amber-200 border border-amber-500/40 rounded text-[11px] font-bold shrink-0 self-start sm:self-auto cursor-pointer"
                     >
-                      ☁️ Conectar Servidor Nuvem Agora
+                      💻 Conectar Localhost:10000
                     </button>
                   </div>
                 )}
               </div>
 
-              {/* Seletor de Provedor */}
-              <div className="space-y-3">
-                <h3 className="text-xs font-bold text-white flex items-center gap-2">
-                  <Settings className="w-4 h-4 text-[#45dfa4]" />
-                  <span>Selecione o Provedor de E-mail</span>
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {/* GoDesc Oficial */}
-                  <button
-                    type="button"
-                    onClick={() => handleProviderChange('godesc')}
-                    className={`relative flex flex-col items-start gap-2 p-4 rounded-xl border text-left transition-all ${
-                      emailProvider === 'godesc'
-                        ? 'border-[#45dfa4] bg-[#45dfa4]/10 shadow-lg shadow-[#45dfa4]/10'
-                        : 'border-[#2A2F3A] bg-[#181c22] hover:border-[#45dfa4]/40'
-                    }`}
-                  >
-                    {emailProvider === 'godesc' && (
-                      <span className="absolute top-2 right-2 w-5 h-5 bg-[#45dfa4] rounded-full flex items-center justify-center">
-                        <Check className="w-3 h-3 text-gray-950" />
-                      </span>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">🏢</span>
-                      <span className="text-xs font-bold text-white">GoDesc Oficial</span>
-                    </div>
-                    <p className="text-[10px] text-[#8d90a0] leading-relaxed">
-                      <span className="text-[#45dfa4] font-mono">@godesc.com.br</span><br/>
-                      mail.desccloud.com.br<br/>
-                      SMTP: 587 (STARTTLS) | IMAP: 993 (SSL)
-                    </p>
-                    <span className="text-[9px] px-2 py-0.5 bg-[#45dfa4]/20 text-[#45dfa4] rounded-full font-bold">RECOMENDADO</span>
-                  </button>
-
-                  {/* SMTP Personalizado */}
-                  <button
-                    type="button"
-                    onClick={() => handleProviderChange('custom')}
-                    className={`relative flex flex-col items-start gap-2 p-4 rounded-xl border text-left transition-all ${
-                      emailProvider === 'custom'
-                        ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/10'
-                        : 'border-[#2A2F3A] bg-[#181c22] hover:border-blue-500/40'
-                    }`}
-                  >
-                    {emailProvider === 'custom' && (
-                      <span className="absolute top-2 right-2 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                        <Check className="w-3 h-3 text-white" />
-                      </span>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">⚙️</span>
-                      <span className="text-xs font-bold text-white">SMTP Personalizado</span>
-                    </div>
-                    <p className="text-[10px] text-[#8d90a0] leading-relaxed">
-                      Qualquer servidor SMTP<br/>
-                      Configure host, porta<br/>
-                      e tipo de criptografia
-                    </p>
-                  </button>
-
-                  {/* Gmail */}
-                  <button
-                    type="button"
-                    onClick={() => handleProviderChange('gmail')}
-                    className={`relative flex flex-col items-start gap-2 p-4 rounded-xl border text-left transition-all ${
-                      emailProvider === 'gmail'
-                        ? 'border-red-500 bg-red-500/10 shadow-lg shadow-red-500/10'
-                        : 'border-[#2A2F3A] bg-[#181c22] hover:border-red-500/40'
-                    }`}
-                  >
-                    {emailProvider === 'gmail' && (
-                      <span className="absolute top-2 right-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-                        <Check className="w-3 h-3 text-white" />
-                      </span>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">🔴</span>
-                      <span className="text-xs font-bold text-white">Google Gmail</span>
-                    </div>
-                    <p className="text-[10px] text-[#8d90a0] leading-relaxed">
-                      smtp.gmail.com<br/>
-                      SMTP: 465 (SSL)<br/>
-                      Exige Senha de App Google
-                    </p>
-                  </button>
-                </div>
-              </div>
-
-              {/* Info SMTP - GoDesc */}
-              {emailProvider === 'godesc' && (
-                <div className="bg-[#0d1117] border border-[#45dfa4]/20 rounded-xl p-4 text-xs space-y-2">
-                  <div className="flex items-center gap-2 text-[#45dfa4] font-bold mb-1">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Configuração automática do servidor DescCloud</span>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="bg-[#181c22] rounded-lg p-2.5 border border-[#2A2F3A]">
-                      <p className="text-[#8d90a0] text-[10px] mb-0.5">SMTP Host</p>
-                      <p className="text-white font-mono font-bold text-[11px]">mail.desccloud.com.br</p>
-                    </div>
-                    <div className="bg-[#181c22] rounded-lg p-2.5 border border-[#2A2F3A]">
-                      <p className="text-[#8d90a0] text-[10px] mb-0.5">SMTP Porta</p>
-                      <p className="text-[#45dfa4] font-mono font-bold text-[11px]">587 (STARTTLS)</p>
-                    </div>
-                    <div className="bg-[#181c22] rounded-lg p-2.5 border border-[#2A2F3A]">
-                      <p className="text-[#8d90a0] text-[10px] mb-0.5">IMAP Host</p>
-                      <p className="text-white font-mono font-bold text-[11px]">mail.desccloud.com.br</p>
-                    </div>
-                    <div className="bg-[#181c22] rounded-lg p-2.5 border border-[#2A2F3A]">
-                      <p className="text-[#8d90a0] text-[10px] mb-0.5">IMAP Porta</p>
-                      <p className="text-[#45dfa4] font-mono font-bold text-[11px]">993 (SSL/TLS)</p>
-                    </div>
-                  </div>
-                  <p className="text-[#8d90a0] text-[10px] pt-1">💡 Use o e-mail e a senha da sua caixa de e-mail corporativa diretamente — sem senhas de aplicativo extras.</p>
-                </div>
-              )}
-
-              {/* Info Gmail */}
-              {emailProvider === 'gmail' && (
-                <div className="bg-[#0d1117] border border-red-500/20 rounded-xl p-4 text-xs space-y-2">
-                  <div className="flex items-center gap-2 text-red-400 font-bold mb-1">
-                    <HelpCircle className="w-4 h-4" />
-                    <span>Como usar Senha de Aplicativo do Gmail</span>
-                  </div>
-                  <ol className="list-decimal pl-5 space-y-1 text-[#8d90a0] text-[11px]">
-                    <li>Acesse <a href="https://myaccount.google.com/security" target="_blank" rel="noopener noreferrer" className="text-[#45dfa4] underline">Segurança da Conta Google</a>.</li>
-                    <li>Ative a <strong className="text-white">"Verificação em duas etapas"</strong>.</li>
-                    <li>Pesquise por <strong className="text-white">"Senhas de app"</strong> e crie uma para "GoDesc 360".</li>
-                    <li>Cole o código de 16 letras no campo <strong className="text-white">Senha</strong> abaixo.</li>
-                  </ol>
-                </div>
-              )}
-
-              {/* Formulário Principal */}
-              <form onSubmit={handleSaveEmailConfig} className="bg-[#181c22] border border-[#2A2F3A] rounded-xl p-5 space-y-5">
-                <div className="flex items-center justify-between pb-3 border-b border-[#2A2F3A]">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <Key className="w-4 h-4 text-[#45dfa4]" />
-                    <span>Credenciais de Acesso</span>
-                  </h3>
-                  <label className="flex items-center gap-2 cursor-pointer text-xs">
-                    <input
-                      type="checkbox"
-                      checked={emailEnabled}
-                      onChange={e => setEmailEnabled(e.target.checked)}
-                      className="accent-[#45dfa4] rounded w-4 h-4 cursor-pointer"
-                    />
-                    <span className="text-white font-medium">Habilitar envio de e-mails</span>
-                  </label>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                  <div>
-                    <label className="block text-[#8d90a0] mb-1 font-semibold">
-                      {emailProvider === 'godesc' ? 'E-mail Corporativo (@godesc.com.br):' : emailProvider === 'gmail' ? 'Conta Gmail (Remetente):' : 'E-mail (Remetente):'}
-                    </label>
-                    <div className="relative">
-                      <Mail className="w-4 h-4 text-[#8d90a0] absolute left-3 top-2.5" />
-                      <input
-                        type="email"
-                        required
-                        value={emailUser}
-                        onChange={e => setEmailUser(e.target.value)}
-                        placeholder={emailProvider === 'godesc' ? 'seuemail@godesc.com.br' : emailProvider === 'gmail' ? 'exemplo@gmail.com' : 'usuario@seudominio.com'}
-                        className="w-full bg-[#111827] border border-[#2A2F3A] rounded-lg pl-9 pr-3 py-2 text-white focus:outline-none focus:border-[#45dfa4]"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[#8d90a0] mb-1 font-semibold">
-                      {emailProvider === 'gmail' ? 'Senha de Aplicativo (16 dígitos):' : 'Senha do E-mail:'}
-                    </label>
-                    <div className="relative">
-                      <Lock className="w-4 h-4 text-[#8d90a0] absolute left-3 top-2.5" />
-                      <input
-                        type="password"
-                        value={emailPass}
-                        onChange={e => setEmailPass(e.target.value)}
-                        placeholder={hasStoredPassword ? '•••••••••••••••• (Já configurada)' : emailProvider === 'gmail' ? 'xxxx xxxx xxxx xxxx' : 'Senha da sua caixa de e-mail'}
-                        className="w-full bg-[#111827] border border-[#2A2F3A] rounded-lg pl-9 pr-3 py-2 text-white focus:outline-none focus:border-[#45dfa4]"
-                      />
-                    </div>
-                    {hasStoredPassword && !emailPass && (
-                      <span className="text-[10px] text-emerald-400 mt-1 block">✓ Senha salva no servidor. Preencha só para alterar.</span>
-                    )}
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className="block text-[#8d90a0] mb-1 font-semibold">Nome de Exibição do Remetente:</label>
-                    <input
-                      type="text"
-                      value={emailFromName}
-                      onChange={e => setEmailFromName(e.target.value)}
-                      placeholder="GoDesc 360 Service Desk"
-                      className="w-full bg-[#111827] border border-[#2A2F3A] rounded-lg p-2 text-white focus:outline-none focus:border-[#45dfa4]"
-                    />
-                  </div>
-
-                  {/* Campos avançados SMTP para provedor Custom */}
-                  {emailProvider === 'custom' && (
-                    <>
-                      <div>
-                        <label className="block text-[#8d90a0] mb-1 font-semibold">Host SMTP:</label>
-                        <input
-                          type="text"
-                          required
-                          value={emailSmtpHost}
-                          onChange={e => setEmailSmtpHost(e.target.value)}
-                          placeholder="mail.seudominio.com"
-                          className="w-full bg-[#111827] border border-[#2A2F3A] rounded-lg p-2 text-white font-mono focus:outline-none focus:border-[#45dfa4]"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[#8d90a0] mb-1 font-semibold">Porta SMTP:</label>
-                        <div className="flex gap-2">
-                          <input
-                            type="number"
-                            required
-                            value={emailSmtpPort}
-                            onChange={e => setEmailSmtpPort(Number(e.target.value))}
-                            placeholder="587"
-                            className="w-24 bg-[#111827] border border-[#2A2F3A] rounded-lg p-2 text-white font-mono focus:outline-none focus:border-[#45dfa4]"
-                          />
-                          <label className="flex items-center gap-2 px-3 py-2 bg-[#111827] border border-[#2A2F3A] rounded-lg cursor-pointer text-xs">
-                            <input
-                              type="checkbox"
-                              checked={emailSmtpSecure}
-                              onChange={e => setEmailSmtpSecure(e.target.checked)}
-                              className="accent-[#45dfa4] w-3.5 h-3.5"
-                            />
-                            <span className="text-[#8d90a0]">SSL/TLS direto (porta 465)</span>
-                          </label>
+              {hasStoredPassword && emailUser && !isEditingEmail ? (
+                /* PAINEL DE CONTA CONECTADA E ATIVA (NÃO PEDE CREDENCIAIS NOVAMENTE) */
+                <div className="space-y-4">
+                  {/* Card Principal de Conexão Ativa */}
+                  <div className="bg-[#181c22] border border-emerald-500/30 rounded-xl p-5 relative overflow-hidden shadow-lg shadow-emerald-500/5">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+                    
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#2A2F3A]">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                          <CheckCircle2 className="w-5 h-5" />
                         </div>
-                        <p className="text-[10px] text-[#8d90a0] mt-1">Deixe desmarcado para STARTTLS (porta 587)</p>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-bold text-white">E-mail Corporativo Configurado</h3>
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                              Conectado
+                            </span>
+                          </div>
+                          <p className="text-[#8d90a0] text-xs mt-0.5">
+                            As notificações de chamados são enviadas automaticamente aos clientes. Não é necessário redigitar credenciais.
+                          </p>
+                        </div>
                       </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingEmail(true)}
+                          className="px-3 py-1.5 bg-[#27272a] hover:bg-[#323238] text-white border border-[#3f3f46] rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                          title="Alterar endereço de e-mail ou redefinir senha"
+                        >
+                          <Settings className="w-3.5 h-3.5 text-[#45dfa4]" />
+                          <span>Alterar Credenciais</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowDisconnectConfirm(true)}
+                          className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                          title="Desconectar a conta e remover credenciais"
+                        >
+                          <Lock className="w-3.5 h-3.5" />
+                          <span>Desconectar</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Resumo da Conexão */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 text-xs">
+                      <div className="p-3 bg-[#111827] border border-[#2A2F3A] rounded-lg">
+                        <p className="text-[#8d90a0] text-[10px] mb-1">E-mail Corporativo Remetente</p>
+                        <p className="text-white font-mono font-bold truncate">{emailUser}</p>
+                        <p className="text-[#45dfa4] text-[10px] mt-0.5">{emailFromName || 'GoDesc 360'}</p>
+                      </div>
+
+                      <div className="p-3 bg-[#111827] border border-[#2A2F3A] rounded-lg">
+                        <p className="text-[#8d90a0] text-[10px] mb-1">Servidor SMTP de Saída</p>
+                        <p className="text-white font-mono font-bold truncate">{emailSmtpHost}:{emailSmtpPort}</p>
+                        <p className="text-[#8d90a0] text-[10px] mt-0.5">
+                          {emailProvider === 'godesc' ? 'DescCloud Corporativo' : emailProvider === 'gmail' ? 'Google SMTP' : 'SMTP Custom'}
+                        </p>
+                      </div>
+
+                      <div className="p-3 bg-[#111827] border border-[#2A2F3A] rounded-lg">
+                        <p className="text-[#8d90a0] text-[10px] mb-1">Status da Credencial</p>
+                        <p className="text-emerald-400 font-mono font-bold flex items-center gap-1.5">
+                          <span>••••••••••••••••</span>
+                          <span className="text-[10px] text-emerald-500">✓ Salva</span>
+                        </p>
+                        <p className="text-[#8d90a0] text-[10px] mt-0.5">Persistida na nuvem e servidor</p>
+                      </div>
+                    </div>
+
+                    {/* Confirmação para desconectar */}
+                    {showDisconnectConfirm && (
+                      <div className="mt-4 p-4 bg-rose-500/10 border border-rose-500/30 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                        <div className="flex items-start gap-2.5 text-rose-300">
+                          <AlertCircle className="w-5 h-5 shrink-0 text-rose-400 mt-0.5" />
+                          <div>
+                            <strong className="text-white block font-bold">Deseja realmente desconectar esta conta de e-mail?</strong>
+                            <span>As notificações automáticas de chamados serão pausadas até que uma nova credencial seja configurada.</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                          <button
+                            type="button"
+                            onClick={() => setShowDisconnectConfirm(false)}
+                            className="px-3 py-1.5 bg-[#27272a] hover:bg-[#323238] text-white rounded-lg text-xs font-semibold cursor-pointer"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleDisconnectEmail}
+                            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg text-xs cursor-pointer shadow-md shadow-rose-600/20"
+                          >
+                            Sim, Desconectar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Gatilhos de Notificação Rápidos (sem precisar de senha) */}
+                  <div className="bg-[#181c22] border border-[#2A2F3A] rounded-xl p-5 space-y-3 text-xs">
+                    <div className="flex items-center justify-between pb-2 border-b border-[#2A2F3A]">
+                      <h4 className="font-bold text-white flex items-center gap-2">
+                        <Sliders className="w-4 h-4 text-[#45dfa4]" />
+                        <span>Gatilhos de Notificação Automática para Clientes</span>
+                      </h4>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={emailEnabled}
+                          onChange={e => handleToggleTrigger('enabled', e.target.checked)}
+                          className="accent-[#45dfa4] rounded w-4 h-4 cursor-pointer"
+                        />
+                        <span className="text-white text-xs font-medium">Habilitar envios</span>
+                      </label>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                      <label className="flex items-center gap-2.5 p-3 bg-[#111827] border border-[#2A2F3A] rounded-lg cursor-pointer hover:border-[#45dfa4]/30 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={notifyOnCreate}
+                          onChange={e => handleToggleTrigger('notifyOnCreate', e.target.checked)}
+                          className="accent-[#45dfa4] rounded w-4 h-4 cursor-pointer"
+                        />
+                        <div>
+                          <span className="text-white text-xs font-medium block">Abertura de Chamado</span>
+                          <span className="text-[10px] text-[#8d90a0]">Ao registrar novo ticket</span>
+                        </div>
+                      </label>
+
+                      <label className="flex items-center gap-2.5 p-3 bg-[#111827] border border-[#2A2F3A] rounded-lg cursor-pointer hover:border-[#45dfa4]/30 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={notifyOnStatusChange}
+                          onChange={e => handleToggleTrigger('notifyOnStatusChange', e.target.checked)}
+                          className="accent-[#45dfa4] rounded w-4 h-4 cursor-pointer"
+                        />
+                        <div>
+                          <span className="text-white text-xs font-medium block">Mudança de Status</span>
+                          <span className="text-[10px] text-[#8d90a0]">Andamento, Pausa, Conclusão</span>
+                        </div>
+                      </label>
+
+                      <label className="flex items-center gap-2.5 p-3 bg-[#111827] border border-[#2A2F3A] rounded-lg cursor-pointer hover:border-[#45dfa4]/30 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={notifyOnMessage}
+                          onChange={e => handleToggleTrigger('notifyOnMessage', e.target.checked)}
+                          className="accent-[#45dfa4] rounded w-4 h-4 cursor-pointer"
+                        />
+                        <div>
+                          <span className="text-white text-xs font-medium block">Resposta do Técnico</span>
+                          <span className="text-[10px] text-[#8d90a0]">Ao interagir no chat do ticket</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* FORMULÁRIO DE CONFIGURAÇÃO / ALTERAÇÃO */
+                <div className="space-y-4">
+                  {isEditingEmail && (
+                    <div className="flex items-center justify-between p-3.5 bg-blue-500/10 border border-blue-500/30 rounded-xl text-xs text-blue-300">
+                      <span>✏️ <strong>Modo de Alteração de Credenciais:</strong> Atualize os dados desejados e clique em "Salvar Configurações".</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingEmail(false)}
+                        className="px-3 py-1 bg-[#27272a] hover:bg-[#323238] text-white rounded-lg text-xs font-semibold cursor-pointer shrink-0 ml-2"
+                      >
+                        Cancelar Edição
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Seletor de Provedor */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-bold text-white flex items-center gap-2">
+                      <Settings className="w-4 h-4 text-[#45dfa4]" />
+                      <span>Selecione o Provedor de E-mail</span>
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {/* GoDesc Oficial */}
+                      <button
+                        type="button"
+                        onClick={() => handleProviderChange('godesc')}
+                        className={`relative flex flex-col items-start gap-2 p-4 rounded-xl border text-left transition-all ${
+                          emailProvider === 'godesc'
+                            ? 'border-[#45dfa4] bg-[#45dfa4]/10 shadow-lg shadow-[#45dfa4]/10'
+                            : 'border-[#2A2F3A] bg-[#181c22] hover:border-[#45dfa4]/40'
+                        }`}
+                      >
+                        {emailProvider === 'godesc' && (
+                          <span className="absolute top-2 right-2 w-5 h-5 bg-[#45dfa4] rounded-full flex items-center justify-center">
+                            <Check className="w-3 h-3 text-gray-950" />
+                          </span>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">🏢</span>
+                          <span className="text-xs font-bold text-white">GoDesc Oficial</span>
+                        </div>
+                        <p className="text-[10px] text-[#8d90a0] leading-relaxed">
+                          <span className="text-[#45dfa4] font-mono">@godesc.com.br</span><br/>
+                          mail.desccloud.com.br<br/>
+                          SMTP: 587 (STARTTLS) | IMAP: 993 (SSL)
+                        </p>
+                        <span className="text-[9px] px-2 py-0.5 bg-[#45dfa4]/20 text-[#45dfa4] rounded-full font-bold">RECOMENDADO</span>
+                      </button>
+
+                      {/* SMTP Personalizado */}
+                      <button
+                        type="button"
+                        onClick={() => handleProviderChange('custom')}
+                        className={`relative flex flex-col items-start gap-2 p-4 rounded-xl border text-left transition-all ${
+                          emailProvider === 'custom'
+                            ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/10'
+                            : 'border-[#2A2F3A] bg-[#181c22] hover:border-blue-500/40'
+                        }`}
+                      >
+                        {emailProvider === 'custom' && (
+                          <span className="absolute top-2 right-2 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                            <Check className="w-3 h-3 text-white" />
+                          </span>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">⚙️</span>
+                          <span className="text-xs font-bold text-white">SMTP Personalizado</span>
+                        </div>
+                        <p className="text-[10px] text-[#8d90a0] leading-relaxed">
+                          Qualquer servidor SMTP<br/>
+                          Configure host, porta<br/>
+                          e tipo de criptografia
+                        </p>
+                      </button>
+
+                      {/* Gmail */}
+                      <button
+                        type="button"
+                        onClick={() => handleProviderChange('gmail')}
+                        className={`relative flex flex-col items-start gap-2 p-4 rounded-xl border text-left transition-all ${
+                          emailProvider === 'gmail'
+                            ? 'border-red-500 bg-red-500/10 shadow-lg shadow-red-500/10'
+                            : 'border-[#2A2F3A] bg-[#181c22] hover:border-red-500/40'
+                        }`}
+                      >
+                        {emailProvider === 'gmail' && (
+                          <span className="absolute top-2 right-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                            <Check className="w-3 h-3 text-white" />
+                          </span>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">🔴</span>
+                          <span className="text-xs font-bold text-white">Google Gmail</span>
+                        </div>
+                        <p className="text-[10px] text-[#8d90a0] leading-relaxed">
+                          smtp.gmail.com<br/>
+                          SMTP: 465 (SSL)<br/>
+                          Exige Senha de App Google
+                        </p>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Info SMTP - GoDesc */}
+                  {emailProvider === 'godesc' && (
+                    <div className="bg-[#0d1117] border border-[#45dfa4]/20 rounded-xl p-4 text-xs space-y-2">
+                      <div className="flex items-center gap-2 text-[#45dfa4] font-bold mb-1">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Configuração automática do servidor DescCloud</span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="bg-[#181c22] rounded-lg p-2.5 border border-[#2A2F3A]">
+                          <p className="text-[#8d90a0] text-[10px] mb-0.5">SMTP Host</p>
+                          <p className="text-white font-mono font-bold text-[11px]">mail.desccloud.com.br</p>
+                        </div>
+                        <div className="bg-[#181c22] rounded-lg p-2.5 border border-[#2A2F3A]">
+                          <p className="text-[#8d90a0] text-[10px] mb-0.5">SMTP Porta</p>
+                          <p className="text-[#45dfa4] font-mono font-bold text-[11px]">587 (STARTTLS)</p>
+                        </div>
+                        <div className="bg-[#181c22] rounded-lg p-2.5 border border-[#2A2F3A]">
+                          <p className="text-[#8d90a0] text-[10px] mb-0.5">IMAP Host</p>
+                          <p className="text-white font-mono font-bold text-[11px]">mail.desccloud.com.br</p>
+                        </div>
+                        <div className="bg-[#181c22] rounded-lg p-2.5 border border-[#2A2F3A]">
+                          <p className="text-[#8d90a0] text-[10px] mb-0.5">IMAP Porta</p>
+                          <p className="text-[#45dfa4] font-mono font-bold text-[11px]">993 (SSL/TLS)</p>
+                        </div>
+                      </div>
+                      <p className="text-[#8d90a0] text-[10px] pt-1">💡 Use o e-mail e a senha da sua caixa de e-mail corporativa diretamente — sem senhas de aplicativo extras.</p>
+                    </div>
+                  )}
+
+                  {/* Info Gmail */}
+                  {emailProvider === 'gmail' && (
+                    <div className="bg-[#0d1117] border border-red-500/20 rounded-xl p-4 text-xs space-y-2">
+                      <div className="flex items-center gap-2 text-red-400 font-bold mb-1">
+                        <HelpCircle className="w-4 h-4" />
+                        <span>Como usar Senha de Aplicativo do Gmail</span>
+                      </div>
+                      <ol className="list-decimal pl-5 space-y-1 text-[#8d90a0] text-[11px]">
+                        <li>Acesse <a href="https://myaccount.google.com/security" target="_blank" rel="noopener noreferrer" className="text-[#45dfa4] underline">Segurança da Conta Google</a>.</li>
+                        <li>Ative a <strong className="text-white">"Verificação em duas etapas"</strong>.</li>
+                        <li>Pesquise por <strong className="text-white">"Senhas de app"</strong> e crie uma para "GoDesc 360".</li>
+                        <li>Cole o código de 16 letras no campo <strong className="text-white">Senha</strong> abaixo.</li>
+                      </ol>
+                    </div>
+                  )}
+
+                  {/* Formulário Principal */}
+                  <form onSubmit={handleSaveEmailConfig} className="bg-[#181c22] border border-[#2A2F3A] rounded-xl p-5 space-y-5">
+                    <div className="flex items-center justify-between pb-3 border-b border-[#2A2F3A]">
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <Key className="w-4 h-4 text-[#45dfa4]" />
+                        <span>Credenciais de Acesso</span>
+                      </h3>
+                      <label className="flex items-center gap-2 cursor-pointer text-xs">
+                        <input
+                          type="checkbox"
+                          checked={emailEnabled}
+                          onChange={e => setEmailEnabled(e.target.checked)}
+                          className="accent-[#45dfa4] rounded w-4 h-4 cursor-pointer"
+                        />
+                        <span className="text-white font-medium">Habilitar envio de e-mails</span>
+                      </label>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                       <div>
-                        <label className="block text-[#8d90a0] mb-1 font-semibold">Host IMAP (Recebimento):</label>
+                        <label className="block text-[#8d90a0] mb-1 font-semibold">
+                          {emailProvider === 'godesc' ? 'E-mail Corporativo (@godesc.com.br):' : emailProvider === 'gmail' ? 'Conta Gmail (Remetente):' : 'E-mail (Remetente):'}
+                        </label>
+                        <div className="relative">
+                          <Mail className="w-4 h-4 text-[#8d90a0] absolute left-3 top-2.5" />
+                          <input
+                            type="email"
+                            required
+                            value={emailUser}
+                            onChange={e => setEmailUser(e.target.value)}
+                            placeholder={emailProvider === 'godesc' ? 'seuemail@godesc.com.br' : emailProvider === 'gmail' ? 'exemplo@gmail.com' : 'usuario@seudominio.com'}
+                            className="w-full bg-[#111827] border border-[#2A2F3A] rounded-lg pl-9 pr-3 py-2 text-white focus:outline-none focus:border-[#45dfa4]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[#8d90a0] mb-1 font-semibold">
+                          {emailProvider === 'gmail' ? 'Senha de Aplicativo (16 dígitos):' : 'Senha do E-mail:'}
+                        </label>
+                        <div className="relative">
+                          <Lock className="w-4 h-4 text-[#8d90a0] absolute left-3 top-2.5" />
+                          <input
+                            type="password"
+                            value={emailPass}
+                            onChange={e => setEmailPass(e.target.value)}
+                            placeholder={hasStoredPassword ? '•••••••••••••••• (Já configurada)' : emailProvider === 'gmail' ? 'xxxx xxxx xxxx xxxx' : 'Senha da sua caixa de e-mail'}
+                            className="w-full bg-[#111827] border border-[#2A2F3A] rounded-lg pl-9 pr-3 py-2 text-white focus:outline-none focus:border-[#45dfa4]"
+                          />
+                        </div>
+                        {hasStoredPassword && !emailPass && (
+                          <span className="text-[10px] text-emerald-400 mt-1 block">✓ Senha salva no servidor. Preencha só para alterar.</span>
+                        )}
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="block text-[#8d90a0] mb-1 font-semibold">Nome de Exibição do Remetente:</label>
                         <input
                           type="text"
-                          value={emailImapHost}
-                          onChange={e => setEmailImapHost(e.target.value)}
-                          placeholder="imap.seudominio.com"
-                          className="w-full bg-[#111827] border border-[#2A2F3A] rounded-lg p-2 text-white font-mono focus:outline-none focus:border-[#45dfa4]"
+                          value={emailFromName}
+                          onChange={e => setEmailFromName(e.target.value)}
+                          placeholder="GoDesc 360 Service Desk"
+                          className="w-full bg-[#111827] border border-[#2A2F3A] rounded-lg p-2 text-white focus:outline-none focus:border-[#45dfa4]"
                         />
                       </div>
-                      <div>
-                        <label className="block text-[#8d90a0] mb-1 font-semibold">Porta IMAP:</label>
-                        <input
-                          type="number"
-                          value={emailImapPort}
-                          onChange={e => setEmailImapPort(Number(e.target.value))}
-                          placeholder="993"
-                          className="w-24 bg-[#111827] border border-[#2A2F3A] rounded-lg p-2 text-white font-mono focus:outline-none focus:border-[#45dfa4]"
-                        />
+
+                      {/* Campos avançados SMTP para provedor Custom */}
+                      {emailProvider === 'custom' && (
+                        <>
+                          <div>
+                            <label className="block text-[#8d90a0] mb-1 font-semibold">Host SMTP:</label>
+                            <input
+                              type="text"
+                              required
+                              value={emailSmtpHost}
+                              onChange={e => setEmailSmtpHost(e.target.value)}
+                              placeholder="mail.seudominio.com"
+                              className="w-full bg-[#111827] border border-[#2A2F3A] rounded-lg p-2 text-white font-mono focus:outline-none focus:border-[#45dfa4]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[#8d90a0] mb-1 font-semibold">Porta SMTP:</label>
+                            <div className="flex gap-2">
+                              <input
+                                type="number"
+                                required
+                                value={emailSmtpPort}
+                                onChange={e => setEmailSmtpPort(Number(e.target.value))}
+                                placeholder="587"
+                                className="w-24 bg-[#111827] border border-[#2A2F3A] rounded-lg p-2 text-white font-mono focus:outline-none focus:border-[#45dfa4]"
+                              />
+                              <label className="flex items-center gap-2 px-3 py-2 bg-[#111827] border border-[#2A2F3A] rounded-lg cursor-pointer text-xs">
+                                <input
+                                  type="checkbox"
+                                  checked={emailSmtpSecure}
+                                  onChange={e => setEmailSmtpSecure(e.target.checked)}
+                                  className="accent-[#45dfa4] w-3.5 h-3.5"
+                                />
+                                <span className="text-[#8d90a0]">SSL/TLS direto (porta 465)</span>
+                              </label>
+                            </div>
+                            <p className="text-[10px] text-[#8d90a0] mt-1">Deixe desmarcado para STARTTLS (porta 587)</p>
+                          </div>
+                          <div>
+                            <label className="block text-[#8d90a0] mb-1 font-semibold">Host IMAP (Recebimento):</label>
+                            <input
+                              type="text"
+                              value={emailImapHost}
+                              onChange={e => setEmailImapHost(e.target.value)}
+                              placeholder="imap.seudominio.com"
+                              className="w-full bg-[#111827] border border-[#2A2F3A] rounded-lg p-2 text-white font-mono focus:outline-none focus:border-[#45dfa4]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[#8d90a0] mb-1 font-semibold">Porta IMAP:</label>
+                            <input
+                              type="number"
+                              value={emailImapPort}
+                              onChange={e => setEmailImapPort(Number(e.target.value))}
+                              placeholder="993"
+                              className="w-24 bg-[#111827] border border-[#2A2F3A] rounded-lg p-2 text-white font-mono focus:outline-none focus:border-[#45dfa4]"
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Gatilhos de Notificação */}
+                    <div className="pt-4 border-t border-[#2A2F3A] space-y-3 text-xs">
+                      <h4 className="font-bold text-white flex items-center gap-2">
+                        <Sliders className="w-4 h-4 text-[#45dfa4]" />
+                        <span>Gatilhos de Notificação para o Cliente</span>
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <label className="flex items-center gap-2 p-3 bg-[#111827] border border-[#2A2F3A] rounded-lg cursor-pointer hover:border-[#45dfa4]/30 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={notifyOnCreate}
+                            onChange={e => setNotifyOnCreate(e.target.checked)}
+                            className="accent-[#45dfa4] rounded w-4 h-4"
+                          />
+                          <span className="text-white text-xs">Abertura de Chamado</span>
+                        </label>
+                        <label className="flex items-center gap-2 p-3 bg-[#111827] border border-[#2A2F3A] rounded-lg cursor-pointer hover:border-[#45dfa4]/30 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={notifyOnStatusChange}
+                            onChange={e => setNotifyOnStatusChange(e.target.checked)}
+                            className="accent-[#45dfa4] rounded w-4 h-4"
+                          />
+                          <span className="text-white text-xs">Mudança de Status</span>
+                        </label>
+                        <label className="flex items-center gap-2 p-3 bg-[#111827] border border-[#2A2F3A] rounded-lg cursor-pointer hover:border-[#45dfa4]/30 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={notifyOnMessage}
+                            onChange={e => setNotifyOnMessage(e.target.checked)}
+                            className="accent-[#45dfa4] rounded w-4 h-4"
+                          />
+                          <span className="text-white text-xs">Resposta do Técnico</span>
+                        </label>
                       </div>
-                    </>
-                  )}
-                </div>
+                    </div>
 
-                {/* Gatilhos de Notificação */}
-                <div className="pt-4 border-t border-[#2A2F3A] space-y-3 text-xs">
-                  <h4 className="font-bold text-white flex items-center gap-2">
-                    <Sliders className="w-4 h-4 text-[#45dfa4]" />
-                    <span>Gatilhos de Notificação para o Cliente</span>
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <label className="flex items-center gap-2 p-3 bg-[#111827] border border-[#2A2F3A] rounded-lg cursor-pointer hover:border-[#45dfa4]/30 transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={notifyOnCreate}
-                        onChange={e => setNotifyOnCreate(e.target.checked)}
-                        className="accent-[#45dfa4] rounded w-4 h-4"
-                      />
-                      <span className="text-white text-xs">Abertura de Chamado</span>
-                    </label>
-                    <label className="flex items-center gap-2 p-3 bg-[#111827] border border-[#2A2F3A] rounded-lg cursor-pointer hover:border-[#45dfa4]/30 transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={notifyOnStatusChange}
-                        onChange={e => setNotifyOnStatusChange(e.target.checked)}
-                        className="accent-[#45dfa4] rounded w-4 h-4"
-                      />
-                      <span className="text-white text-xs">Mudança de Status</span>
-                    </label>
-                    <label className="flex items-center gap-2 p-3 bg-[#111827] border border-[#2A2F3A] rounded-lg cursor-pointer hover:border-[#45dfa4]/30 transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={notifyOnMessage}
-                        onChange={e => setNotifyOnMessage(e.target.checked)}
-                        className="accent-[#45dfa4] rounded w-4 h-4"
-                      />
-                      <span className="text-white text-xs">Resposta do Técnico</span>
-                    </label>
-                  </div>
-                </div>
+                    {emailSaveStatus && (
+                      <div className={`p-3 rounded-lg text-xs flex items-center gap-2 ${
+                        emailSaveStatus.includes('sucesso') ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                      }`}>
+                        {emailSaveStatus.includes('sucesso') ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+                        <span>{emailSaveStatus}</span>
+                      </div>
+                    )}
 
-                {emailSaveStatus && (
-                  <div className={`p-3 rounded-lg text-xs flex items-center gap-2 ${
-                    emailSaveStatus.includes('sucesso') ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                  }`}>
-                    {emailSaveStatus.includes('sucesso') ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
-                    <span>{emailSaveStatus}</span>
-                  </div>
-                )}
-
-                <div className="flex justify-end pt-2">
-                  <button
-                    type="submit"
-                    className="px-5 py-2.5 bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 font-bold rounded-lg text-xs flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-[#45dfa4]/10"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>Salvar Configurações</span>
-                  </button>
+                    <div className="flex justify-end gap-2 pt-2">
+                      {isEditingEmail && (
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingEmail(false)}
+                          className="px-4 py-2.5 bg-[#27272a] hover:bg-[#323238] text-white font-semibold rounded-lg text-xs transition-colors cursor-pointer"
+                        >
+                          Cancelar
+                        </button>
+                      )}
+                      <button
+                        type="submit"
+                        className="px-5 py-2.5 bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 font-bold rounded-lg text-xs flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-[#45dfa4]/10"
+                      >
+                        <Save className="w-4 h-4" />
+                        <span>Salvar Configurações</span>
+                      </button>
+                    </div>
+                  </form>
                 </div>
-              </form>
+              )}
 
               {/* Card de Teste de Conexão */}
               <div className="bg-[#181c22] border border-[#2A2F3A] rounded-xl p-5 space-y-4 text-xs">

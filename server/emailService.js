@@ -609,6 +609,31 @@ async function sendTicketNotification({ to, actionType, ticket, technicianName, 
   }
 }
 
+function clearConfig() {
+  try {
+    emailConfig = {
+      enabled: false,
+      provider: 'godesc',
+      smtpHost: 'mail.desccloud.com.br',
+      smtpPort: 587,
+      smtpSecure: false,
+      imapHost: 'mail.desccloud.com.br',
+      imapPort: 993,
+      user: '',
+      pass: '',
+      fromName: 'GoDesc',
+      notifyOnCreate: true,
+      notifyOnStatusChange: true,
+      notifyOnMessage: true
+    };
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(emailConfig, null, 2), 'utf8');
+    return true;
+  } catch (err) {
+    console.error('Erro ao limpar email_config.json:', err);
+    return false;
+  }
+}
+
 module.exports = {
   getEmailConfig: () => {
     // Retorna cópia sem expor a senha completa
@@ -620,6 +645,8 @@ module.exports = {
     };
   },
   saveConfig,
+  clearConfig,
   testConnection,
   sendTicketNotification
 };
+

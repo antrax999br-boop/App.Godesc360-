@@ -106,6 +106,28 @@ export class ChatbotEngine {
     }
 
     const trimmed = incomingText.trim();
+    const lowerTrimmed = trimmed.toLowerCase();
+
+    // Comandos de reinício de menu a qualquer momento
+    const isMenuRestart = ['menu', 'início', 'inicio', '#', 'voltar', 'opções', 'opcoes', 'ajuda', 'começar', 'comecar'].includes(lowerTrimmed);
+
+    // Build welcome message from rootNode message if present, or default fallback
+    const welcomeMsg = rootNode?.message || `Olá! Tudo bem? 👋\n\nBem-vindo à Central de Atendimento GoDesc 360.\n\nPara direcionarmos seu atendimento à equipe correta, por favor digite o número da opção desejada:\n\n1 - 💼 Comercial\n2 - 🛠️ Suporte Técnico\n3 - 💳 Financeiro\n4 - 🎫 Abrir Ticket Chamado\n5 - 👤 Falar com Atendente\n\n_(A qualquer momento, digite *#* ou *menu* para retornar ao início)_`;
+
+    // Se o cliente digitar comando de reinício, reseta para o menu principal
+    if (isMenuRestart) {
+      return {
+        replyMessage: welcomeMsg,
+        updateConversationStatus: 'BOT',
+        targetQueueName: 'Triagem Automática',
+        botActive: true
+      };
+    }
+
+    // Se o atendente humano estiver ativamente engajado (IN_PROGRESS) e o robô pausado, não intercepta mensagens normais
+    if (!conversation.botActive && conversation.status === 'IN_PROGRESS') {
+      return {};
+    }
 
     // Check if customized flow nodes exist
     const rootNode = (flow && flow.nodes && flow.nodes.length > 0)
@@ -114,7 +136,10 @@ export class ChatbotEngine {
 
     // Dynamically match user option against flow rootNode options if present
     if (rootNode && rootNode.options && rootNode.options.length > 0) {
-      const matchedOpt = rootNode.options.find(o => o.triggerValue.trim() === trimmed);
+      const matchedOpt = rootNode.options.find(o => 
+        o.triggerValue.trim().toLowerCase() === lowerTrimmed || 
+        o.label.trim().toLowerCase() === lowerTrimmed
+      );
 
       if (matchedOpt) {
         const targetNode = flow.nodes.find(n => n.id === matchedOpt.targetNodeId);
@@ -151,7 +176,7 @@ export class ChatbotEngine {
 
         // Standard Queue transfer for menu choices (e.g. Comercial, Suporte, Financeiro, etc)
         return {
-          replyMessage: targetNode?.message || `Perfeito! Vou encaminhar você para a fila do setor **${matchedOpt.label}**. Por favor, aguarde um momento. ⏳`,
+          replyMessage: targetNode?.message || `Perfeito! Vou encaminhar você para a fila do setor *${matchedOpt.label}*. Por favor, aguarde um momento. ⏳`,
           updateConversationStatus: 'WAITING',
           targetQueueId: targetQueue?.id,
           targetQueueName: targetQueue?.name || matchedOpt.label,
@@ -160,11 +185,11 @@ export class ChatbotEngine {
       }
     }
 
-    // Process fallback numerical options if flow options didn't match
-    if (trimmed === '1') {
+    // Process fallback numerical or keyword options if flow options didn't match
+    if (lowerTrimmed === '1' || lowerTrimmed === 'comercial' || lowerTrimmed.includes('vendas')) {
       const q = queues.find(item => item.name.toLowerCase().includes('comercial')) || queues[0];
       return {
-        replyMessage: `Perfeito! Vou encaminhar você para a fila do setor **Comercial**. Por favor, aguarde um momento. ⏳`,
+        replyMessage: `Perfeito! Vou encaminhar você para a fila do setor *Comercial*. Por favor, aguarde um momento. ⏳`,
         updateConversationStatus: 'WAITING',
         targetQueueId: q?.id,
         targetQueueName: q?.name || 'Comercial',
@@ -172,10 +197,10 @@ export class ChatbotEngine {
       };
     }
 
-    if (trimmed === '2') {
+    if (lowerTrimmed === '2' || lowerTrimmed === 'suporte' || lowerTrimmed.includes('tecnico') || lowerTrimmed.includes('técnico') || lowerTrimmed.includes('ajuda')) {
       const q = queues.find(item => item.name.toLowerCase().includes('suporte')) || queues[0];
       return {
-        replyMessage: `Certo! Vou encaminhar você para a fila de **Suporte Técnico**. Em instantes um analista assumirá seu atendimento. 🛠️`,
+        replyMessage: `Certo! Vou encaminhar você para a fila de *Suporte Técnico*. Em instantes um analista assumirá seu atendimento. 🛠️`,
         updateConversationStatus: 'WAITING',
         targetQueueId: q?.id,
         targetQueueName: q?.name || 'Suporte Técnico',
@@ -183,10 +208,10 @@ export class ChatbotEngine {
       };
     }
 
-    if (trimmed === '3') {
+    if (lowerTrimmed === '3' || lowerTrimmed === 'financeiro' || lowerTrimmed.includes('boleto') || lowerTrimmed.includes('pagamento') || lowerTrimmed.includes('fatura')) {
       const q = queues.find(item => item.name.toLowerCase().includes('financeiro')) || queues[0];
       return {
-        replyMessage: `Entendido! Redirecionando seu contato para o departamento **Financeiro**. 💳`,
+        replyMessage: `Entendido! Redirecionando seu contato para o departamento *Financeiro*. 💳`,
         updateConversationStatus: 'WAITING',
         targetQueueId: q?.id,
         targetQueueName: q?.name || 'Financeiro',
@@ -194,7 +219,7 @@ export class ChatbotEngine {
       };
     }
 
-    if (trimmed === '4') {
+    if (lowerTrimmed === '4' || lowerTrimmed === 'ticket' || lowerTrimmed === 'chamado' || lowerTrimmed.includes('abrir chamado')) {
       return {
         replyMessage: `Geramos um chamado de suporte técnico automático para seu atendimento! 🎫\n\nNosso sistema registrou suas informações e um técnico entrará em contato.`,
         updateConversationStatus: 'WAITING',
@@ -208,7 +233,7 @@ export class ChatbotEngine {
       };
     }
 
-    if (trimmed === '5') {
+    if (lowerTrimmed === '5' || lowerTrimmed === 'atendente' || lowerTrimmed.includes('humano') || lowerTrimmed.includes('falar com atendente') || lowerTrimmed.includes('pessoa')) {
       return {
         replyMessage: `Você solicitou atendimento humano. Você foi inserido na fila de espera e o primeiro analista disponível irá te atender. 👤`,
         updateConversationStatus: 'WAITING',
@@ -217,12 +242,12 @@ export class ChatbotEngine {
       };
     }
 
-    // Build welcome message from rootNode message if present, or default fallback
-    const welcomeMsg = rootNode?.message || `Olá! Tudo bem? 👋\n\nBem-vindo à Central de Atendimento GoDesc360.\n\nComo podemos te ajudar hoje? Digite uma opção:\n\n1 - 💼 Comercial\n2 - 🛠️ Suporte Técnico\n3 - 💳 Financeiro\n4 - 🎫 Abrir Ticket Chamado\n5 - 👤 Falar com Atendente`;
-
-    // Default response for unhandled text -> Send menu
+    // Mensagem não reconhecida (saudação ou texto livre) -> Envia o menu de triagem
     return {
-      replyMessage: welcomeMsg
+      replyMessage: welcomeMsg,
+      updateConversationStatus: 'BOT',
+      targetQueueName: 'Triagem Automática',
+      botActive: true
     };
   }
 }

@@ -364,6 +364,17 @@ app.post('/api/email/config', (req, res) => {
   }
 });
 
+// Desconecta credenciais de e-mail e limpa a configuração salva
+app.post('/api/email/disconnect', (req, res) => {
+  const cleared = emailService.clearConfig();
+  if (cleared) {
+    console.log('🔴 Conta de e-mail corporativo desconectada pelo usuário.');
+    res.json({ success: true, message: 'Conta de e-mail desconectada com sucesso.' });
+  } else {
+    res.status(500).json({ error: 'Erro ao desconectar conta de e-mail.' });
+  }
+});
+
 // Testa conexão SMTP enviando um e-mail de verificação
 app.post('/api/email/test', async (req, res) => {
   const { user, pass, fromName, provider, smtpHost, smtpPort, smtpSecure, testRecipient } = req.body;
@@ -385,11 +396,70 @@ app.post('/api/email/test', async (req, res) => {
   }
 });
 
-// Dispara e-mail de notificação de chamado
+// ============================================================================
+// SUPABASE REALTIME CLOUD RELAY: Permite que analistas em outras máquinas
+// disparem e-mails corporativos automaticamente sem precisar rodar servidor local
+// ============================================================================
+const { createClient } = require('@supabase/supabase-js');
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://hhoiexewnnbgwhgliefb.supabase.co';
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhob2lleGV3bm5iZ3doZ2xpZWZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2Nzk5NDYsImV4cCI6MjEwMjI1NTk0Nn0.6-WkEJYfsD7xuD0z4-jQSxZPS5OPM3oN4WtXoVlpGFU';
+
+const recentEmailDispatches = new Map();
+
+function isRecentlyDispatched(key) {
+  const now = Date.now();
+  if (recentEmailDispatches.has(key)) {
+    const time = recentEmailDispatches.get(key);
+    if (now - time < 12000) return true;
+  }
+  recentEmailDispatches.set(key, now);
+  if (recentEmailDispatches.size > 500) {
+    for (const [k, t] of recentEmailDispatches.entries()) {
+      if (now - t > 30000) recentEmailDispatches.delete(k);
+    }
+  }
+  return false;
+}
+
+try {
+  const supabaseWorker = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const emailDispatchChannel = supabaseWorker.channel('godesc_email_dispatch');
+
+  emailDispatchChannel.on('broadcast', { event: 'dispatch_ticket_email' }, async ({ payload }) => {
+    if (!payload || !payload.to || !payload.ticket) return;
+    const ticketId = payload.ticket.ticketNumber || payload.ticket.id || 'unknown';
+    const dedupeKey = `${payload.to}_${payload.actionType}_${ticketId}_${payload.note || ''}_${payload.messageText || ''}`;
+    if (isRecentlyDispatched(dedupeKey)) {
+      return;
+    }
+    console.log(`📨 [Supabase Cloud Relay] Recebida solicitação de envio [${payload.actionType}] para ${payload.to} emitida por analista.`);
+    try {
+      await emailService.sendTicketNotification(payload);
+    } catch (err) {
+      console.error('Falha ao processar envio de e-mail via Supabase Cloud Relay:', err);
+    }
+  });
+
+  emailDispatchChannel.subscribe((status) => {
+    if (status === 'SUBSCRIBED') {
+      console.log('📡 [Supabase Cloud Relay] Servidor conectado! Pronto para emitir e-mails disparados por qualquer analista da equipe.');
+    }
+  });
+} catch (err) {
+  console.warn('Aviso: Não foi possível conectar o Supabase Realtime no servidor:', err.message);
+}
+
+// Dispara e-mail de notificação de chamado via HTTP direto
 app.post('/api/email/notify', async (req, res) => {
   const { to, actionType, ticket, technicianName, note, messageText, attachments } = req.body;
   if (!to || !ticket) {
     return res.status(400).json({ error: 'Parâmetros "to" e "ticket" são obrigatórios.' });
+  }
+
+  const ticketId = ticket.ticketNumber || ticket.id || 'unknown';
+  const dedupeKey = `${to}_${actionType}_${ticketId}_${note || ''}_${messageText || ''}`;
+  if (isRecentlyDispatched(dedupeKey)) {
+    return res.json({ success: true, deduplicated: true });
   }
 
   try {

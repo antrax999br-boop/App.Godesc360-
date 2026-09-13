@@ -46,6 +46,7 @@ export const AttendanceChatView: React.FC = () => {
     userSession,
     attendanceQueues,
     userAccounts,
+    chatbotFlow,
     setCurrentScreen
   } = useApp();
 
@@ -113,7 +114,27 @@ export const AttendanceChatView: React.FC = () => {
 
   const handleToggleBot = () => {
     if (!activeConv) return;
-    toggleBotState(activeConv.id, !activeConv.botActive);
+    const nextActive = !activeConv.botActive;
+    toggleBotState(activeConv.id, nextActive);
+    if (nextActive) {
+      const rootNode = (chatbotFlow?.nodes && chatbotFlow.nodes.length > 0)
+        ? (chatbotFlow.nodes.find(n => n.type === 'START' || n.type === 'MENU' || n.id === 'node-start') || chatbotFlow.nodes[0])
+        : null;
+      const welcomeMsg = rootNode?.message || `Olá! Tudo bem? 👋\n\nBem-vindo à Central de Atendimento GoDesc 360.\n\nPara direcionarmos seu atendimento à equipe correta, por favor escolha uma opção digitando o número correspondente:\n\n1 - 💼 Comercial\n2 - 🛠️ Suporte Técnico\n3 - 💳 Financeiro\n4 - 🎫 Abrir Ticket Chamado\n5 - 👤 Falar com Atendente\n\n_(A qualquer momento, digite *#* ou *menu* para retornar ao início)_`;
+
+      sendAttendanceMessage(activeConv.id, `Você foi transferido de volta para o assistente virtual.\n\n${welcomeMsg}`, 'BOT');
+    }
+  };
+
+  const handleRestartBotMenu = () => {
+    if (!activeConv) return;
+    toggleBotState(activeConv.id, true);
+    const rootNode = (chatbotFlow?.nodes && chatbotFlow.nodes.length > 0)
+      ? (chatbotFlow.nodes.find(n => n.type === 'START' || n.type === 'MENU' || n.id === 'node-start') || chatbotFlow.nodes[0])
+      : null;
+    const welcomeMsg = rootNode?.message || `Olá! Tudo bem? 👋\n\nBem-vindo à Central de Atendimento GoDesc 360.\n\nPara direcionarmos seu atendimento à equipe correta, por favor escolha uma opção digitando o número correspondente:\n\n1 - 💼 Comercial\n2 - 🛠️ Suporte Técnico\n3 - 💳 Financeiro\n4 - 🎫 Abrir Ticket Chamado\n5 - 👤 Falar com Atendente\n\n_(A qualquer momento, digite *#* ou *menu* para retornar ao início)_`;
+
+    sendAttendanceMessage(activeConv.id, welcomeMsg, 'BOT');
   };
 
   const handleClose = () => {
@@ -256,11 +277,17 @@ export const AttendanceChatView: React.FC = () => {
                       <div className="w-10 h-10 rounded-full bg-[#27272a] flex items-center justify-center font-bold text-sm text-[#45dfa4]">
                         {c.contactName.substring(0, 2).toUpperCase()}
                       </div>
+                      {c.status === 'BOT' && (
+                        <span className="w-3 h-3 rounded-full bg-purple-500 border-2 border-[#141416] absolute -bottom-0.5 -right-0.5" title="Triagem do Robô" />
+                      )}
                       {c.status === 'WAITING' && (
-                        <span className="w-3 h-3 rounded-full bg-amber-400 border-2 border-[#141416] absolute -bottom-0.5 -right-0.5" />
+                        <span className="w-3 h-3 rounded-full bg-amber-400 border-2 border-[#141416] absolute -bottom-0.5 -right-0.5" title="Aguardando Analista" />
                       )}
                       {c.status === 'IN_PROGRESS' && (
-                        <span className="w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#141416] absolute -bottom-0.5 -right-0.5" />
+                        <span className="w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#141416] absolute -bottom-0.5 -right-0.5" title="Em Atendimento" />
+                      )}
+                      {c.status === 'CLOSED' && (
+                        <span className="w-3 h-3 rounded-full bg-gray-500 border-2 border-[#141416] absolute -bottom-0.5 -right-0.5" title="Encerrado" />
                       )}
                     </div>
 
@@ -274,7 +301,9 @@ export const AttendanceChatView: React.FC = () => {
 
                       <div className="flex items-center justify-between">
                         <span className={`text-[10px] px-2 py-0.5 rounded-md font-mono font-bold ${
-                          (c.queueName || '').toLowerCase().includes('comercial')
+                          c.status === 'BOT'
+                            ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                            : (c.queueName || '').toLowerCase().includes('comercial')
                             ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                             : (c.queueName || '').toLowerCase().includes('suporte')
                             ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
@@ -284,7 +313,7 @@ export const AttendanceChatView: React.FC = () => {
                             ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
                             : 'bg-[#27272a] text-[#45dfa4] border border-[#323238]'
                         }`}>
-                          {c.queueName || 'Fila Geral'}
+                          {c.status === 'BOT' ? '🤖 Triagem Robô' : (c.queueName || 'Fila Geral')}
                         </span>
                         {c.unreadCount > 0 && (
                           <span className="w-4 h-4 rounded-full bg-[#45dfa4] text-gray-950 text-[10px] font-bold flex items-center justify-center font-mono">
@@ -320,7 +349,19 @@ export const AttendanceChatView: React.FC = () => {
                     <div className="flex items-center gap-2 text-[10px] text-[#8d90a0]">
                       <span>Fila: <strong className="text-[#45dfa4] font-mono">{activeConv.queueName || 'Geral'}</strong></span>
                       <span>•</span>
-                      <span>Atendente: <strong className="text-white">{activeConv.assignedUserName || 'Nenhum'}</strong></span>
+                      <span>Atendente: <strong className={
+                        activeConv.status === 'BOT'
+                          ? 'text-purple-400 font-bold'
+                          : (activeConv.status === 'WAITING' || !activeConv.assignedUserName)
+                          ? 'text-amber-400 font-bold'
+                          : 'text-white'
+                      }>
+                        {activeConv.status === 'BOT'
+                          ? '🤖 Assistente Virtual (Robô)'
+                          : (activeConv.status === 'WAITING' || !activeConv.assignedUserName)
+                          ? '⏳ Aguardando Analista Aceitar'
+                          : (activeConv.assignedUserName || 'Nenhum')}
+                      </strong></span>
                     </div>
                   </div>
                 </div>
@@ -339,39 +380,30 @@ export const AttendanceChatView: React.FC = () => {
                         <RefreshCw className="w-3.5 h-3.5 text-gray-950" />
                         Reabrir Atendimento
                       </button>
-                    </div>
-                  ) : (
-                    <>
-                      {activeConv.status === 'WAITING' || !activeConv.assignedUserName ? (
-                        <button
-                          onClick={handleAssignToMe}
-                          className="px-3 py-1.5 bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 font-bold text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-md shadow-[#45dfa4]/20"
-                        >
-                          <UserCheck className="w-4 h-4" />
-                          Assumir Atendimento
-                        </button>
-                      ) : (
-                        <button
-                          onClick={handleToggleBot}
-                          className={`px-3 py-1.5 text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer font-bold ${
-                            activeConv.botActive
-                              ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
-                              : 'bg-[#27272a] text-[#8d90a0] hover:text-white'
-                          }`}
-                        >
-                          <Bot className="w-4 h-4" />
-                          {activeConv.botActive ? 'Devolver p/ BOT' : 'Ativar BOT'}
-                        </button>
-                      )}
-
                       <button
-                        onClick={() => setShowTransferModal(true)}
-                        className="px-3 py-1.5 bg-[#27272a] hover:bg-[#323238] text-white text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+                        onClick={handleRestartBotMenu}
+                        className="px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
                       >
-                        <ArrowRightLeft className="w-4 h-4 text-[#45dfa4]" />
-                        Transferir
+                        <Bot className="w-4 h-4" />
+                        Devolver p/ BOT
                       </button>
-
+                    </div>
+                  ) : activeConv.status === 'BOT' ? (
+                    <>
+                      <button
+                        onClick={handleAssignToMe}
+                        className="px-3 py-1.5 bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 font-bold text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-md shadow-[#45dfa4]/20"
+                      >
+                        <UserCheck className="w-4 h-4" />
+                        Assumir Atendimento
+                      </button>
+                      <button
+                        onClick={handleRestartBotMenu}
+                        className="px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <Bot className="w-4 h-4" />
+                        Reenviar Menu BOT
+                      </button>
                       <button
                         onClick={handleCreateTicketFromChat}
                         className="px-3 py-1.5 bg-[#27272a] hover:bg-[#323238] text-white text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
@@ -379,7 +411,75 @@ export const AttendanceChatView: React.FC = () => {
                         <TicketIcon className="w-4 h-4 text-[#45dfa4]" />
                         Criar Ticket
                       </button>
-
+                      <button
+                        onClick={handleClose}
+                        className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Encerrar Conversa
+                      </button>
+                    </>
+                  ) : (activeConv.status === 'WAITING' || !activeConv.assignedUserName) ? (
+                    <>
+                      <button
+                        onClick={handleAssignToMe}
+                        className="px-3 py-1.5 bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 font-bold text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-md shadow-[#45dfa4]/20"
+                      >
+                        <UserCheck className="w-4 h-4" />
+                        Assumir Atendimento
+                      </button>
+                      <button
+                        onClick={handleRestartBotMenu}
+                        className="px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <Bot className="w-4 h-4" />
+                        Devolver p/ BOT
+                      </button>
+                      <button
+                        onClick={() => setShowTransferModal(true)}
+                        className="px-3 py-1.5 bg-[#27272a] hover:bg-[#323238] text-white text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <ArrowRightLeft className="w-4 h-4 text-[#45dfa4]" />
+                        Transferir
+                      </button>
+                      <button
+                        onClick={handleCreateTicketFromChat}
+                        className="px-3 py-1.5 bg-[#27272a] hover:bg-[#323238] text-white text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <TicketIcon className="w-4 h-4 text-[#45dfa4]" />
+                        Criar Ticket
+                      </button>
+                      <button
+                        onClick={handleClose}
+                        className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Encerrar Conversa
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={handleRestartBotMenu}
+                        className="px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <Bot className="w-4 h-4" />
+                        Devolver p/ BOT
+                      </button>
+                      <button
+                        onClick={() => setShowTransferModal(true)}
+                        className="px-3 py-1.5 bg-[#27272a] hover:bg-[#323238] text-white text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <ArrowRightLeft className="w-4 h-4 text-[#45dfa4]" />
+                        Transferir
+                      </button>
+                      <button
+                        onClick={handleCreateTicketFromChat}
+                        className="px-3 py-1.5 bg-[#27272a] hover:bg-[#323238] text-white text-xs rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <TicketIcon className="w-4 h-4 text-[#45dfa4]" />
+                        Criar Ticket
+                      </button>
                       <button
                         onClick={handleClose}
                         className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
