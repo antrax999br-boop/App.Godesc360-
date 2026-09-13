@@ -2090,50 +2090,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   ]);
 
-  const [attendanceConversations, setAttendanceConversations] = useState<AttendanceConversation[]>(() => {
-    const saved = localStorage.getItem('godesc_attendance_conversations');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Ao carregar, remove conversas CLOSED para não poluir a tela após F5
-        return Array.isArray(parsed) ? parsed.filter((c: AttendanceConversation) => c.status !== 'CLOSED') : [];
-      } catch (e) {}
-    }
-    return [];
-  });
+  // Conversas em tempo real — sem persistência em localStorage (dados vêm do servidor Baileys via polling)
+  const [attendanceConversations, setAttendanceConversations] = useState<AttendanceConversation[]>([]);
 
-  const [attendanceMessages, setAttendanceMessages] = useState<AttendanceMessage[]>(() => {
-    const saved = localStorage.getItem('godesc_attendance_messages');
-    const savedConvs = localStorage.getItem('godesc_attendance_conversations');
-    if (saved) {
-      try {
-        const parsedMsgs = JSON.parse(saved);
-        // Remove mensagens de conversas CLOSED (que foram filtradas acima)
-        if (savedConvs && Array.isArray(parsedMsgs)) {
-          const parsed = JSON.parse(savedConvs);
-          const closedIds = new Set(
-            Array.isArray(parsed)
-              ? parsed.filter((c: AttendanceConversation) => c.status === 'CLOSED').map((c: AttendanceConversation) => c.id)
-              : []
-          );
-          return parsedMsgs.filter((m: AttendanceMessage) => !closedIds.has(m.conversationId));
-        }
-        return Array.isArray(parsedMsgs) ? parsedMsgs : [];
-      } catch (e) {}
-    }
-    return [];
-  });
+  // Mensagens em tempo real — sem persistência em localStorage (dados vêm do servidor Baileys via polling)
+  const [attendanceMessages, setAttendanceMessages] = useState<AttendanceMessage[]>([]);
 
-  // Automatically persist WhatsApp conversations and messages on change
+  // Limpa dados antigos do localStorage (migração para modelo sem persistência)
   useEffect(() => {
-    // Persiste apenas conversas não encerradas
-    localStorage.setItem('godesc_attendance_conversations', JSON.stringify(attendanceConversations));
-  }, [attendanceConversations]);
-
-  useEffect(() => {
-    localStorage.setItem('godesc_attendance_messages', JSON.stringify(attendanceMessages));
-  }, [attendanceMessages]);
-
+    localStorage.removeItem('godesc_attendance_conversations');
+    localStorage.removeItem('godesc_attendance_messages');
+  }, []);
 
 
   const CLOUD_API_URL = 'https://godesc360-whatsapp-api.onrender.com';
