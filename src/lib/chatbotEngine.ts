@@ -141,8 +141,13 @@ export class ChatbotEngine {
     // Comandos de reinício de menu a qualquer momento
     const isMenuRestart = ['menu', 'início', 'inicio', '#', 'voltar', 'opções', 'opcoes', 'ajuda', 'começar', 'comecar'].includes(lowerTrimmed);
 
+    // Check if customized flow nodes exist (must be declared BEFORE welcomeMsg)
+    const rootNode = (flow && flow.nodes && flow.nodes.length > 0)
+      ? (flow.nodes.find(n => n.type === 'START' || n.type === 'MENU' || n.id === 'node-start') || flow.nodes[0])
+      : null;
+
     // Build welcome message from rootNode message if present, or default fallback
-    const welcomeMsg = rootNode?.message || `Olá! Tudo bem? 👋\n\nBem-vindo à Central de Atendimento GoDesc 360.\n\nPara direcionarmos seu atendimento à equipe correta, por favor digite o número da opção desejada:\n\n1 - 💼 Comercial\n2 - 🛠️ Suporte Técnico\n3 - 💳 Financeiro\n4 - 🎫 Abrir Ticket Chamado\n5 - 👤 Falar com Atendente\n\n_(A qualquer momento, digite *#* ou *menu* para retornar ao início)_`;
+    const welcomeMsg = (rootNode && rootNode.message) ? rootNode.message : `Olá! Tudo bem? 👋\n\nBem-vindo à Central de Atendimento GoDesc 360.\n\nPara direcionarmos seu atendimento à equipe correta, por favor digite o número da opção desejada:\n\n1 - 💼 Comercial\n2 - 🛠️ Suporte Técnico\n3 - 💳 Financeiro\n4 - 🎫 Abrir Ticket Chamado\n5 - 👤 Falar com Atendente\n\n_(A qualquer momento, digite *#* ou *menu* para retornar ao início)_`;
 
     // Se o cliente digitar comando de reinício, reseta para o menu principal
     if (isMenuRestart) {
@@ -158,11 +163,6 @@ export class ChatbotEngine {
     if (!conversation.botActive && conversation.status === 'IN_PROGRESS') {
       return {};
     }
-
-    // Check if customized flow nodes exist
-    const rootNode = (flow && flow.nodes && flow.nodes.length > 0)
-      ? (flow.nodes.find(n => n.type === 'START' || n.type === 'MENU' || n.id === 'node-start') || flow.nodes[0])
-      : null;
 
     // Dynamically match user option against flow rootNode options if present
     if (rootNode && rootNode.options && rootNode.options.length > 0) {
