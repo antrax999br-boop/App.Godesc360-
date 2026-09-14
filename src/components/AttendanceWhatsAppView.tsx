@@ -22,7 +22,7 @@ export const AttendanceWhatsAppView: React.FC = () => {
   const [serverUrl, setServerUrl] = useState<string>(whatsappServerUrl);
   const [liveQrCode, setLiveQrCode] = useState<string | null>(null);
   const [connectionState, setConnectionState] = useState<string>(whatsappConnection.status);
-  const [phoneNumber, setPhoneNumber] = useState<string>(whatsappConnection.phoneNumber || '+55 11 99887-6655');
+  const [phoneNumber, setPhoneNumber] = useState<string>(whatsappConnection.phoneNumber || '');
   const [apiError, setApiError] = useState<string | null>(null);
 
   // Poll real Baileys server for live scannable QR Code
@@ -56,7 +56,42 @@ export const AttendanceWhatsAppView: React.FC = () => {
     }
   };
 
-  // Periodic status check
+  // Verifica o status real do servidor imediatamente ao montar o componente
+  // Isso garante que, após um reload de página, a UI mostre 'CONECTADO' sem pedir novo QR
+  useEffect(() => {
+    const checkStatusOnMount = async () => {
+      try {
+        const activeUrl = serverUrl.trim().replace(/\/+$/, '');
+        const res = await fetch(`${activeUrl}/api/status`, { signal: AbortSignal.timeout(5000) });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === 'CONNECTED') {
+            setConnectionState('CONNECTED');
+            setLiveQrCode(null);
+            if (data.phoneNumber) setPhoneNumber(data.phoneNumber);
+          } else if (data.status === 'WAITING_QR') {
+            setConnectionState('WAITING_QR');
+          }
+        }
+      } catch {
+        // Servidor offline — mantém o estado atual
+      }
+    };
+    checkStatusOnMount();
+  }, [serverUrl]);
+
+  // Sincroniza connectionState com o status vindo do poll do AppContext
+  useEffect(() => {
+    if (whatsappConnection.status === 'CONNECTED') {
+      setConnectionState('CONNECTED');
+      setLiveQrCode(null);
+      if (whatsappConnection.phoneNumber) setPhoneNumber(whatsappConnection.phoneNumber);
+    } else if (whatsappConnection.status === 'DISCONNECTED' && connectionState !== 'WAITING_QR') {
+      setConnectionState('DISCONNECTED');
+    }
+  }, [whatsappConnection.status, whatsappConnection.phoneNumber]);
+
+  // Poll periódico somente enquanto está aguardando scan do QR
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (connectionState === 'WAITING_QR' || liveQrCode) {

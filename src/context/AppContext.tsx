@@ -1981,8 +1981,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [whatsappConnection, setWhatsappConnection] = useState<WhatsAppConnection>({
     id: 'conn-default',
     companyId: 'default-company',
-    status: 'CONNECTED',
-    phoneNumber: '+55 11 99887-6655',
+    status: 'DISCONNECTED',
+    phoneNumber: undefined,
     name: 'Empresa GoDesc360',
     connectedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()

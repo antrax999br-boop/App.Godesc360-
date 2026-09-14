@@ -37,10 +37,13 @@ const incomingQueue = [];
 
 async function startBaileys() {
   if (isStarting) return;
+  // Se já está conectado com socket ativo, não reinicia — preserva a sessão
+  if (connectionStatus === 'CONNECTED' && sock) return;
   isStarting = true;
 
   try {
-    if (sock) {
+    // Só fecha o socket se NÃO estiver conectado (evita destruir sessão válida)
+    if (sock && connectionStatus !== 'CONNECTED') {
       try {
         sock.ev.removeAllListeners();
         sock.end(undefined);
@@ -192,12 +195,23 @@ app.get('/api/status', (req, res) => {
 });
 
 app.get('/api/qr', async (req, res) => {
-  if (!sock) {
+  // Se já está conectado, retorna imediatamente sem gerar novo QR
+  // Isso é crítico: chamar startBaileys() com sessão ativa destruiria o pareamento
+  if (connectionStatus === 'CONNECTED' && sock) {
+    return res.json({
+      status: 'CONNECTED',
+      qrCode: null,
+      phoneNumber: connectedPhone
+    });
+  }
+
+  // Só inicia o Baileys se não há socket ou já está desconectado
+  if (!sock || connectionStatus === 'DISCONNECTED') {
     await startBaileys();
   }
 
   let attempts = 0;
-  while (!qrCodeBase64 && connectionStatus !== 'CONNECTED' && attempts < 10) {
+  while (!qrCodeBase64 && connectionStatus !== 'CONNECTED' && attempts < 20) {
     await new Promise(r => setTimeout(r, 500));
     attempts++;
   }
