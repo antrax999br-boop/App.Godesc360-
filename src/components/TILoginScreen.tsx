@@ -43,13 +43,6 @@ export const TILoginScreen: React.FC = () => {
     }, 300);
   };
 
-  const fillQuickCredentials = (usr: string, pass: string) => {
-    setUsernameOrEmail(usr);
-    setPassword(pass);
-    setErrorMsg(null);
-    setIsLockedError(false);
-  };
-
   return (
     <div className="min-h-screen bg-[#1e1e24] text-[#dfe2eb] flex flex-col justify-between items-center px-4 py-8 relative selection:bg-[#45dfa4]/30 selection:text-[#45dfa4]">
       {/* Background Radial Glow */}
@@ -102,33 +95,7 @@ export const TILoginScreen: React.FC = () => {
             </h2>
           </div>
 
-          {/* Quick Credential Hints for Demo / Testing */}
-          <div className="mb-5 p-3 rounded-xl bg-[#45dfa4]/10 border border-[#45dfa4]/30 text-xs space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-[#45dfa4] font-medium">
-                <Sparkles className="w-4 h-4 shrink-0" />
-                <span>Conta T.I: <strong>t.i</strong> / <strong>t.i</strong></span>
-              </div>
-              <button
-                type="button"
-                onClick={() => fillQuickCredentials('t.i', 't.i')}
-                className="px-2 py-0.5 bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 font-bold rounded text-[11px] transition-colors cursor-pointer"
-              >
-                Usar T.I
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between pt-1 border-t border-[#45dfa4]/20 text-[11px] text-[#c3c6d7]">
-              <span>Gestor: <strong>admin.gestor</strong> / <strong>gestor</strong></span>
-              <button
-                type="button"
-                onClick={() => fillQuickCredentials('admin.gestor', 'gestor')}
-                className="px-2 py-0.5 bg-[#181c22] hover:bg-[#283240] text-white font-semibold rounded border border-[#2A2F3A] text-[10px] cursor-pointer"
-              >
-                Usar Gestor
-              </button>
-            </div>
-          </div>
+          {/* Form Title Header */}
 
           {/* Error Message & Account Block Banner */}
           {errorMsg && (

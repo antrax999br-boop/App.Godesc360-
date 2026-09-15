@@ -142,8 +142,8 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // FIRST SCREEN MUST BE 'portal_landing' (Image 9) as explicitly requested by user!
-  const [currentScreen, setCurrentScreen] = useState<ScreenView>('portal_landing');
+  // FIRST SCREEN IS NOW 'ti_login' as explicitly requested by user!
+  const [currentScreen, setCurrentScreen] = useState<ScreenView>('ti_login');
 
   // User Session
   const [userSession, setUserSession] = useState<UserSession>(() => {
@@ -230,7 +230,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   ];
 
-  // Managed Users state
+  // Managed Users state with localStorage & Cloud sync fallback
   const [managedUsers, setManagedUsers] = useState<UserAccount[]>(() => {
     const saved = localStorage.getItem('godesc_managed_users');
     if (saved) {
@@ -243,8 +243,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   useEffect(() => {
-    localStorage.setItem('godesc_managed_users', JSON.stringify(managedUsers));
+    try {
+      localStorage.setItem('godesc_managed_users', JSON.stringify(managedUsers));
+    } catch (e) {}
   }, [managedUsers]);
+
+  // Helper to persist managedUsers synchronously to localStorage and asynchronously to Supabase Cloud
+  const saveManagedUsersToCloud = async (usersList: UserAccount[]) => {
+    try {
+      // 1. Instant synchronous local storage save
+      localStorage.setItem('godesc_managed_users', JSON.stringify(usersList));
+
+      // 2. Cloud persistence in Supabase master record
+      const { data } = await supabase
+        .from('tickets')
+        .select('id')
+        .eq('subject', '__SYSTEM_MANAGED_USERS__')
+        .limit(1);
+
+      if (data && data.length > 0) {
+        await supabase
+          .from('tickets')
+          .update({
+            description: JSON.stringify(usersList),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', data[0].id);
+      } else {
+        await supabase
+          .from('tickets')
+          .insert({
+            ticket_number: '#SYS-USERS',
+            client_name: 'Sistema',
+            company: 'GoDesc 360',
+            subject: '__SYSTEM_MANAGED_USERS__',
+            description: JSON.stringify(usersList),
+            status: 'Fechado',
+            priority: 'Baixa',
+            category: 'Sistema'
+          });
+      }
+
+      // 3. Realtime Broadcast channel notify other tabs
+      const channel = supabase.channel('managed_users_sync_channel');
+      channel.send({
+        type: 'broadcast',
+        event: 'managed_users_changed',
+        payload: { users: usersList }
+      });
+    } catch (err) {
+      console.warn('Erro ao sincronizar usuários na nuvem:', err);
+    }
+  };
 
   const addManagedUser = (userData: Omit<UserAccount, 'id'>): UserAccount => {
     const newUser: UserAccount = {
@@ -253,7 +303,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toLocaleDateString('pt-BR')
     };
 
-    setManagedUsers(prev => [...prev, newUser]);
+    setManagedUsers(prev => {
+      const updated = [...prev, newUser];
+      saveManagedUsersToCloud(updated);
+      return updated;
+    });
 
     // Automatically create isolated Kanban board in localStorage for this user if missing
     const userKanbanKey = `godesc_kanban_tasks_${newUser.username}`;
@@ -276,11 +330,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateManagedUser = (id: string, updates: Partial<UserAccount>) => {
-    setManagedUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
+    setManagedUsers(prev => {
+      const updated = prev.map(u => u.id === id ? { ...u, ...updates } : u);
+      saveManagedUsersToCloud(updated);
+      return updated;
+    });
   };
 
   const deleteManagedUser = (id: string) => {
-    setManagedUsers(prev => prev.filter(u => u.id !== id));
+    setManagedUsers(prev => {
+      const updated = prev.filter(u => u.id !== id);
+      saveManagedUsersToCloud(updated);
+      return updated;
+    });
   };
 
   const [ticketCategories, setTicketCategories] = useState<{ id: number; name: string; subcategories: string[]; defaultPriority: TicketPriority }[]>(() => {
@@ -489,7 +551,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         const { data, error } = await supabase.from('tickets').select('*').order('created_at', { ascending: false });
         if (!error && data) {
-          const filteredData = data.filter((item: any) => item.subject !== '__SYSTEM_VAULT_CREDENTIALS__' && item.subject !== '__SYSTEM_EMAIL_CONFIG__');
+          const filteredData = data.filter((item: any) =>
+            item.subject !== '__SYSTEM_VAULT_CREDENTIALS__' &&
+            item.subject !== '__SYSTEM_EMAIL_CONFIG__' &&
+            item.subject !== '__SYSTEM_MANAGED_USERS__'
+          );
           const mapped: Ticket[] = filteredData.map((item: any) => {
             const msgs = item.messages || [];
             const reqEmail = extractEmail(item, msgs);
@@ -547,7 +613,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         (payload) => {
           if (payload.eventType === 'INSERT') {
             const newItem = payload.new;
-            if (newItem.subject === '__SYSTEM_VAULT_CREDENTIALS__' || newItem.subject === '__SYSTEM_EMAIL_CONFIG__') return;
+            if (newItem.subject === '__SYSTEM_VAULT_CREDENTIALS__' || newItem.subject === '__SYSTEM_EMAIL_CONFIG__' || newItem.subject === '__SYSTEM_MANAGED_USERS__') return;
             const msgs = newItem.messages || [];
             const reqEmail = extractEmail(newItem, msgs);
             const atts = (newItem.attachments && newItem.attachments.length > 0) ? newItem.attachments : (msgs[0]?.attachments || []);
@@ -590,7 +656,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             });
           } else if (payload.eventType === 'UPDATE') {
             const updated = payload.new;
-            if (updated.subject === '__SYSTEM_VAULT_CREDENTIALS__' || updated.subject === '__SYSTEM_EMAIL_CONFIG__') return;
+            if (updated.subject === '__SYSTEM_VAULT_CREDENTIALS__' || updated.subject === '__SYSTEM_EMAIL_CONFIG__' || updated.subject === '__SYSTEM_MANAGED_USERS__') return;
             const msgs = updated.messages || [];
             const reqEmail = extractEmail(updated, msgs);
             const atts = (updated.attachments && updated.attachments.length > 0) ? updated.attachments : (msgs[0]?.attachments || []);
@@ -800,6 +866,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       supabase.removeChannel(vaultPostgresChannel);
       supabase.removeChannel(ticketsPostgresChannel);
       supabase.removeChannel(vaultBroadcastChannel);
+    };
+  }, []);
+
+  // Fetch & Subscribe to Managed Users in Supabase (Cloud Persistence across F5 and tabs)
+  useEffect(() => {
+    const fetchSupabaseManagedUsers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('tickets')
+          .select('*')
+          .eq('subject', '__SYSTEM_MANAGED_USERS__')
+          .limit(1);
+
+        if (!error && data && data.length > 0 && data[0].description) {
+          try {
+            const parsed = JSON.parse(data[0].description);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setManagedUsers(parsed);
+              localStorage.setItem('godesc_managed_users', JSON.stringify(parsed));
+            }
+          } catch (e) {}
+        }
+      } catch (err) {
+        console.warn('Supabase managed users fetch exception:', err);
+      }
+    };
+
+    fetchSupabaseManagedUsers();
+
+    // Broadcast listener for managed users across tabs
+    const userBroadcastChannel = supabase.channel('managed_users_sync_channel');
+    userBroadcastChannel
+      .on('broadcast', { event: 'managed_users_changed' }, (payload) => {
+        if (payload?.payload?.users && Array.isArray(payload.payload.users)) {
+          setManagedUsers(payload.payload.users);
+          localStorage.setItem('godesc_managed_users', JSON.stringify(payload.payload.users));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(userBroadcastChannel);
     };
   }, []);
 

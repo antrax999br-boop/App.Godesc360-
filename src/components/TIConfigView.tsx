@@ -37,6 +37,7 @@ import { motion, AnimatePresence } from 'motion/react';
 
 const AVAILABLE_MODULES: { id: ScreenView; label: string }[] = [
   { id: 'ti_dashboard', label: 'Painel TI Dashboard' },
+  { id: 'ti_dashboard_detailed', label: 'Dashboard Detalhado por Mês & Operadores' },
   { id: 'ti_tickets', label: 'Chamados & Tickets' },
   { id: 'ti_queue', label: 'Kanban de Tarefas' },
   { id: 'ti_database', label: 'Base de Dados & Notas' },

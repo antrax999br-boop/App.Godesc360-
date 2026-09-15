@@ -32,6 +32,7 @@ import { AttendanceQueuesView } from './components/AttendanceQueuesView';
 import { AttendanceSettingsView } from './components/AttendanceSettingsView';
 import { AttendanceContactsView } from './components/AttendanceContactsView';
 import { AttendanceDashboardView } from './components/AttendanceDashboardView';
+import { TIDetailedDashboardView } from './components/TIDetailedDashboardView';
 
 const ScreenRenderer: React.FC = () => {
   const { currentScreen } = useApp();
@@ -52,6 +53,12 @@ const ScreenRenderer: React.FC = () => {
         return (
           <ProtectedTIRoute requiredModule="ti_dashboard">
             <TIDashboard key="ti_dashboard" />
+          </ProtectedTIRoute>
+        );
+      case 'ti_dashboard_detailed':
+        return (
+          <ProtectedTIRoute requiredModule="ti_dashboard">
+            <TIDetailedDashboardView key="ti_dashboard_detailed" />
           </ProtectedTIRoute>
         );
       case 'attendance_dashboard':
@@ -171,7 +178,7 @@ const ScreenRenderer: React.FC = () => {
           </ProtectedTIRoute>
         );
       default:
-        return <PortalLanding key="default_landing" />;
+        return <TILoginScreen key="default_login" />;
     }
   };
 
@@ -204,10 +211,14 @@ interface ErrorBoundaryState {
   errorMessage: string;
 }
 
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  public state: ErrorBoundaryState = {
+    hasError: false,
+    errorMessage: ''
+  };
+
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, errorMessage: '' };
   }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
@@ -219,7 +230,8 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   render() {
-    if (this.state.hasError) {
+    const { hasError, errorMessage } = (this as any).state || {};
+    if (hasError) {
       return (
         <div className="min-h-screen bg-[#141416] text-[#dfe2eb] flex flex-col items-center justify-center p-6 text-center space-y-4">
           <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-2xl">
@@ -227,12 +239,12 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
           </div>
           <h2 className="text-lg font-bold text-white">Falha Temporária de Renderização</h2>
           <p className="text-xs text-[#8d90a0] max-w-md font-mono bg-[#1e1e24] p-3 rounded-xl border border-[#27272a]">
-            {this.state.errorMessage}
+            {errorMessage}
           </p>
           <div className="flex gap-3">
             <button
               onClick={() => {
-                this.setState({ hasError: false, errorMessage: '' });
+                (this as any).setState({ hasError: false, errorMessage: '' });
                 window.location.reload();
               }}
               className="px-4 py-2 bg-[#45dfa4] text-gray-950 font-bold rounded-xl text-xs hover:bg-[#00bd85] transition-all cursor-pointer shadow-lg shadow-[#45dfa4]/20"
@@ -254,7 +266,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
         </div>
       );
     }
-    return this.props.children;
+    return (this as any).props.children;
   }
 }
 

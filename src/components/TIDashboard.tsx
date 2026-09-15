@@ -378,18 +378,47 @@ export const TIDashboard: React.FC = () => {
 
           {/* Nav Links */}
           <div className="flex-1 overflow-y-auto px-3 space-y-1">
-            <button
-              id="menu-ti-dashboard"
-              onClick={() => setCurrentScreen('ti_dashboard')}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                currentScreen === 'ti_dashboard'
-                  ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                  : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
-              }`}
-            >
-              <LayoutDashboard className="w-4 h-4 text-[#45dfa4]" />
-              <span>Dashboard</span>
-            </button>
+            {/* Collapsible Dashboard Parent Menu */}
+            <div className="space-y-1">
+              <button
+                id="menu-ti-dashboard-parent"
+                onClick={() => setCurrentScreen('ti_dashboard')}
+                className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm text-left transition-colors cursor-pointer text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]"
+              >
+                <div className="flex items-center gap-3">
+                  <LayoutDashboard className="w-4 h-4 text-[#45dfa4]" />
+                  <span className="font-semibold text-white">Dashboard</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#8d90a0] rotate-90" />
+              </button>
+
+              {/* Subcategories under Dashboard */}
+              <div className="pl-6 space-y-1 border-l-2 border-[#27272a] ml-4">
+                <button
+                  id="submenu-ti-dashboard-geral"
+                  onClick={() => setCurrentScreen('ti_dashboard')}
+                  className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-left transition-colors cursor-pointer ${
+                    currentScreen === 'ti_dashboard'
+                      ? 'bg-[#45dfa4]/15 text-[#45dfa4] font-bold border-l-2 border-[#45dfa4] rounded-r-md'
+                      : 'text-[#8d90a0] hover:text-white hover:bg-[#1f2630]'
+                  }`}
+                >
+                  <span>• Visão Geral</span>
+                </button>
+
+                <button
+                  id="submenu-ti-dashboard-detailed"
+                  onClick={() => setCurrentScreen('ti_dashboard_detailed')}
+                  className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-left transition-colors cursor-pointer ${
+                    currentScreen === 'ti_dashboard_detailed'
+                      ? 'bg-[#45dfa4]/15 text-[#45dfa4] font-bold border-l-2 border-[#45dfa4] rounded-r-md'
+                      : 'text-[#8d90a0] hover:text-white hover:bg-[#1f2630]'
+                  }`}
+                >
+                  <span>• Detalhamento Mensal & Operadores</span>
+                </button>
+              </div>
+            </div>
 
             {/* Service Desk Section */}
             <div className="py-2">
@@ -681,6 +710,30 @@ export const TIDashboard: React.FC = () => {
                   placeholder="Buscar ticket, cliente ou inventário..."
                   className="w-full bg-[#151c25] border border-[#27272a] rounded-lg pl-9 pr-4 py-1.5 text-xs text-white placeholder:text-[#8d90a0] focus:outline-none focus:border-[#45dfa4] transition-all"
                 />
+              </div>
+
+              {/* Sub-tab navigation switcher */}
+              <div className="hidden md:flex items-center bg-[#151c25] border border-[#27272a] p-1 rounded-xl gap-1">
+                <button
+                  onClick={() => setCurrentScreen('ti_dashboard')}
+                  className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                    currentScreen === 'ti_dashboard'
+                      ? 'bg-[#45dfa4] text-gray-950 font-bold shadow-md'
+                      : 'text-[#8d90a0] hover:text-white'
+                  }`}
+                >
+                  Visão Geral
+                </button>
+                <button
+                  onClick={() => setCurrentScreen('ti_dashboard_detailed')}
+                  className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                    currentScreen === 'ti_dashboard_detailed'
+                      ? 'bg-[#45dfa4] text-gray-950 font-bold shadow-md'
+                      : 'text-[#8d90a0] hover:text-white'
+                  }`}
+                >
+                  Detalhamento Mensal
+                </button>
               </div>
             </div>
 

@@ -5,6 +5,7 @@ export type ScreenView =
   | 'login'             // Screen 3: Acesso ao Sistema
   | 'ti_login'          // Tela de Login Específica do T.I.
   | 'ti_dashboard'      // Screen 2: Dashboard TI
+  | 'ti_dashboard_detailed' // Dashboard TI Detalhado (Mensal & Operadores)
   | 'client_my_tickets' // Meus Chamados (Client view)
   | 'knowledge_base'    // Base de Conhecimento
   | 'system_status'     // Status dos Sistemas
