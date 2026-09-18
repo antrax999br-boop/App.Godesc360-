@@ -534,6 +534,24 @@ export const TIDashboard: React.FC = () => {
               {attendanceSubmenuOpen && (
                 <div className="space-y-0.5 mt-1">
                   <button
+                    id="menu-attendance-queue"
+                    onClick={() => setCurrentScreen('attendance_queue')}
+                    className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                      currentScreen === 'attendance_queue'
+                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Layers className="w-4 h-4 text-[#45dfa4]" />
+                      <span>Fila de Atendimento</span>
+                    </div>
+                    <span className="px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-[#45dfa4]/20 text-[#45dfa4] border border-[#45dfa4]/30">
+                      Novo
+                    </span>
+                  </button>
+
+                  <button
                     id="menu-attendance-chat"
                     onClick={() => setCurrentScreen('attendance_chat')}
                     className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
@@ -581,16 +599,16 @@ export const TIDashboard: React.FC = () => {
                       </button>
 
                       <button
-                        id="menu-attendance-queue"
-                        onClick={() => setCurrentScreen('attendance_queue')}
+                        id="menu-attendance-queues-config"
+                        onClick={() => setCurrentScreen('attendance_queues_config')}
                         className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                          currentScreen === 'attendance_queue' || currentScreen === 'attendance_queues_config'
+                          currentScreen === 'attendance_queues_config'
                             ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
                             : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
                         }`}
                       >
                         <Layers className="w-4 h-4 text-[#45dfa4]" />
-                        <span>Filas de Atendimento</span>
+                        <span>Configurar Filas</span>
                       </button>
 
                       <button

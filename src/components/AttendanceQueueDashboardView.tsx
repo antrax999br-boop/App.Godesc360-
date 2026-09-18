@@ -34,17 +34,20 @@ export const AttendanceQueueDashboardView: React.FC = () => {
     whatsappConnection.status === 'CONNECTED';
 
   // Conversas assumidas PELO analista logado
+  const isMine = (c: any) =>
+    (userSession.name && c.assignedUserName === userSession.name) ||
+    (userSession.username && (c.assignedUserName === userSession.username || c.assignedUser === userSession.username)) ||
+    (c.assignedUserName === 'Analista T.I.' && (!userSession.name || userSession.username === 't.i'));
+
   const myConversations = attendanceConversations.filter(
-    c =>
-      c.status === 'IN_PROGRESS' &&
-      c.assignedUserName === (userSession.name || userSession.username)
+    c => c.status === 'IN_PROGRESS' && isMine(c)
   );
 
   // Conversas na fila aguardando (sem analista) — WAITING ou TRANSFERRED
   const waitingConversations = attendanceConversations.filter(
     c =>
       (c.status === 'WAITING' || c.status === 'TRANSFERRED') &&
-      !c.assignedUserName
+      (!c.assignedUserName || !c.assignedUser)
   );
 
   const totalActive = attendanceConversations.filter(

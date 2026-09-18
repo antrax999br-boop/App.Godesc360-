@@ -31,7 +31,8 @@ import {
   Sparkles,
   ArrowLeft,
   RefreshCw,
-  LogOut
+  LogOut,
+  Layers
 } from 'lucide-react';
 
 export const AttendanceChatView: React.FC = () => {
@@ -80,7 +81,21 @@ export const AttendanceChatView: React.FC = () => {
     ? attendanceMessages.filter(m => m.conversationId === activeConv.id)
     : [];
 
+  const isPrivileged = userSession.role === 'ceo' || userSession.role === 'admin' || userSession.role === 'gestor';
+  const isMine = (c: AttendanceConversation) =>
+    (userSession.name && c.assignedUserName === userSession.name) ||
+    (userSession.username && (c.assignedUserName === userSession.username || c.assignedUser === userSession.username)) ||
+    (c.assignedUserName === 'Analista T.I.' && (!userSession.name || userSession.username === 't.i'));
+
+  const isAssignedToOther = (c: AttendanceConversation) =>
+    c.status === 'IN_PROGRESS' && !isMine(c) && !isPrivileged;
+
   const filteredConversations = attendanceConversations.filter(c => {
+    // Isolamento estrito entre analistas: conversas de outro analista não aparecem
+    if (isAssignedToOther(c)) {
+      return false;
+    }
+
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const matchName = c.contactName.toLowerCase().includes(q);
@@ -89,13 +104,13 @@ export const AttendanceChatView: React.FC = () => {
     }
 
     if (filterTab === 'mine') {
-      return c.status !== 'CLOSED' && c.assignedUserName === userSession.name;
+      return c.status !== 'CLOSED' && isMine(c);
     }
     if (filterTab === 'waiting') {
-      return c.status === 'WAITING';
+      return c.status === 'WAITING' || c.status === 'TRANSFERRED';
     }
     if (filterTab === 'in_progress') {
-      return c.status === 'IN_PROGRESS';
+      return c.status === 'IN_PROGRESS' && (isMine(c) || isPrivileged);
     }
     if (filterTab === 'bot') {
       return c.status === 'BOT' || c.botActive;
@@ -217,13 +232,21 @@ export const AttendanceChatView: React.FC = () => {
       <div className="p-3 bg-[#141416] border-b border-[#27272a] flex items-center justify-between px-4 shrink-0">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setCurrentScreen('ti_dashboard')}
-            className="p-1.5 bg-[#27272a] hover:bg-[#323238] text-white rounded-lg transition-all cursor-pointer flex items-center gap-2 text-xs font-semibold"
+            onClick={() => setCurrentScreen('attendance_queue')}
+            className="p-1.5 bg-[#45dfa4]/15 hover:bg-[#45dfa4]/25 text-[#45dfa4] border border-[#45dfa4]/40 rounded-lg transition-all cursor-pointer flex items-center gap-2 text-xs font-semibold"
+            title="Ir para a tela Fila de Atendimento"
           >
-            <ArrowLeft className="w-4 h-4 text-[#45dfa4]" />
-            <span>Voltar ao Painel</span>
+            <Layers className="w-4 h-4 text-[#45dfa4]" />
+            <span>Voltar à Fila</span>
           </button>
-          <div className="flex items-center gap-2 text-xs text-white font-bold">
+          <button
+            onClick={() => setCurrentScreen('ti_dashboard')}
+            className="p-1.5 bg-[#27272a] hover:bg-[#323238] text-[#8d90a0] hover:text-white rounded-lg transition-all cursor-pointer flex items-center gap-2 text-xs font-medium"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Painel TI</span>
+          </button>
+          <div className="flex items-center gap-2 text-xs text-white font-bold pl-2 border-l border-[#27272a]">
             <MessageSquare className="w-4 h-4 text-[#45dfa4]" />
             <span>Central de Atendimento WhatsApp em Tempo Real</span>
           </div>
