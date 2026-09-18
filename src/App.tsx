@@ -29,6 +29,7 @@ import { AttendanceWhatsAppView } from './components/AttendanceWhatsAppView';
 import { AttendanceChatView } from './components/AttendanceChatView';
 import { AttendanceChatbotView } from './components/AttendanceChatbotView';
 import { AttendanceQueuesView } from './components/AttendanceQueuesView';
+import { AttendanceQueueDashboardView } from './components/AttendanceQueueDashboardView';
 import { AttendanceSettingsView } from './components/AttendanceSettingsView';
 import { AttendanceContactsView } from './components/AttendanceContactsView';
 import { AttendanceDashboardView } from './components/AttendanceDashboardView';
@@ -86,10 +87,15 @@ const ScreenRenderer: React.FC = () => {
           </ProtectedTIRoute>
         );
       case 'attendance_queue':
+        return (
+          <ProtectedTIRoute requiredModule="ti_queue">
+            <AttendanceQueueDashboardView key="attendance_queue" />
+          </ProtectedTIRoute>
+        );
       case 'attendance_queues_config':
         return (
           <ProtectedTIRoute requiredModule="ti_queue">
-            <AttendanceQueuesView key="attendance_queue" />
+            <AttendanceQueuesView key="attendance_queues_config" />
           </ProtectedTIRoute>
         );
       case 'attendance_settings':

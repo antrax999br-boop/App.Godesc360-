@@ -117,6 +117,7 @@ interface AppContextType {
   sendAttendanceMessage: (conversationId: string, content: string, senderType?: SenderType) => void;
   assignConversation: (conversationId: string, userId: string, userName: string) => void;
   transferConversation: (conversationId: string, targetQueueId?: string, targetQueueName?: string, targetUserName?: string) => void;
+  returnConversationToQueue: (conversationId: string) => void;
   closeConversation: (conversationId: string) => void;
   toggleBotState: (conversationId: string, active: boolean) => void;
   saveChatbotFlow: (flow: ChatbotFlow) => void;
@@ -2930,6 +2931,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  const returnConversationToQueue = (conversationId: string) => {
+    setAttendanceConversations(prev =>
+      prev.map(c => {
+        if (c.id === conversationId) {
+          return {
+            ...c,
+            status: 'WAITING',
+            assignedUserId: undefined,
+            assignedUserName: undefined,
+            assignedAt: undefined
+          };
+        }
+        return c;
+      })
+    );
+  };
+
   const closeConversation = (conversationId: string) => {
     // Marca a conversa como encerrada
     setAttendanceConversations(prev =>
@@ -3087,6 +3105,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         sendAttendanceMessage,
         assignConversation,
         transferConversation,
+        returnConversationToQueue,
         closeConversation,
         toggleBotState,
         saveChatbotFlow,

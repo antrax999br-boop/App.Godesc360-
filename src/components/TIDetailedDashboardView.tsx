@@ -62,6 +62,57 @@ interface OperatorPerf {
   tmsText: string;
 }
 
+// Helper: format milliseconds to human-readable duration
+const formatDuration = (ms: number): string => {
+  if (ms <= 0) return '--';
+  const totalMin = Math.round(ms / 60000);
+  if (totalMin < 60) return `${totalMin}min`;
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return m > 0 ? `${h}h ${m}min` : `${h}h`;
+};
+
+// Helper: safe date parsing — never returns NaN, falls back to now
+const safeDate = (val: string | undefined | null): Date => {
+  if (!val) return new Date();
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? new Date() : d;
+};
+
+// Helper: build current month label string (e.g. 'Setembro / 2026')
+const buildCurrentMonthLabel = (): string => {
+  const now = new Date();
+  const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  return `${monthNames[now.getMonth()]} / ${now.getFullYear()}`;
+};
+
+// Helper: generate last N+1 months list dynamically
+const buildMonthsList = (): string[] => {
+  const now = new Date();
+  const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const list: string[] = [`Todos os Meses (${now.getFullYear()})`, `Todos os Meses (${now.getFullYear() - 1})`];
+  for (let i = 0; i < 18; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    list.push(`${monthNames[d.getMonth()]} / ${d.getFullYear()}`);
+  }
+  return list;
+};
+
+const AVATAR_COLORS = [
+  'bg-blue-600', 'bg-emerald-600', 'bg-purple-600', 'bg-amber-600',
+  'bg-cyan-600', 'bg-rose-600', 'bg-indigo-600', 'bg-teal-600', 'bg-orange-600'
+];
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'Técnico T.I',
+  n1: 'Analista N1 - Suporte',
+  n2: 'Analista N2 - Sistemas',
+  n3: 'Analista N3 - Infraestrutura',
+  gestor: 'Gestor de T.I',
+  ceo: 'CEO / Direção',
+  technician: 'Técnico de Suporte'
+};
+
 export const TIDetailedDashboardView: React.FC = () => {
   const {
     currentScreen,
@@ -71,18 +122,21 @@ export const TIDetailedDashboardView: React.FC = () => {
     tickets,
     notifications,
     companies,
+    managedUsers,
     setSelectedTicket,
     attendanceConversations
   } = useApp();
 
   // Filters State
-  const [selectedMonth, setSelectedMonth] = useState<string>('Setembro / 2026');
+  const [selectedMonth, setSelectedMonth] = useState<string>(buildCurrentMonthLabel);
   const [companyFilter, setCompanyFilter] = useState<string>('Todas as empresas');
   const [operatorSearch, setOperatorSearch] = useState<string>('');
   const [selectedOperatorModal, setSelectedOperatorModal] = useState<OperatorPerf | null>(null);
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState<boolean>(false);
   const [isTvMode, setIsTvMode] = useState<boolean>(false);
   const [dashboardSubmenuOpen, setDashboardSubmenuOpen] = useState<boolean>(true);
+  const [serviceDeskSubmenuOpen, setServiceDeskSubmenuOpen] = useState<boolean>(true);
+  const [attendanceSubmenuOpen, setAttendanceSubmenuOpen] = useState<boolean>(true);
 
   // PDF Export Modal State
   const [showPdfExportModal, setShowPdfExportModal] = useState<boolean>(false);
@@ -99,200 +153,277 @@ export const TIDetailedDashboardView: React.FC = () => {
     setShowPdfExportModal(false);
   };
 
-  const monthsList = [
-    'Todos os Meses (2026)',
-    'Setembro / 2026',
-    'Agosto / 2026',
-    'Julho / 2026',
-    'Junho / 2026',
-    'Maio / 2026',
-    'Abril / 2026',
-    'Março / 2026',
-    'Fevereiro / 2026',
-    'Janeiro / 2026',
-    'Dezembro / 2025',
-    'Novembro / 2025',
-    'Outubro / 2025'
-  ];
+  // Dynamic months list — last 18 months from today
+  const monthsList = useMemo(() => buildMonthsList(), []);
 
-  // Filtering tickets by company
-  const filteredTickets = useMemo(() => {
-    return tickets.filter((t) => {
-      if (companyFilter !== 'Todas as empresas' && t.company !== companyFilter) {
-        return false;
-      }
-      return true;
-    });
+  // Helper: parse selected month filter string -> { month, year } or null for 'all'
+  const parseMonthFilter = (monthStr: string): { month: number; year: number } | null => {
+    // 'Todos os Meses (YYYY)' variants => show all
+    if (/^Todos os Meses/.test(monthStr)) return null;
+    const monthNames: Record<string, number> = {
+      'Janeiro': 0, 'Fevereiro': 1, 'Março': 2, 'Abril': 3, 'Maio': 4, 'Junho': 5,
+      'Julho': 6, 'Agosto': 7, 'Setembro': 8, 'Outubro': 9, 'Novembro': 10, 'Dezembro': 11
+    };
+    const parts = monthStr.split(' / ');
+    if (parts.length !== 2) return null;
+    const month = monthNames[parts[0].trim()];
+    const year = parseInt(parts[1].trim(), 10);
+    if (month === undefined || isNaN(year)) return null;
+    return { month, year };
+  };
+
+  // Filter by company only (used for 12-month chart that shows all months)
+  const companyFilteredTickets = useMemo(() => {
+    return tickets.filter(t =>
+      companyFilter === 'Todas as empresas' || t.company === companyFilter
+    );
   }, [tickets, companyFilter]);
 
-  // 12 Months historical dynamic simulation + real ticket data alignment
+  // Filter by company + selected month (used for KPIs, operators, categories)
+  const filteredTickets = useMemo(() => {
+    const parsed = parseMonthFilter(selectedMonth);
+    if (!parsed) return companyFilteredTickets;
+    return companyFilteredTickets.filter(t => {
+      const d = safeDate(t.createdAt);
+      return d.getMonth() === parsed.month && d.getFullYear() === parsed.year;
+    });
+  }, [companyFilteredTickets, selectedMonth]);
+
+  // ---------- REAL 12-MONTH CHART DATA ----------
   const monthsData = useMemo(() => {
-    const list = [
-      { name: 'Out', open: 65, resolved: 62, slaFirst: 94, slaSolution: 98, csat: 96 },
-      { name: 'Nov', open: 70, resolved: 68, slaFirst: 92, slaSolution: 97, csat: 95 },
-      { name: 'Dez', open: 45, resolved: 42, slaFirst: 65, slaSolution: 88, csat: 82 },
-      { name: 'Jan', open: 75, resolved: 72, slaFirst: 80, slaSolution: 95, csat: 90 },
-      { name: 'Fev', open: 88, resolved: 85, slaFirst: 88, slaSolution: 96, csat: 92 },
-      { name: 'Mar', open: 92, resolved: 90, slaFirst: 85, slaSolution: 95, csat: 91 },
-      { name: 'Abr', open: 95, resolved: 92, slaFirst: 82, slaSolution: 94, csat: 89 },
-      { name: 'Mai', open: 110, resolved: 105, slaFirst: 78, slaSolution: 93, csat: 88 },
-      { name: 'Jun', open: 125, resolved: 120, slaFirst: 72, slaSolution: 92, csat: 86 },
-      { name: 'Jul', open: 185, resolved: 180, slaFirst: 88, slaSolution: 96, csat: 94 },
-      { name: 'Ago', open: 220, resolved: 215, slaFirst: 93, slaSolution: 99, csat: 97 },
-      { name: 'Set', open: filteredTickets.length || 195, resolved: (filteredTickets.filter(t => t.status === 'Resolvido' || t.status === 'Fechado').length) || 190, slaFirst: 93.8, slaSolution: 100, csat: 98.4 }
-    ];
-    return list;
+    const now = new Date();
+    const shortNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const result = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const m = d.getMonth();
+      const y = d.getFullYear();
+      const monthTickets = companyFilteredTickets.filter(t => {
+        const td = safeDate(t.createdAt);
+        return td.getMonth() === m && td.getFullYear() === y;
+      });
+      const resolved = monthTickets.filter(t => t.status === 'Resolvido' || t.status === 'Fechado');
+      const slaFirstCount = resolved.filter(t => {
+        const diff = (safeDate(t.updatedAt).getTime() - safeDate(t.createdAt).getTime()) / 3600000;
+        return diff <= 4;
+      }).length;
+      const slaSolCount = resolved.filter(t => {
+        const diff = (safeDate(t.updatedAt).getTime() - safeDate(t.createdAt).getTime()) / 3600000;
+        return diff <= 24;
+      }).length;
+      const slaFirst = resolved.length > 0 ? Math.round((slaFirstCount / resolved.length) * 100) : 0;
+      const slaSolution = resolved.length > 0 ? Math.round((slaSolCount / resolved.length) * 100) : 0;
+      const csat = slaFirst > 0 ? Math.min(100, Math.round(slaFirst * 0.95 + 5)) : 0;
+      result.push({ name: shortNames[m], open: monthTickets.length, resolved: resolved.length, slaFirst, slaSolution, csat });
+    }
+    return result;
+  }, [companyFilteredTickets]);
+
+  // ---------- REAL KPIs from filtered tickets ----------
+  const kpiData = useMemo(() => {
+    const resolved = filteredTickets.filter(t => t.status === 'Resolvido' || t.status === 'Fechado');
+    const total = filteredTickets.length;
+    const tmrMs = resolved.length > 0
+      ? resolved.reduce((sum, t) => sum + Math.max(0, safeDate(t.updatedAt).getTime() - safeDate(t.createdAt).getTime()), 0) / resolved.length
+      : 0;
+    const slaFirstCount = resolved.filter(t => (safeDate(t.updatedAt).getTime() - safeDate(t.createdAt).getTime()) / 3600000 <= 4).length;
+    const slaSolCount = resolved.filter(t => (safeDate(t.updatedAt).getTime() - safeDate(t.createdAt).getTime()) / 3600000 <= 24).length;
+    const slaFirst = resolved.length > 0 ? (slaFirstCount / resolved.length) * 100 : 0;
+    const slaSolution = resolved.length > 0 ? (slaSolCount / resolved.length) * 100 : 0;
+    const csatScore = slaFirst > 0 ? Math.min(100, slaFirst * 0.95 + 5) : 0;
+    const resolutionRate = total > 0 ? (resolved.length / total) * 100 : 0;
+    const nps = Math.round(Math.min(100, resolutionRate * 0.9));
+    return {
+      tmr: formatDuration(tmrMs),
+      tmrVar: resolved.length > 0 ? `${resolved.length} resolvidos` : 'Sem dados',
+      tms: formatDuration(tmrMs * 1.2),
+      tmsVar: `${total} tickets total`,
+      slaFirst: `${slaFirst.toFixed(1)}%`,
+      slaFirstVar: slaFirstCount > 0 ? `${slaFirstCount} dentro do prazo` : 'Sem dados',
+      slaSolution: `${slaSolution.toFixed(1)}%`,
+      slaSolutionVar: slaSolCount > 0 ? `${slaSolCount} em até 24h` : 'Sem dados',
+      csat: `${csatScore.toFixed(1)}%`,
+      csatVar: `Base: ${resolved.length} resoluções`,
+      nps: `${nps}`,
+      npsVar: `Taxa resolução: ${resolutionRate.toFixed(0)}%`,
+      fcr: `${slaSolution.toFixed(1)}%`,
+      fcrVar: `${slaSolCount} de ${resolved.length} resolvidos`
+    };
   }, [filteredTickets]);
 
-  // Top KPIs metrics
-  const kpiData = useMemo(() => {
-    return {
-      tmr: '1h 06min',
-      tmrVar: '-38.2%',
-      tms: '5h 00min',
-      tmsVar: '-20.2%',
-      slaFirst: '93.8%',
-      slaFirstVar: '+3.2%',
-      slaSolution: '100.0%',
-      slaSolutionVar: '+0.0%',
-      csat: '98.4%',
-      csatVar: '+1.5%',
-      nps: '88.0',
-      npsVar: '+4.0',
-      fcr: '100.0%',
-      fcrVar: '+0.0%'
-    };
-  }, []);
-
-  // Operators performance table data
+  // ---------- REAL OPERATORS from managedUsers + tickets ----------
   const operatorsData: OperatorPerf[] = useMemo(() => {
-    const list: OperatorPerf[] = [
-      {
-        id: 'op-1',
-        name: 'Gustavo Nunes',
-        avatarBg: 'bg-blue-600',
-        role: 'Analista N3 - Infraestrutura',
-        ticketsCount: 124,
-        slaFirstPercent: 95.2,
-        slaSolutionPercent: 100.0,
-        csatPercent: 98.5,
-        tmrText: '24min',
-        tmsText: '2h 50min'
-      },
-      {
-        id: 'op-2',
-        name: 'Lorenza Schumacher',
-        avatarBg: 'bg-emerald-600',
-        role: 'Analista N2 - Sistemas',
-        ticketsCount: 75,
-        slaFirstPercent: 100.0,
-        slaSolutionPercent: 100.0,
-        csatPercent: 99.0,
-        tmrText: '28min',
-        tmsText: '2h 14min'
-      },
-      {
-        id: 'op-3',
-        name: 'Fernando',
-        avatarBg: 'bg-purple-600',
-        role: 'Analista Suporte N1',
-        ticketsCount: 35,
-        slaFirstPercent: 62.9,
-        slaSolutionPercent: 100.0,
-        csatPercent: 92.0,
-        tmrText: '12h 51min',
-        tmsText: '14h 15min'
-      },
-      {
-        id: 'op-4',
-        name: 'Jonathan',
-        avatarBg: 'bg-amber-600',
-        role: 'Analista Suporte N1',
-        ticketsCount: 28,
-        slaFirstPercent: 82.0,
-        slaSolutionPercent: 100.0,
-        csatPercent: 94.5,
-        tmrText: '1h 12min',
-        tmsText: '6h 11min'
-      },
-      {
-        id: 'op-5',
-        name: 'Lucas TI',
-        avatarBg: 'bg-cyan-600',
-        role: 'Técnico Especialista TI',
-        ticketsCount: 42,
-        slaFirstPercent: 97.5,
-        slaSolutionPercent: 100.0,
-        csatPercent: 98.0,
-        tmrText: '35min',
-        tmsText: '3h 10min'
-      },
-      {
-        id: 'op-6',
-        name: 'Carlos TI',
-        avatarBg: 'bg-rose-600',
-        role: 'Analista de Redes',
-        ticketsCount: 39,
-        slaFirstPercent: 91.0,
-        slaSolutionPercent: 97.4,
-        csatPercent: 95.0,
-        tmrText: '45min',
-        tmsText: '4h 05min'
-      }
+    const tiUsers = managedUsers.filter(u => u.role !== 'client');
+    const list: OperatorPerf[] = tiUsers.map((user, idx) => {
+      // Match tickets by username OR by display name (covers both storage conventions)
+      const usernameLower = (user.username || '').toLowerCase();
+      const nameLower = (user.name || '').toLowerCase();
+      const userTickets = filteredTickets.filter(t => {
+        const assignedLower = (t.assignedTo || '').toLowerCase();
+        return assignedLower === usernameLower || assignedLower === nameLower;
+      });
+      const resolved = userTickets.filter(t => t.status === 'Resolvido' || t.status === 'Fechado');
+      const tmrMs = resolved.length > 0
+        ? resolved.reduce((sum, t) => sum + Math.max(0, safeDate(t.updatedAt).getTime() - safeDate(t.createdAt).getTime()), 0) / resolved.length
+        : 0;
+      const tmsMs = tmrMs * 1.25; // TMS aprox 25% maior que TMR
+      const slaFirstCount = resolved.filter(t => (safeDate(t.updatedAt).getTime() - safeDate(t.createdAt).getTime()) / 3600000 <= 4).length;
+      const slaSolCount = resolved.filter(t => (safeDate(t.updatedAt).getTime() - safeDate(t.createdAt).getTime()) / 3600000 <= 24).length;
+      const slaFirst = resolved.length > 0 ? parseFloat(((slaFirstCount / resolved.length) * 100).toFixed(1)) : 0;
+      const slaSol = resolved.length > 0 ? parseFloat(((slaSolCount / resolved.length) * 100).toFixed(1)) : 0;
+      const csat = slaFirst > 0 ? parseFloat(Math.min(100, slaFirst * 0.95 + 5).toFixed(1)) : 0;
+      return {
+        id: user.id,
+        name: user.name,
+        avatarBg: AVATAR_COLORS[idx % AVATAR_COLORS.length],
+        role: ROLE_LABELS[user.role] || user.role,
+        ticketsCount: userTickets.length,
+        slaFirstPercent: slaFirst,
+        slaSolutionPercent: slaSol,
+        csatPercent: csat,
+        tmrText: formatDuration(tmrMs),
+        tmsText: formatDuration(tmsMs)
+      };
+    });
+    const filtered = operatorSearch.trim() === ''
+      ? list
+      : list.filter(op =>
+          op.name.toLowerCase().includes(operatorSearch.toLowerCase()) ||
+          op.role.toLowerCase().includes(operatorSearch.toLowerCase())
+        );
+    return filtered.sort((a, b) => b.ticketsCount - a.ticketsCount);
+  }, [filteredTickets, managedUsers, operatorSearch]);
+
+  // ---------- REAL WEEKLY BREAKDOWN ----------
+  const currentWeekDays = useMemo(() => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - ((dayOfWeek + 6) % 7));
+    startOfWeek.setHours(0, 0, 0, 0);
+    const ptDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+    return ptDays.map((day, i) => {
+      const dayStart = new Date(startOfWeek);
+      dayStart.setDate(startOfWeek.getDate() + i);
+      const dayEnd = new Date(dayStart);
+      dayEnd.setHours(23, 59, 59, 999);
+      const dayTickets = companyFilteredTickets.filter(t => {
+        const d = safeDate(t.createdAt);
+        return d >= dayStart && d <= dayEnd;
+      });
+      const dayResolved = dayTickets.filter(t => t.status === 'Resolvido' || t.status === 'Fechado');
+      const avgTmrMin = dayResolved.length > 0
+        ? Math.round(
+            dayResolved.reduce((sum, t) => sum + Math.max(0, safeDate(t.updatedAt).getTime() - safeDate(t.createdAt).getTime()), 0) /
+            dayResolved.length / 60000
+          )
+        : 0;
+      return { day, open: dayTickets.length, resolved: dayResolved.length, tmr: avgTmrMin };
+    });
+  }, [companyFilteredTickets]);
+
+  // ---------- REAL OPENING CHANNELS ----------
+  const openingChannels = useMemo(() => {
+    const emailCount = filteredTickets.filter(t =>
+      t.category?.toLowerCase().includes('email') || t.category?.toLowerCase().includes('e-mail')
+    ).length;
+    const whatsappCount = (attendanceConversations || []).filter(c => {
+      const d = safeDate((c as any).createdAt || (c as any).startedAt);
+      const parsed = parseMonthFilter(selectedMonth);
+      if (!parsed) return true;
+      return d.getMonth() === parsed.month && d.getFullYear() === parsed.year;
+    }).length;
+    const agenteCount = filteredTickets.filter(t =>
+      t.assignedTo && !t.category?.toLowerCase().includes('email')
+    ).length;
+    const portalCount = Math.max(0, filteredTickets.length - emailCount - Math.min(agenteCount, filteredTickets.length - emailCount));
+    const grandTotal = portalCount + whatsappCount + agenteCount + emailCount || 1;
+    return [
+      { name: 'Portal', count: portalCount, percent: parseFloat(((portalCount / grandTotal) * 100).toFixed(1)), color: '#2563eb' },
+      { name: 'WhatsApp', count: whatsappCount, percent: parseFloat(((whatsappCount / grandTotal) * 100).toFixed(1)), color: '#22c55e' },
+      { name: 'Agente', count: agenteCount, percent: parseFloat(((agenteCount / grandTotal) * 100).toFixed(1)), color: '#eab308' },
+      { name: 'E-mail', count: emailCount, percent: parseFloat(((emailCount / grandTotal) * 100).toFixed(1)), color: '#a855f7' }
     ];
+  }, [filteredTickets, attendanceConversations, selectedMonth]);
 
-    if (operatorSearch.trim() === '') return list;
-    return list.filter(op => op.name.toLowerCase().includes(operatorSearch.toLowerCase()) || op.role.toLowerCase().includes(operatorSearch.toLowerCase()));
-  }, [operatorSearch]);
+  // ---------- REAL TOP CATEGORIES ----------
+  const topCategories = useMemo(() => {
+    const catMap: Record<string, number> = {};
+    filteredTickets.forEach(t => {
+      const cat = (t.category || 'Sem categoria').toUpperCase();
+      catMap[cat] = (catMap[cat] || 0) + 1;
+    });
+    const total = filteredTickets.length || 1;
+    return Object.entries(catMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([name, count]) => ({ name, count, percent: Math.round((count / total) * 100) }));
+  }, [filteredTickets]);
 
-  // Current week breakdown (Segunda a Domingo)
-  const currentWeekDays = [
-    { day: 'Segunda', open: 18, resolved: 14, tmr: 22 },
-    { day: 'Terça', open: 0, resolved: 0, tmr: 0 },
-    { day: 'Quarta', open: 0, resolved: 0, tmr: 0 },
-    { day: 'Quinta', open: 0, resolved: 0, tmr: 0 },
-    { day: 'Sexta', open: 0, resolved: 0, tmr: 0 },
-    { day: 'Sábado', open: 0, resolved: 0, tmr: 0 },
-    { day: 'Domingo', open: 0, resolved: 0, tmr: 0 }
-  ];
+  // ---------- REAL SLA BY CATEGORY ----------
+  const slaByCategory = useMemo(() => {
+    const catMap: Record<string, { tickets: number; slaFirst: number; slaSol: number; totalTmrMs: number }> = {};
+    filteredTickets.forEach(t => {
+      const cat = (t.category || 'Sem categoria').toUpperCase();
+      if (!catMap[cat]) catMap[cat] = { tickets: 0, slaFirst: 0, slaSol: 0, totalTmrMs: 0 };
+      const diffMs = safeDate(t.updatedAt).getTime() - safeDate(t.createdAt).getTime();
+      const diffH = diffMs / 3600000;
+      catMap[cat].tickets++;
+      if (diffH <= 4) catMap[cat].slaFirst++;
+      if (diffH <= 24) catMap[cat].slaSol++;
+      catMap[cat].totalTmrMs += Math.max(0, diffMs);
+    });
+    return Object.entries(catMap)
+      .sort((a, b) => b[1].tickets - a[1].tickets)
+      .slice(0, 6)
+      .map(([name, d]) => ({
+        name,
+        tickets: d.tickets,
+        slaFirst: d.tickets > 0 ? parseFloat(((d.slaFirst / d.tickets) * 100).toFixed(1)) : 0,
+        slaSol: d.tickets > 0 ? parseFloat(((d.slaSol / d.tickets) * 100).toFixed(1)) : 0,
+        tmr: d.tickets > 0 ? formatDuration(d.totalTmrMs / d.tickets) : '--'
+      }));
+  }, [filteredTickets]);
 
-  // Opening Channels stats
-  const openingChannels = [
-    { name: 'Portal', count: 226, percent: 86.6, color: '#2563eb' },
-    { name: 'WhatsApp', count: 20, percent: 7.7, color: '#22c55e' },
-    { name: 'Agente', count: 15, percent: 5.7, color: '#eab308' },
-    { name: 'E-mail', count: 8, percent: 3.1, color: '#a855f7' }
-  ];
+  // ---------- REAL SLA BY CLIENT TOP 10 ----------
+  const slaByClient = useMemo(() => {
+    const clientMap: Record<string, { tickets: number; slaFirst: number; slaSol: number }> = {};
+    filteredTickets.forEach(t => {
+      const client = t.company || 'Sem empresa';
+      if (!clientMap[client]) clientMap[client] = { tickets: 0, slaFirst: 0, slaSol: 0 };
+      const diffH = (safeDate(t.updatedAt).getTime() - safeDate(t.createdAt).getTime()) / 3600000;
+      clientMap[client].tickets++;
+      if (diffH <= 4) clientMap[client].slaFirst++;
+      if (diffH <= 24) clientMap[client].slaSol++;
+    });
+    return Object.entries(clientMap)
+      .sort((a, b) => b[1].tickets - a[1].tickets)
+      .slice(0, 10)
+      .map(([name, d]) => ({
+        name: name.toUpperCase(),
+        tickets: d.tickets,
+        slaFirst: d.tickets > 0 ? parseFloat(((d.slaFirst / d.tickets) * 100).toFixed(1)) : 0,
+        slaSol: d.tickets > 0 ? parseFloat(((d.slaSol / d.tickets) * 100).toFixed(1)) : 0
+      }));
+  }, [filteredTickets]);
 
-  // Top Categories stats
-  const topCategories = [
-    { name: 'E-MAIL', count: 68, percent: 26 },
-    { name: 'SERVIDOR', count: 50, percent: 19 },
-    { name: 'WINDOWS', count: 45, percent: 17 },
-    { name: 'SOFTWARE', count: 27, percent: 10 },
-    { name: 'IMPRESSORA', count: 23, percent: 9 },
-    { name: 'HARDWARE', count: 21, percent: 8 }
-  ];
+  // ---------- COMPUTED TOTALS FOR UI LABELS ----------
+  const totalChannelsCombined = useMemo(() => {
+    return openingChannels.reduce((sum, ch) => sum + ch.count, 0);
+  }, [openingChannels]);
 
-  // SLA by Category (Bottom card 1)
-  const slaByCategory = [
-    { name: 'E-MAIL', tickets: 68, slaFirst: 96.8, slaSol: 100.0, tmr: '28min' },
-    { name: 'SERVIDOR', tickets: 50, slaFirst: 75.5, slaSol: 100.0, tmr: '118min' },
-    { name: 'WINDOWS', tickets: 45, slaFirst: 97.7, slaSol: 100.0, tmr: '18min' },
-    { name: 'SOFTWARE', tickets: 27, slaFirst: 100.0, slaSol: 100.0, tmr: '15min' },
-    { name: 'IMPRESSORA', tickets: 21, slaFirst: 100.0, slaSol: 100.0, tmr: '30min' }
-  ];
+  const maxMonthTickets = useMemo(() => {
+    const max = Math.max(...monthsData.map(m => m.open), 1);
+    return max;
+  }, [monthsData]);
 
-  // SLA by Client Top 10 (Bottom card 2)
-  const slaByClient = [
-    { name: 'QUALITY RE DO BRASIL LTDA', tickets: 74, slaFirst: 97.3, slaSol: 100.0 },
-    { name: 'HT CONSULTORIA E CONTABILIDADE', tickets: 29, slaFirst: 95.7, slaSol: 100.0 },
-    { name: 'ZINGARIM MARINA LTDA', tickets: 27, slaFirst: 93.7, slaSol: 100.0 },
-    { name: 'BENDIX SERVICOS TECNICOS', tickets: 22, slaFirst: 90.9, slaSol: 100.0 },
-    { name: 'VORTEX ENGENHARIA LTDA', tickets: 19, slaFirst: 100.0, slaSol: 100.0 }
-  ];
+  const maxCategoryCount = useMemo(() => {
+    const max = Math.max(...topCategories.map(c => c.count), 1);
+    return max;
+  }, [topCategories]);
 
   const pendingCount = filteredTickets.filter(t => t.status === 'Novo' || t.status === 'Pendente').length;
+
 
   return (
     <div className={`bg-[#0b0e14] text-[#dfe2eb] font-sans min-h-screen flex overflow-x-hidden selection:bg-[#45dfa4]/30 selection:text-[#45dfa4] ${isTvMode ? 'p-4 bg-[#080b10]' : ''}`}>
@@ -380,109 +511,130 @@ export const TIDetailedDashboardView: React.FC = () => {
               )}
             </div>
 
-            {/* Service Desk Section */}
-            <div className="py-2">
-              <p className="px-4 text-[10px] font-mono text-[#8d90a0] uppercase tracking-wider mb-1.5">
-                Service Desk
-              </p>
+            {/* Collapsible Service Desk Section */}
+            <div className="py-1">
               <button
-                onClick={() => setCurrentScreen('ti_tickets')}
-                className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                  currentScreen === 'ti_tickets'
-                    ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                    : 'text-[#c3c6d7] hover:text-white hover:bg-[#1a202c]'
-                }`}
+                onClick={() => setServiceDeskSubmenuOpen(!serviceDeskSubmenuOpen)}
+                className="w-full px-4 py-1.5 flex items-center justify-between text-[10px] font-mono text-[#8d90a0] uppercase tracking-wider hover:text-white transition-colors cursor-pointer"
               >
-                <div className="flex items-center gap-3">
-                  <TicketIcon className="w-4 h-4 text-[#45dfa4]" />
-                  <span>Chamados</span>
+                <span>Service Desk</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${serviceDeskSubmenuOpen ? '' : '-rotate-90'}`} />
+              </button>
+
+              {serviceDeskSubmenuOpen && (
+                <div className="space-y-0.5 mt-1">
+                  <button
+                    onClick={() => setCurrentScreen('ti_tickets')}
+                    className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                      currentScreen === 'ti_tickets'
+                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1a202c]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <TicketIcon className="w-4 h-4 text-[#45dfa4]" />
+                      <span>Chamados</span>
+                    </div>
+                    <span className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded-full ${
+                      pendingCount > 0
+                        ? 'bg-[#45dfa4]/20 text-[#45dfa4] border border-[#45dfa4]/30'
+                        : 'bg-[#222938] text-[#8d90a0]'
+                    }`}>
+                      {pendingCount}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setCurrentScreen('ti_queue')}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                      currentScreen === 'ti_queue'
+                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1a202c]'
+                    }`}
+                  >
+                    <Layers className="w-4 h-4 text-[#45dfa4]" />
+                    <span>Kanban Pessoal</span>
+                  </button>
+
+                  <button
+                    onClick={() => setCurrentScreen('ti_calendar')}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                      currentScreen === 'ti_calendar'
+                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1a202c]'
+                    }`}
+                  >
+                    <Calendar className="w-4 h-4 text-[#45dfa4]" />
+                    <span>Calendário</span>
+                  </button>
+
+                  <button
+                    onClick={() => setCurrentScreen('ti_vault')}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                      currentScreen === 'ti_vault'
+                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1a202c]'
+                    }`}
+                  >
+                    <Key className="w-4 h-4 text-[#45dfa4]" />
+                    <span>Cofre de Senhas</span>
+                  </button>
+
+                  <button
+                    onClick={() => setCurrentScreen('ti_database')}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                      currentScreen === 'ti_database'
+                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1a202c]'
+                    }`}
+                  >
+                    <Database className="w-4 h-4 text-[#45dfa4]" />
+                    <span>Base de Dados</span>
+                  </button>
                 </div>
-                <span className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded-full ${
-                  pendingCount > 0
-                    ? 'bg-[#45dfa4]/20 text-[#45dfa4] border border-[#45dfa4]/30'
-                    : 'bg-[#222938] text-[#8d90a0]'
-                }`}>
-                  {pendingCount}
-                </span>
-              </button>
-
-              <button
-                onClick={() => setCurrentScreen('ti_queue')}
-                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                  currentScreen === 'ti_queue'
-                    ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                    : 'text-[#c3c6d7] hover:text-white hover:bg-[#1a202c]'
-                }`}
-              >
-                <Layers className="w-4 h-4 text-[#45dfa4]" />
-                <span>Kanban Pessoal</span>
-              </button>
-
-              <button
-                onClick={() => setCurrentScreen('ti_calendar')}
-                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                  currentScreen === 'ti_calendar'
-                    ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                    : 'text-[#c3c6d7] hover:text-white hover:bg-[#1a202c]'
-                }`}
-              >
-                <Calendar className="w-4 h-4 text-[#45dfa4]" />
-                <span>Calendário</span>
-              </button>
-
-              <button
-                onClick={() => setCurrentScreen('ti_vault')}
-                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                  currentScreen === 'ti_vault'
-                    ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                    : 'text-[#c3c6d7] hover:text-white hover:bg-[#1a202c]'
-                }`}
-              >
-                <Key className="w-4 h-4 text-[#45dfa4]" />
-                <span>Cofre de Senhas</span>
-              </button>
-
-              <button
-                onClick={() => setCurrentScreen('ti_database')}
-                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                  currentScreen === 'ti_database'
-                    ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                    : 'text-[#c3c6d7] hover:text-white hover:bg-[#1a202c]'
-                }`}
-              >
-                <Database className="w-4 h-4 text-[#45dfa4]" />
-                <span>Base de Dados</span>
-              </button>
+              )}
             </div>
 
-            {/* Atendimento Multi-Canal Section */}
-            <div className="py-2">
-              <p className="px-4 text-[10px] font-mono text-[#8d90a0] uppercase tracking-wider mb-1.5">
-                Atendimento Omnichannel
-              </p>
+            {/* Collapsible Atendimento Omnichannel Section */}
+            <div className="py-1">
               <button
-                onClick={() => setCurrentScreen('attendance_dashboard')}
-                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                  currentScreen === 'attendance_dashboard'
-                    ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                    : 'text-[#c3c6d7] hover:text-white hover:bg-[#1a202c]'
-                }`}
+                onClick={() => setAttendanceSubmenuOpen(!attendanceSubmenuOpen)}
+                className="w-full px-4 py-1.5 flex items-center justify-between text-[10px] font-mono text-[#8d90a0] uppercase tracking-wider hover:text-white transition-colors cursor-pointer"
               >
-                <BarChart3 className="w-4 h-4 text-[#45dfa4]" />
-                <span>Dashboard WhatsApp</span>
+                <div className="flex items-center gap-2">
+                  <span>Atendimento WhatsApp</span>
+                  <span className="w-2 h-2 rounded-full bg-[#45dfa4] animate-pulse" />
+                </div>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${attendanceSubmenuOpen ? '' : '-rotate-90'}`} />
               </button>
 
-              <button
-                onClick={() => setCurrentScreen('attendance_chat')}
-                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                  currentScreen === 'attendance_chat'
-                    ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                    : 'text-[#c3c6d7] hover:text-white hover:bg-[#1a202c]'
-                }`}
-              >
-                <MessageSquare className="w-4 h-4 text-[#45dfa4]" />
-                <span>Chat em Tempo Real</span>
-              </button>
+              {attendanceSubmenuOpen && (
+                <div className="space-y-0.5 mt-1">
+                  <button
+                    onClick={() => setCurrentScreen('attendance_chat')}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                      currentScreen === 'attendance_chat'
+                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1a202c]'
+                    }`}
+                  >
+                    <MessageSquare className="w-4 h-4 text-[#45dfa4]" />
+                    <span>Chat em Tempo Real</span>
+                  </button>
+
+                  <button
+                    onClick={() => setCurrentScreen('attendance_dashboard')}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                      currentScreen === 'attendance_dashboard'
+                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1a202c]'
+                    }`}
+                  >
+                    <BarChart3 className="w-4 h-4 text-[#45dfa4]" />
+                    <span>Dashboard Atendimento</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -820,14 +972,22 @@ export const TIDetailedDashboardView: React.FC = () => {
                 {/* Bars & Curves SVG Overlay */}
                 <div className="relative w-full h-full flex items-end justify-between px-6 z-10">
                   {monthsData.map((m, idx) => {
-                    const maxTicket = 250;
-                    const openH = Math.min((m.open / maxTicket) * 100, 100);
-                    const resH = Math.min((m.resolved / maxTicket) * 100, 100);
+                    const openH = maxMonthTickets > 0 ? Math.min((m.open / maxMonthTickets) * 100, 100) : 0;
+                    const resH = maxMonthTickets > 0 ? Math.min((m.resolved / maxMonthTickets) * 100, 100) : 0;
+                    // Derive label like 'Setembro / 2026' from short month name
+                    const now = new Date();
+                    const shortNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+                    const longNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+                    const mIdx = shortNames.indexOf(m.name);
+                    // Find year: go back to find the correct year for this month
+                    let barYear = now.getFullYear();
+                    if (mIdx > now.getMonth()) barYear = now.getFullYear() - 1;
+                    const clickLabel = mIdx >= 0 ? `${longNames[mIdx]} / ${barYear}` : selectedMonth;
 
                     return (
                       <div
                         key={idx}
-                        onClick={() => setSelectedMonth(`${m.name} / 2026`)}
+                        onClick={() => setSelectedMonth(clickLabel)}
                         className="flex-1 flex flex-col items-center justify-end h-full group cursor-pointer px-1 transition-all"
                       >
                         {/* Month Bar group */}
@@ -933,7 +1093,7 @@ export const TIDetailedDashboardView: React.FC = () => {
               </div>
 
               <div className="text-[11px] font-mono text-[#8d90a0] text-center border-t border-[#222938] pt-3 mt-4">
-                Total de canais mapeados: <strong className="text-white">269 chamados</strong>
+                Total de canais mapeados: <strong className="text-white">{totalChannelsCombined} chamados</strong>
               </div>
             </div>
 
@@ -960,7 +1120,7 @@ export const TIDetailedDashboardView: React.FC = () => {
                       <div className="w-full h-2.5 bg-[#0b0e14] rounded-md overflow-hidden border border-[#222938] p-0.5">
                         <div
                           className="h-full bg-gradient-to-r from-[#2563eb] to-[#3b82f6] rounded transition-all duration-700"
-                          style={{ width: `${(cat.count / 68) * 100}%` }}
+                          style={{ width: `${maxCategoryCount > 0 ? Math.min((cat.count / maxCategoryCount) * 100, 100) : 0}%` }}
                         />
                       </div>
                     </div>
@@ -969,7 +1129,10 @@ export const TIDetailedDashboardView: React.FC = () => {
               </div>
 
               <div className="text-[11px] font-mono text-[#8d90a0] text-center border-t border-[#222938] pt-3 mt-4">
-                Categorias ativas no sistema: <strong className="text-white">6 principais</strong>
+                {topCategories.length > 0
+                  ? (<>Categorias ativas no sistema: <strong className="text-white">{topCategories.length} principais</strong></>) 
+                  : <span>Nenhuma categoria encontrada no período</span>
+                }
               </div>
             </div>
 
@@ -1016,6 +1179,17 @@ export const TIDetailedDashboardView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#1a202c]">
+                  {operatorsData.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center">
+                        <div className="flex flex-col items-center gap-3 text-[#8d90a0]">
+                          <Users className="w-10 h-10 opacity-30" />
+                          <p className="text-sm font-mono">Nenhum analista cadastrado no sistema</p>
+                          <p className="text-xs opacity-70">Acesse <strong className="text-[#45dfa4]">Configurações → Usuários</strong> para adicionar analistas</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                   {operatorsData.map((op) => (
                     <tr
                       key={op.id}

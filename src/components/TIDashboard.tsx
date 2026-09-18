@@ -28,6 +28,7 @@ import {
   RefreshCw,
   ExternalLink,
   ChevronRight,
+  ChevronDown,
   HelpCircle,
   Zap,
   TrendingUp,
@@ -198,11 +199,17 @@ export const TIDashboard: React.FC = () => {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
 
-  // Filters State
+  // Filters & Sidebar Sections State
   const [companyFilter, setCompanyFilter] = useState('Todas as empresas');
   const [departmentFilter, setDepartmentFilter] = useState('Todos os departamentos');
   const [periodFilter, setPeriodFilter] = useState('Últimos 30 dias');
   const [isTvMode, setIsTvMode] = useState(false);
+
+  // Collapsible Sidebar Category States
+  const [dashboardSubmenuOpen, setDashboardSubmenuOpen] = useState(true);
+  const [serviceDeskSubmenuOpen, setServiceDeskSubmenuOpen] = useState(true);
+  const [attendanceSubmenuOpen, setAttendanceSubmenuOpen] = useState(true);
+  const [adminSubmenuOpen, setAdminSubmenuOpen] = useState(true);
 
   // Filtered tickets logic
   const filteredTickets = tickets.filter((t) => {
@@ -382,284 +389,314 @@ export const TIDashboard: React.FC = () => {
             <div className="space-y-1">
               <button
                 id="menu-ti-dashboard-parent"
-                onClick={() => setCurrentScreen('ti_dashboard')}
-                className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm text-left transition-colors cursor-pointer text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]"
+                onClick={() => setDashboardSubmenuOpen(!dashboardSubmenuOpen)}
+                className="w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]"
               >
                 <div className="flex items-center gap-3">
                   <LayoutDashboard className="w-4 h-4 text-[#45dfa4]" />
                   <span className="font-semibold text-white">Dashboard</span>
                 </div>
-                <ChevronRight className="w-4 h-4 text-[#8d90a0] rotate-90" />
+                <ChevronDown className={`w-4 h-4 text-[#8d90a0] transition-transform duration-200 ${dashboardSubmenuOpen ? '' : '-rotate-90'}`} />
               </button>
 
               {/* Subcategories under Dashboard */}
-              <div className="pl-6 space-y-1 border-l-2 border-[#27272a] ml-4">
-                <button
-                  id="submenu-ti-dashboard-geral"
-                  onClick={() => setCurrentScreen('ti_dashboard')}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-left transition-colors cursor-pointer ${
-                    currentScreen === 'ti_dashboard'
-                      ? 'bg-[#45dfa4]/15 text-[#45dfa4] font-bold border-l-2 border-[#45dfa4] rounded-r-md'
-                      : 'text-[#8d90a0] hover:text-white hover:bg-[#1f2630]'
-                  }`}
-                >
-                  <span>• Visão Geral</span>
-                </button>
-
-                <button
-                  id="submenu-ti-dashboard-detailed"
-                  onClick={() => setCurrentScreen('ti_dashboard_detailed')}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-left transition-colors cursor-pointer ${
-                    currentScreen === 'ti_dashboard_detailed'
-                      ? 'bg-[#45dfa4]/15 text-[#45dfa4] font-bold border-l-2 border-[#45dfa4] rounded-r-md'
-                      : 'text-[#8d90a0] hover:text-white hover:bg-[#1f2630]'
-                  }`}
-                >
-                  <span>• Detalhamento Mensal & Operadores</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Service Desk Section */}
-            <div className="py-2">
-              <p className="px-4 text-[10px] font-mono text-[#8d90a0] uppercase tracking-wider mb-1.5">
-                Service Desk
-              </p>
-              <button
-                id="menu-ti-chamados"
-                onClick={() => setCurrentScreen('ti_tickets')}
-                className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                  currentScreen === 'ti_tickets'
-                    ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                    : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <TicketIcon className="w-4 h-4 text-[#45dfa4]" />
-                  <span>Chamados</span>
-                </div>
-                <span className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded-full ${
-                  pendingCount > 0
-                    ? 'bg-[#45dfa4]/20 text-[#45dfa4] border border-[#45dfa4]/30'
-                    : 'bg-[#2e353f] text-[#8d90a0]'
-                }`}>
-                  {pendingCount}
-                </span>
-              </button>
-
-              <button
-                id="menu-ti-fila"
-                onClick={() => setCurrentScreen('ti_queue')}
-                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                  currentScreen === 'ti_queue'
-                    ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                    : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
-                }`}
-              >
-                <Layers className="w-4 h-4 text-[#45dfa4]" />
-                <span>Kanban Pessoal</span>
-              </button>
-
-              <button
-                id="menu-ti-calendar"
-                onClick={() => setCurrentScreen('ti_calendar')}
-                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                  currentScreen === 'ti_calendar'
-                    ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                    : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
-                }`}
-              >
-                <Calendar className="w-4 h-4 text-[#45dfa4]" />
-                <span>Calendário</span>
-              </button>
-
-              <button
-                id="menu-ti-vault"
-                onClick={() => setCurrentScreen('ti_vault')}
-                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                  currentScreen === 'ti_vault'
-                    ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                    : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
-                }`}
-              >
-                <Key className="w-4 h-4 text-[#45dfa4]" />
-                <span>Cofre de Senhas</span>
-              </button>
-
-              <button
-                id="menu-ti-knowledge-base"
-                onClick={() => setCurrentScreen('knowledge_base')}
-                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                  currentScreen === 'knowledge_base'
-                    ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                    : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
-                }`}
-              >
-                <HelpCircle className="w-4 h-4 text-[#45dfa4]" />
-                <span>Base de Conhecimento</span>
-              </button>
-            </div>
-
-            {/* Atendimento Section (WhatsApp & Chatbot) */}
-            <div className="py-2">
-              <p className="px-4 text-[10px] font-mono text-[#8d90a0] uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                <span>Atendimento WhatsApp</span>
-                <span className="w-2 h-2 rounded-full bg-[#45dfa4] animate-pulse" />
-              </p>
-
-              <button
-                id="menu-attendance-chat"
-                onClick={() => setCurrentScreen('attendance_chat')}
-                className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                  currentScreen === 'attendance_chat'
-                    ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                    : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <MessageSquare className="w-4 h-4 text-[#45dfa4]" />
-                  <span>Chat em Tempo Real</span>
-                </div>
-                <span className="px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-[#45dfa4]/20 text-[#45dfa4] border border-[#45dfa4]/30">
-                  Ao Vivo
-                </span>
-              </button>
-
-              {/* Admin-only Attendance Configuration Submenus */}
-              {(userSession.role === 'ceo' || userSession.role === 'gestor' || userSession.role === 'admin' || userSession.permissions?.canAccessConfig) && (
-                <>
+              {dashboardSubmenuOpen && (
+                <div className="pl-6 space-y-1 border-l-2 border-[#27272a] ml-4">
                   <button
-                    id="menu-attendance-dashboard"
-                    onClick={() => setCurrentScreen('attendance_dashboard')}
-                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                      currentScreen === 'attendance_dashboard'
+                    id="submenu-ti-dashboard-geral"
+                    onClick={() => setCurrentScreen('ti_dashboard')}
+                    className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-left transition-colors cursor-pointer ${
+                      currentScreen === 'ti_dashboard'
+                        ? 'bg-[#45dfa4]/15 text-[#45dfa4] font-bold border-l-2 border-[#45dfa4] rounded-r-md'
+                        : 'text-[#8d90a0] hover:text-white hover:bg-[#1f2630]'
+                    }`}
+                  >
+                    <span>• Visão Geral</span>
+                  </button>
+
+                  <button
+                    id="submenu-ti-dashboard-detailed"
+                    onClick={() => setCurrentScreen('ti_dashboard_detailed')}
+                    className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-left transition-colors cursor-pointer ${
+                      currentScreen === 'ti_dashboard_detailed'
+                        ? 'bg-[#45dfa4]/15 text-[#45dfa4] font-bold border-l-2 border-[#45dfa4] rounded-r-md'
+                        : 'text-[#8d90a0] hover:text-white hover:bg-[#1f2630]'
+                    }`}
+                  >
+                    <span>• Detalhamento Mensal & Operadores</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Collapsible Service Desk Section */}
+            <div className="py-1">
+              <button
+                onClick={() => setServiceDeskSubmenuOpen(!serviceDeskSubmenuOpen)}
+                className="w-full px-4 py-1.5 flex items-center justify-between text-[10px] font-mono text-[#8d90a0] uppercase tracking-wider hover:text-white transition-colors cursor-pointer"
+              >
+                <span>Service Desk</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${serviceDeskSubmenuOpen ? '' : '-rotate-90'}`} />
+              </button>
+
+              {serviceDeskSubmenuOpen && (
+                <div className="space-y-0.5 mt-1">
+                  <button
+                    id="menu-ti-chamados"
+                    onClick={() => setCurrentScreen('ti_tickets')}
+                    className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                      currentScreen === 'ti_tickets'
                         ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
                         : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
                     }`}
                   >
-                    <TrendingUp className="w-4 h-4 text-[#45dfa4]" />
-                    <span>Dashboard Atendimento</span>
+                    <div className="flex items-center gap-3">
+                      <TicketIcon className="w-4 h-4 text-[#45dfa4]" />
+                      <span>Chamados</span>
+                    </div>
+                    <span className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded-full ${
+                      pendingCount > 0
+                        ? 'bg-[#45dfa4]/20 text-[#45dfa4] border border-[#45dfa4]/30'
+                        : 'bg-[#2e353f] text-[#8d90a0]'
+                    }`}>
+                      {pendingCount}
+                    </span>
                   </button>
 
                   <button
-                    id="menu-attendance-chatbot"
-                    onClick={() => setCurrentScreen('attendance_chatbot')}
+                    id="menu-ti-fila"
+                    onClick={() => setCurrentScreen('ti_queue')}
                     className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                      currentScreen === 'attendance_chatbot'
-                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
-                    }`}
-                  >
-                    <Bot className="w-4 h-4 text-[#45dfa4]" />
-                    <span>Chatbot Automático</span>
-                  </button>
-
-                  <button
-                    id="menu-attendance-queue"
-                    onClick={() => setCurrentScreen('attendance_queue')}
-                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                      currentScreen === 'attendance_queue' || currentScreen === 'attendance_queues_config'
+                      currentScreen === 'ti_queue'
                         ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
                         : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
                     }`}
                   >
                     <Layers className="w-4 h-4 text-[#45dfa4]" />
-                    <span>Filas de Atendimento</span>
+                    <span>Kanban Pessoal</span>
                   </button>
 
                   <button
-                    id="menu-attendance-whatsapp"
-                    onClick={() => setCurrentScreen('attendance_whatsapp')}
+                    id="menu-ti-calendar"
+                    onClick={() => setCurrentScreen('ti_calendar')}
                     className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                      currentScreen === 'attendance_whatsapp'
+                      currentScreen === 'ti_calendar'
                         ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
                         : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
                     }`}
                   >
-                    <Smartphone className="w-4 h-4 text-[#45dfa4]" />
-                    <span>Conexão WhatsApp</span>
+                    <Calendar className="w-4 h-4 text-[#45dfa4]" />
+                    <span>Calendário</span>
                   </button>
 
                   <button
-                    id="menu-attendance-contacts"
-                    onClick={() => setCurrentScreen('attendance_contacts')}
+                    id="menu-ti-vault"
+                    onClick={() => setCurrentScreen('ti_vault')}
                     className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                      currentScreen === 'attendance_contacts'
+                      currentScreen === 'ti_vault'
                         ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
                         : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
                     }`}
                   >
-                    <Users className="w-4 h-4 text-[#45dfa4]" />
-                    <span>Contatos & CRM</span>
+                    <Key className="w-4 h-4 text-[#45dfa4]" />
+                    <span>Cofre de Senhas</span>
                   </button>
 
                   <button
-                    id="menu-attendance-settings"
-                    onClick={() => setCurrentScreen('attendance_settings')}
+                    id="menu-ti-knowledge-base"
+                    onClick={() => setCurrentScreen('knowledge_base')}
                     className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                      currentScreen === 'attendance_settings'
+                      currentScreen === 'knowledge_base'
                         ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
                         : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
                     }`}
                   >
-                    <Clock className="w-4 h-4 text-[#45dfa4]" />
-                    <span>Horários & Ausência</span>
+                    <HelpCircle className="w-4 h-4 text-[#45dfa4]" />
+                    <span>Base de Conhecimento</span>
                   </button>
-                </>
+                </div>
               )}
             </div>
 
-            {/* Administração Section */}
-            <div className="py-2">
-              <p className="px-4 text-[10px] font-mono text-[#8d90a0] uppercase tracking-wider mb-1.5">
-                Administração
-              </p>
-              {(userSession.role === 'ceo' || userSession.role === 'gestor' || userSession.role === 'admin' || userSession.permissions?.canAccessConfig) && (
-                <>
-                  <button
-                    id="menu-ti-config"
-                    onClick={() => setCurrentScreen('ti_config')}
-                    className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                      currentScreen === 'ti_config'
-                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Settings className="w-4 h-4 text-[#45dfa4]" />
-                      <span>Configurações</span>
-                    </div>
-                  </button>
-
-                  <button
-                    id="menu-ti-audit-logs"
-                    onClick={() => setCurrentScreen('ti_audit_logs')}
-                    className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                      currentScreen === 'ti_audit_logs'
-                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Activity className="w-4 h-4 text-[#45dfa4]" />
-                      <span>Logs de Auditoria</span>
-                    </div>
-                  </button>
-                </>
-              )}
-
+            {/* Collapsible Atendimento Section (WhatsApp & Chatbot) */}
+            <div className="py-1">
               <button
-                id="menu-ti-database"
-                onClick={() => setCurrentScreen('ti_database')}
-                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                  currentScreen === 'ti_database'
-                    ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                    : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
-                }`}
+                onClick={() => setAttendanceSubmenuOpen(!attendanceSubmenuOpen)}
+                className="w-full px-4 py-1.5 flex items-center justify-between text-[10px] font-mono text-[#8d90a0] uppercase tracking-wider hover:text-white transition-colors cursor-pointer"
               >
-                <Database className="w-4 h-4 text-[#45dfa4]" />
-                <span>Base de Dados</span>
+                <div className="flex items-center gap-2">
+                  <span>Atendimento WhatsApp</span>
+                  <span className="w-2 h-2 rounded-full bg-[#45dfa4] animate-pulse" />
+                </div>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${attendanceSubmenuOpen ? '' : '-rotate-90'}`} />
               </button>
+
+              {attendanceSubmenuOpen && (
+                <div className="space-y-0.5 mt-1">
+                  <button
+                    id="menu-attendance-chat"
+                    onClick={() => setCurrentScreen('attendance_chat')}
+                    className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                      currentScreen === 'attendance_chat'
+                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <MessageSquare className="w-4 h-4 text-[#45dfa4]" />
+                      <span>Chat em Tempo Real</span>
+                    </div>
+                    <span className="px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-[#45dfa4]/20 text-[#45dfa4] border border-[#45dfa4]/30">
+                      Ao Vivo
+                    </span>
+                  </button>
+
+                  {/* Admin-only Attendance Configuration Submenus */}
+                  {(userSession.role === 'ceo' || userSession.role === 'gestor' || userSession.role === 'admin' || userSession.permissions?.canAccessConfig) && (
+                    <>
+                      <button
+                        id="menu-attendance-dashboard"
+                        onClick={() => setCurrentScreen('attendance_dashboard')}
+                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                          currentScreen === 'attendance_dashboard'
+                            ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                            : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                        }`}
+                      >
+                        <TrendingUp className="w-4 h-4 text-[#45dfa4]" />
+                        <span>Dashboard Atendimento</span>
+                      </button>
+
+                      <button
+                        id="menu-attendance-chatbot"
+                        onClick={() => setCurrentScreen('attendance_chatbot')}
+                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                          currentScreen === 'attendance_chatbot'
+                            ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                            : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                        }`}
+                      >
+                        <Bot className="w-4 h-4 text-[#45dfa4]" />
+                        <span>Chatbot Automático</span>
+                      </button>
+
+                      <button
+                        id="menu-attendance-queue"
+                        onClick={() => setCurrentScreen('attendance_queue')}
+                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                          currentScreen === 'attendance_queue' || currentScreen === 'attendance_queues_config'
+                            ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                            : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                        }`}
+                      >
+                        <Layers className="w-4 h-4 text-[#45dfa4]" />
+                        <span>Filas de Atendimento</span>
+                      </button>
+
+                      <button
+                        id="menu-attendance-whatsapp"
+                        onClick={() => setCurrentScreen('attendance_whatsapp')}
+                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                          currentScreen === 'attendance_whatsapp'
+                            ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                            : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                        }`}
+                      >
+                        <Smartphone className="w-4 h-4 text-[#45dfa4]" />
+                        <span>Conexão WhatsApp</span>
+                      </button>
+
+                      <button
+                        id="menu-attendance-contacts"
+                        onClick={() => setCurrentScreen('attendance_contacts')}
+                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                          currentScreen === 'attendance_contacts'
+                            ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                            : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                        }`}
+                      >
+                        <Users className="w-4 h-4 text-[#45dfa4]" />
+                        <span>Contatos & CRM</span>
+                      </button>
+
+                      <button
+                        id="menu-attendance-settings"
+                        onClick={() => setCurrentScreen('attendance_settings')}
+                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                          currentScreen === 'attendance_settings'
+                            ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                            : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                        }`}
+                      >
+                        <Clock className="w-4 h-4 text-[#45dfa4]" />
+                        <span>Horários & Ausência</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Collapsible Administração Section */}
+            <div className="py-1">
+              <button
+                onClick={() => setAdminSubmenuOpen(!adminSubmenuOpen)}
+                className="w-full px-4 py-1.5 flex items-center justify-between text-[10px] font-mono text-[#8d90a0] uppercase tracking-wider hover:text-white transition-colors cursor-pointer"
+              >
+                <span>Administração</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${adminSubmenuOpen ? '' : '-rotate-90'}`} />
+              </button>
+
+              {adminSubmenuOpen && (
+                <div className="space-y-0.5 mt-1">
+                  {(userSession.role === 'ceo' || userSession.role === 'gestor' || userSession.role === 'admin' || userSession.permissions?.canAccessConfig) && (
+                    <>
+                      <button
+                        id="menu-ti-config"
+                        onClick={() => setCurrentScreen('ti_config')}
+                        className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                          currentScreen === 'ti_config'
+                            ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                            : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Settings className="w-4 h-4 text-[#45dfa4]" />
+                          <span>Configurações</span>
+                        </div>
+                      </button>
+
+                      <button
+                        id="menu-ti-audit-logs"
+                        onClick={() => setCurrentScreen('ti_audit_logs')}
+                        className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                          currentScreen === 'ti_audit_logs'
+                            ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                            : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Activity className="w-4 h-4 text-[#45dfa4]" />
+                          <span>Logs de Auditoria</span>
+                        </div>
+                      </button>
+                    </>
+                  )}
+
+                  <button
+                    id="menu-ti-database"
+                    onClick={() => setCurrentScreen('ti_database')}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                      currentScreen === 'ti_database'
+                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                    }`}
+                  >
+                    <Database className="w-4 h-4 text-[#45dfa4]" />
+                    <span>Base de Dados</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

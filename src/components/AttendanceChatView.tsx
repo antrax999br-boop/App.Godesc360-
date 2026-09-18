@@ -30,7 +30,8 @@ import {
   ChevronRight,
   Sparkles,
   ArrowLeft,
-  RefreshCw
+  RefreshCw,
+  LogOut
 } from 'lucide-react';
 
 export const AttendanceChatView: React.FC = () => {
@@ -40,6 +41,7 @@ export const AttendanceChatView: React.FC = () => {
     sendAttendanceMessage,
     assignConversation,
     transferConversation,
+    returnConversationToQueue,
     closeConversation,
     toggleBotState,
     addTicket,
@@ -50,8 +52,20 @@ export const AttendanceChatView: React.FC = () => {
     setCurrentScreen
   } = useApp();
 
+  // Lê a conversa pré-selecionada via localStorage (definido ao aceitar da fila)
+  const preSelectedId = (() => {
+    try {
+      const id = localStorage.getItem('attendance_selected_conv');
+      if (id) {
+        localStorage.removeItem('attendance_selected_conv');
+        return id;
+      }
+    } catch { /* ignore */ }
+    return '';
+  })();
+
   const [selectedConvId, setSelectedConvId] = useState<string>(
-    attendanceConversations[0]?.id || ''
+    preSelectedId || attendanceConversations[0]?.id || ''
   );
   const [filterTab, setFilterTab] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -135,6 +149,23 @@ export const AttendanceChatView: React.FC = () => {
     const welcomeMsg = rootNode?.message || `Olá! Tudo bem? 👋\n\nBem-vindo à Central de Atendimento GoDesc 360.\n\nPara direcionarmos seu atendimento à equipe correta, por favor escolha uma opção digitando o número correspondente:\n\n1 - 💼 Comercial\n2 - 🛠️ Suporte Técnico\n3 - 💳 Financeiro\n4 - 🎫 Abrir Ticket Chamado\n5 - 👤 Falar com Atendente\n\n_(A qualquer momento, digite *#* ou *menu* para retornar ao início)_`;
 
     sendAttendanceMessage(activeConv.id, welcomeMsg, 'BOT');
+  };
+
+  const handleReturnToQueue = () => {
+    if (!activeConv) return;
+    sendAttendanceMessage(
+      activeConv.id,
+      'Atendimento devolvido para a fila de espera. Aguarde, um analista irá atendê-lo em breve.',
+      'AGENT'
+    );
+    returnConversationToQueue(activeConv.id);
+    // Seleciona próxima conversa ativa automaticamente
+    const nextActive = attendanceConversations.find(
+      c => c.id !== activeConv.id && c.status !== 'CLOSED' && c.status !== 'WAITING'
+    );
+    setSelectedConvId(nextActive?.id || '');
+    // Volta para a tela de fila
+    setCurrentScreen('attendance_queue');
   };
 
   const handleClose = () => {
@@ -465,6 +496,13 @@ export const AttendanceChatView: React.FC = () => {
                       >
                         <Bot className="w-4 h-4" />
                         Devolver p/ BOT
+                      </button>
+                      <button
+                        onClick={handleReturnToQueue}
+                        className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Devolver à Fila
                       </button>
                       <button
                         onClick={() => setShowTransferModal(true)}
