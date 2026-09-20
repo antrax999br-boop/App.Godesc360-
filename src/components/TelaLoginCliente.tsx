@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 
 import { APP_LOGO } from '../data/mockData';
-import { AppLogo } from './AppLogo';
+import { AppLogo } from './LogoSistema';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield, Sparkles, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 

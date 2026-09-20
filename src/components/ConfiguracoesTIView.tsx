@@ -37,7 +37,7 @@ import {
   Palette
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ThemeToggle } from './ThemeToggle';
+import { ThemeToggle } from './AlternadorTema';
 
 const AVAILABLE_MODULES: { id: ScreenView; label: string }[] = [
   { id: 'ti_dashboard', label: 'Painel TI Dashboard' },

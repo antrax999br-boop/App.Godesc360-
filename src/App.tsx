@@ -1,39 +1,39 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
-import { PortalLanding } from './components/PortalLanding';
-import { ClientHome } from './components/ClientHome';
-import { LoginScreen } from './components/LoginScreen';
-import { NewTicketForm } from './components/NewTicketForm';
-import { TIDashboard } from './components/TIDashboard';
-import { ClientMyTickets } from './components/ClientMyTickets';
-import { KnowledgeBase } from './components/KnowledgeBase';
-import { SystemStatusView } from './components/SystemStatusView';
+import { PortalLanding } from './components/PortalEntradaView';
+import { ClientHome } from './components/ClienteInicioView';
+import { LoginScreen } from './components/TelaLoginCliente';
+import { NewTicketForm } from './components/FormularioNovoChamado';
+import { TIDashboard } from './components/PainelTI';
+import { ClientMyTickets } from './components/ClienteMeusChamadosView';
+import { KnowledgeBase } from './components/BaseConhecimentoView';
+import { SystemStatusView } from './components/StatusSistemaView';
 import {
   TITicketsView,
   TIQueueView,
   TIDomainsView,
   TIClientsView,
   TIMonitoringView
-} from './components/TIViews';
-import { TicketDetailModal } from './components/TicketDetailModal';
-import { CalendarEventsView } from './components/CalendarEventsView';
-import { TIConfigView } from './components/TIConfigView';
-import { TILoginScreen } from './components/TILoginScreen';
-import { TIAuditLogsView } from './components/TIAuditLogsView';
-import { TINewTicketView } from './components/TINewTicketView';
-import { TIVaultView } from './components/TIVaultView';
-import { ProtectedTIRoute } from './components/ProtectedTIRoute';
+} from './components/VisualizacoesTI';
+import { TicketDetailModal } from './components/ModalDetalheChamado';
+import { CalendarEventsView } from './components/EventosCalendarioView';
+import { TIConfigView } from './components/ConfiguracoesTIView';
+import { TILoginScreen } from './components/TelaLoginTI';
+import { TIAuditLogsView } from './components/LogsAuditoriaTIView';
+import { TINewTicketView } from './components/NovoChamadoTIView';
+import { TIVaultView } from './components/CofreSenhasTIView';
+import { ProtectedTIRoute } from './components/RotaProtegidaTI';
 import { AnimatePresence, motion } from 'motion/react';
 
-import { AttendanceWhatsAppView } from './components/AttendanceWhatsAppView';
-import { AttendanceChatView } from './components/AttendanceChatView';
-import { AttendanceChatbotView } from './components/AttendanceChatbotView';
-import { AttendanceQueuesView } from './components/AttendanceQueuesView';
-import { AttendanceQueueDashboardView } from './components/AttendanceQueueDashboardView';
-import { AttendanceSettingsView } from './components/AttendanceSettingsView';
-import { AttendanceContactsView } from './components/AttendanceContactsView';
-import { AttendanceDashboardView } from './components/AttendanceDashboardView';
-import { TIDetailedDashboardView } from './components/TIDetailedDashboardView';
+import { AttendanceWhatsAppView } from './components/AtendimentoWhatsAppView';
+import { AttendanceChatView } from './components/AtendimentoChatView';
+import { AttendanceChatbotView } from './components/AtendimentoChatbotView';
+import { AttendanceQueuesView } from './components/AtendimentoFilasView';
+import { AttendanceQueueDashboardView } from './components/AtendimentoFilaDashboardView';
+import { AttendanceSettingsView } from './components/AtendimentoConfiguracoesView';
+import { AttendanceContactsView } from './components/AtendimentoContatosView';
+import { AttendanceDashboardView } from './components/AtendimentoDashboardView';
+import { TIDetailedDashboardView } from './components/PainelDetalhadoTIView';
 
 const ScreenRenderer: React.FC = () => {
   const { currentScreen, theme } = useApp();

@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { INITIAL_KB_ARTICLES, APP_LOGO } from '../data/mockData';
-import { AppLogo } from './AppLogo';
+import { AppLogo } from './LogoSistema';
 
 export const ClientHome: React.FC = () => {
   const {

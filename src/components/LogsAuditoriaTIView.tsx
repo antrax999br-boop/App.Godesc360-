@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { ArrowLeft, ShieldCheck, Search, Filter, RefreshCw, FileText, Lock, CheckCircle2, AlertTriangle, XCircle, LogOut } from 'lucide-react';
 import { TISecurityEventType } from '../types';
-import { ThemeToggle } from './ThemeToggle';
+import { ThemeToggle } from './AlternadorTema';
 
 export const TIAuditLogsView: React.FC = () => {
   const { auditLogs, setCurrentScreen, userSession } = useApp();

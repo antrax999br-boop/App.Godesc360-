@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { CalendarEvent } from '../types';
-import { ThemeToggle } from './ThemeToggle';
+import { ThemeToggle } from './AlternadorTema';
 import {
   Calendar as CalendarIcon,
   Plus,

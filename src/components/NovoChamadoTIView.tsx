@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { processFileAttachment } from '../utils/fileUtils';
-import { ThemeToggle } from './ThemeToggle';
+import { ThemeToggle } from './AlternadorTema';
 import {
   User,
   FolderTree,

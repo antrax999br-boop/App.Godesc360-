@@ -16,7 +16,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import { APP_LOGO } from '../data/mockData';
-import { AppLogo } from './AppLogo';
+import { AppLogo } from './LogoSistema';
 import { TicketPriority, TicketAttachment } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 

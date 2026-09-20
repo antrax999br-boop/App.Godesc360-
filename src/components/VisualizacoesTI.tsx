@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { INITIAL_CLIENTS, INITIAL_DOMAINS } from '../data/mockData';
 import { Ticket, TicketPriority, TicketStatus } from '../types';
 import { getOperatorsForQueue } from '../utils/queueUtils';
-import { ThemeToggle } from './ThemeToggle';
+import { ThemeToggle } from './AlternadorTema';
 import {
   Search,
   Plus,

@@ -64,3 +64,5 @@ export const AppLogo: React.FC<AppLogoProps> = ({
     </div>
   );
 };
+
+export const LogoSistema = AppLogo;

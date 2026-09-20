@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { APP_LOGO } from '../data/mockData';
-import { AppLogo } from './AppLogo';
-import { ThemeToggle } from './ThemeToggle';
+import { AppLogo } from './LogoSistema';
+import { ThemeToggle } from './AlternadorTema';
 import {
   LayoutDashboard,
   Ticket as TicketIcon,

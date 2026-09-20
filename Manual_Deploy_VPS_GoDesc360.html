@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>GoDesc 360 - Manual Completo de Deploy em VPS</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+    @page {
+      size: A4;
+      margin: 16mm 14mm 16mm 14mm;
+      @bottom-right {
+        content: "Página " counter(page);
+        font-family: 'Inter', sans-serif;
+        font-size: 8pt;
+        color: #64748b;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #0f172a;
+      background: #ffffff;
+      line-height: 1.55;
+      font-size: 9.5pt;
+      margin: 0;
+      padding: 0;
+    }
+
+    .page-break {
+      page-break-after: always;
+      break-after: page;
+    }
+
+    .avoid-break {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    /* CAPA */
+    .cover-page {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 30px 20px 40px 20px;
+      page-break-after: always;
+      break-after: page;
+    }
+
+    .cover-badge {
+      display: inline-block;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #047857;
+      font-size: 10pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 6px 16px;
+      border-radius: 9999px;
+      width: fit-content;
+      margin-bottom: 24px;
+    }
+
+    .cover-title {
+      font-size: 28pt;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.15;
+      margin: 0 0 16px 0;
+      letter-spacing: -0.8px;
+    }
+
+    .cover-title span {
+      color: #059669;
+    }
+
+    .cover-subtitle {
+      font-size: 13pt;
+      color: #475569;
+      line-height: 1.5;
+      max-width: 600px;
+      margin: 0 0 30px 0;
+    }
+
+    .cover-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: auto;
+    }
+
+    .meta-item strong {
+      display: block;
+      font-size: 8pt;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+
+    .meta-item span {
+      font-size: 10pt;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    /* HEADINGS */
+    h1 {
+      font-size: 18pt;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 24px 0 12px 0;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #10b981;
+      letter-spacing: -0.4px;
+    }
+
+    h2 {
+      font-size: 13pt;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 20px 0 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h2::before {
+      content: "";
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: #10b981;
+      border-radius: 2px;
+    }
+
+    h3 {
+      font-size: 11pt;
+      font-weight: 600;
+      color: #334155;
+      margin: 14px 0 6px 0;
+    }
+
+    p {
+      margin: 0 0 10px 0;
+      color: #334155;
+    }
+
+    /* CARDS & ALERTS */
+    .alert-box {
+      border-left: 4px solid #10b981;
+      background: #f0fdf4;
+      padding: 12px 16px;
+      border-radius: 0 8px 8px 0;
+      margin: 12px 0;
+      font-size: 9pt;
+      color: #166534;
+    }
+
+    .alert-box strong {
+      display: block;
+      color: #14532d;
+      font-size: 9.5pt;
+      margin-bottom: 2px;
+    }
+
+    .alert-warning {
+      border-left-color: #f59e0b;
+      background: #fffbeb;
+      color: #92400e;
+    }
+
+    .alert-warning strong {
+      color: #78350f;
+    }
+
+    .alert-danger {
+      border-left-color: #ef4444;
+      background: #fef2f2;
+      color: #991b1b;
+    }
+
+    .alert-danger strong {
+      color: #7f1d1d;
+    }
+
+    /* CODE BLOCKS */
+    pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8.5pt;
+      padding: 12px 14px;
+      border-radius: 8px;
+      overflow-x: hidden;
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin: 8px 0 14px 0;
+      border: 1px solid #1e293b;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-size: 8.5pt;
+      border: 1px solid #e2e8f0;
+    }
+
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+      border: none;
+    }
+
+    /* TABLES */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 18px 0;
+      font-size: 8.5pt;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    th, td {
+      padding: 8px 10px;
+      border: 1px solid #e2e8f0;
+      text-align: left;
+    }
+
+    th {
+      background: #f8fafc;
+      color: #334155;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 7.5pt;
+      letter-spacing: 0.5px;
+    }
+
+    tr:nth-child(even) td {
+      background: #fafbfc;
+    }
+
+    /* STEPS LIST */
+    .step-list {
+      counter-reset: step-counter;
+      list-style: none;
+      padding: 0;
+      margin: 12px 0;
+    }
+
+    .step-item {
+      position: relative;
+      padding-left: 36px;
+      margin-bottom: 14px;
+      counter-increment: step-counter;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .step-item::before {
+      content: counter(step-counter);
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 24px;
+      height: 24px;
+      background: #10b981;
+      color: white;
+      font-weight: 700;
+      font-size: 9pt;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step-title {
+      font-weight: 700;
+      font-size: 10pt;
+      color: #0f172a;
+      margin-bottom: 3px;
+    }
+
+    /* ARCHITECTURE DIAGRAM */
+    .arch-diagram {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 16px;
+      margin: 14px 0;
+    }
+
+    .arch-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      text-align: center;
+    }
+
+    .arch-card {
+      background: white;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .arch-card.highlight {
+      border-color: #10b981;
+      background: #f0fdf4;
+    }
+
+    .arch-card h4 {
+      margin: 0 0 4px 0;
+      font-size: 9pt;
+      color: #0f172a;
+    }
+
+    .arch-card p {
+      margin: 0;
+      font-size: 7.5pt;
+      color: #64748b;
+    }
+
+    /* BADGES */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 7.5pt;
+      font-weight: 600;
+      border-radius: 4px;
+      background: #e2e8f0;
+      color: #334155;
+    }
+
+    .badge-green {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #86efac;
+    }
+
+    .badge-blue {
+      background: #dbeafe;
+      color: #1d4ed8;
+      border: 1px solid #93c5fd;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- CAPA -->
+  <div class="cover-page">
+    <div>
+      <div class="cover-badge">Manual Técnico de Implantação</div>
+      <h1 class="cover-title">GoDesc 360<br><span>Guia Oficial de Deploy em VPS</span></h1>
+      <p class="cover-subtitle">
+        Manual completo de instalação, banco de dados, microserviço Baileys WhatsApp Multi-Device, disparos de e-mails corporativos SMTP e configuração de produção em VPS Linux.
+      </p>
+    </div>
+
+    <div class="arch-diagram">
+      <div style="font-weight:700; font-size:9.5pt; margin-bottom:10px; color:#0f172a;">Arquitetura Geral de Produção</div>
+      <div class="arch-grid">
+        <div class="arch-card">
+          <h4>Frontend Web</h4>
+          <p>React 19 + Vite (Porta 80/443 via Nginx SPA)</p>
+        </div>
+        <div class="arch-card highlight">
+          <h4>Backend API / WhatsApp</h4>
+          <p>Node.js + Baileys + SMTP (Porta 10000 gerenciada pelo PM2)</p>
+        </div>
+        <div class="arch-card">
+          <h4>Banco de Dados</h4>
+          <p>PostgreSQL / Supabase Realtime (Sincronização instantânea)</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="cover-meta-grid">
+      <div class="meta-item">
+        <strong>Sistema</strong>
+        <span>GoDesc 360 Service Desk</span>
+      </div>
+      <div class="meta-item">
+        <strong>Versão do Documento</strong>
+        <span>1.0 - Produção Definitiva</span>
+      </div>
+      <div class="meta-item">
+        <strong>Sistema Operacional Recomendado</strong>
+        <span>Ubuntu 22.04 / 24.04 LTS (ou Debian 12)</span>
+      </div>
+      <div class="meta-item">
+        <strong>Status de Homologação</strong>
+        <span>100% Testado & Validado</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEÇÃO 1 -->
+  <h1>1. Visão Geral da Arquitetura</h1>
+  <p>
+    O <strong>GoDesc 360</strong> é composto por 3 camadas essenciais que se comunicam de forma integrada e em alta velocidade:
+  </p>
+  
+  <table>
+    <thead>
+      <tr>
+        <th>Camada</th>
+        <th>Tecnologia</th>
+        <th>Função no Sistema</th>
+        <th>Porta Padrão</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Frontend Web</strong></td>
+        <td>React 19, TypeScript, Tailwind v4, Vite</td>
+        <td>Interface de usuário para Clientes e Operadores de T.I.</td>
+        <td><code>80 / 443 (Nginx)</code></td>
+      </tr>
+      <tr>
+        <td><strong>Microservidor Backend</strong></td>
+        <td>Node.js, Express, Baileys, Nodemailer</td>
+        <td>Conexão WhatsApp Multi-Device (QR), Webhooks, Chatbot e envio de E-mails corporativos SMTP</td>
+        <td><code>10000 (PM2)</code></td>
+      </tr>
+      <tr>
+        <td><strong>Banco de Dados</strong></td>
+        <td>Supabase / PostgreSQL Realtime</td>
+        <td>Persistência de tickets, usuários, eventos do calendário, cofre de senhas, notas e sincronização em tempo real</td>
+        <td><code>5432 / HTTPS Cloud</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="alert-box">
+    <strong>Por que hospedar em VPS?</strong>
+    Diferente de hospedagens serverless (Vercel/Render) que bloqueiam conexões SMTP nas portas 587/465 e encerram a conexão de socket do WhatsApp Baileys após minutos de inatividade, uma VPS mantém o microserviço rodando 24 horas por dia, com IP fixo, sem bloqueios de envio de e-mail e preservando a sessão do WhatsApp conectada de forma definitiva.
+  </div>
+
+  <!-- SEÇÃO 2 -->
+  <h1>2. Requisitos da VPS e Liberação de Portas</h1>
+  
+  <h3>Especificações Mínimas da Máquina Virtual</h3>
+  <ul>
+    <li><strong>CPU:</strong> 2 vCPUs (recomendado para lidar com criptografia Baileys e compilações rápidas).</li>
+    <li><strong>Memória RAM:</strong> 2 GB no mínimo (4 GB recomendado se rodar o banco no mesmo servidor).</li>
+    <li><strong>Armazenamento:</strong> 20 GB SSD ou NVMe.</li>
+    <li><strong>Sistema Operacional:</strong> Ubuntu 22.04 LTS ou Ubuntu 24.04 LTS (64-bit).</li>
+  </ul>
+
+  <h3>Tabela de Portas do Firewall (UFW)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Porta</th>
+        <th>Protocolo</th>
+        <th>Finalidade</th>
+        <th>Direção</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>22</code></td>
+        <td>TCP</td>
+        <td>Acesso administrativo remoto via SSH</td>
+        <td>Entrada</td>
+      </tr>
+      <tr>
+        <td><code>80</code></td>
+        <td>TCP</td>
+        <td>Acesso HTTP para visitantes e validação SSL Certbot</td>
+        <td>Entrada</td>
+      </tr>
+      <tr>
+        <td><code>443</code></td>
+        <td>TCP</td>
+        <td>Acesso seguro HTTPS para a aplicação completa</td>
+        <td>Entrada</td>
+      </tr>
+      <tr>
+        <td><code>10000</code></td>
+        <td>TCP</td>
+        <td>API do Microservidor WhatsApp & E-mail (Interno ou Nginx Proxy)</td>
+        <td>Entrada / Loopback</td>
+      </tr>
+      <tr>
+        <td><code>587 / 465</code></td>
+        <td>TCP</td>
+        <td>Conexão externa aos servidores SMTP de disparo de e-mails</td>
+        <td>Saída</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SEÇÃO 3 -->
+  <div class="page-break"></div>
+  <h1>3. Passo a Passo: Preparação do Servidor VPS</h1>
+  <p>Conecte-se à sua VPS via terminal SSH e execute os comandos em ordem:</p>
+
+  <ul class="step-list">
+    <li class="step-item">
+      <div class="step-title">Atualizar o Sistema Operacional</div>
+      <p>Garante que todos os pacotes e patches de segurança estejam atualizados:</p>
+      <pre><code>sudo apt update && sudo apt upgrade -y
+sudo apt install -y curl wget git build-essential ufw</code></pre>
+    </li>
+
+    <li class="step-item">
+      <div class="step-title">Configurar o Firewall Básico (UFW)</div>
+      <p>Libere o SSH e as portas web antes de ativar o firewall para não perder o acesso:</p>
+      <pre><code>sudo ufw allow 22/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw allow 10000/tcp
+sudo ufw enable</code></pre>
+    </li>
+
+    <li class="step-item">
+      <div class="step-title">Instalar o Node.js 20 LTS e PM2</div>
+      <p>Instale a versão LTS oficial do Node.js através do repositório NodeSource:</p>
+      <pre><code>curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+sudo npm install -g pm2</code></pre>
+      <p>Verifique as versões instaladas:</p>
+      <pre><code>node -v    # Deve retornar v20.x.x
+npm -v     # Deve retornar v10.x.x
+pm2 -v     # Deve exibir a versão do PM2</code></pre>
+    </li>
+
+    <li class="step-item">
+      <div class="step-title">Instalar e Iniciar o Servidor Nginx</div>
+      <p>O Nginx será responsável por servir os arquivos do site e direcionar as rotas da API:</p>
+      <pre><code>sudo apt install -y nginx certbot python3-certbot-nginx
+sudo systemctl enable nginx
+sudo systemctl start nginx</code></pre>
+    </li>
+  </ul>
+
+  <!-- SEÇÃO 4 -->
+  <h1>4. Banco de Dados: Subindo Tabelas e Supabase Realtime</h1>
+  <p>
+    O sistema GoDesc 360 utiliza PostgreSQL com recursos de Tempo Real (Realtime). A forma mais simples, robusta e escalável é utilizar uma instância Supabase (plano gratuito ou self-hosted).
+  </p>
+
+  <div class="alert-box">
+    <strong>Arquivo com a Estrutura Completa de Tabelas</strong>
+    Criamos o arquivo <code>database_schema_completo.sql</code> na raiz do projeto. Ele contém todos os comandos necessários para criar as 9 tabelas do sistema e habilitar a replicação em tempo real!
+  </div>
+
+  <h3>Passo a Passo no Painel do Supabase:</h3>
+  <ol>
+    <li>Acesse <a href="https://supabase.com">supabase.com</a> e crie um novo projeto (ou use seu existente).</li>
+    <li>No menu lateral esquerdo, clique no ícone <strong>SQL Editor</strong>.</li>
+    <li>Clique em <strong>New query</strong>.</li>
+    <li>Abra o arquivo <code>database_schema_completo.sql</code>, copie todo o seu conteúdo e cole no editor.</li>
+    <li>Clique no botão verde <strong>RUN</strong> no canto inferior direito.</li>
+  </ol>
+
+  <h3>Tabelas Criadas pelo Script:</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Tabela</th>
+        <th>Conteúdo e Finalidade</th>
+        <th>Realtime Ativo</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>tickets</code></td>
+        <td>Todos os chamados, mensagens internas, anexos, histórico e status</td>
+        <td><span class="badge badge-green">Sim</span></td>
+      </tr>
+      <tr>
+        <td><code>notifications</code></td>
+        <td>Sininho de notificações instantâneas de chamados para a equipe</td>
+        <td><span class="badge badge-green">Sim</span></td>
+      </tr>
+      <tr>
+        <td><code>managed_users</code></td>
+        <td>Usuários cadastrados, senhas com hash, cargos (CEO, Gestor, N1, N2, N3) e permissões</td>
+        <td><span class="badge badge-green">Sim</span></td>
+      </tr>
+      <tr>
+        <td><code>calendar_events</code></td>
+        <td>Eventos e lembretes da agenda de T.I. com alertas</td>
+        <td><span class="badge badge-green">Sim</span></td>
+      </tr>
+      <tr>
+        <td><code>vault_credentials</code></td>
+        <td>Cofre de senhas encriptadas de servidores, roteadores e sistemas</td>
+        <td><span class="badge badge-green">Sim</span></td>
+      </tr>
+      <tr>
+        <td><code>db_folders / db_notes</code></td>
+        <td>Pastas e notas técnicas da base de dados e documentação</td>
+        <td><span class="badge badge-green">Sim</span></td>
+      </tr>
+      <tr>
+        <td><code>ticket_categories</code></td>
+        <td>Categorias e subcategorias personalizadas de atendimento</td>
+        <td><span class="badge badge-green">Sim</span></td>
+      </tr>
+      <tr>
+        <td><code>companies</code></td>
+        <td>Empresas clientes cadastradas para abertura de chamados</td>
+        <td><span class="badge badge-green">Sim</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SEÇÃO 5 -->
+  <div class="page-break"></div>
+  <h1>5. Backend: Configuração do Microserviço (WhatsApp & E-mails)</h1>
+  <p>
+    O microserviço Node.js fica na pasta <code>/server</code>. Ele opera em background gerenciado pelo PM2.
+  </p>
+
+  <ul class="step-list">
+    <li class="step-item">
+      <div class="step-title">Clonar o Repositório na VPS</div>
+      <p>Clone o projeto na pasta padrão <code>/var/www</code>:</p>
+      <pre><code>cd /var/www
+sudo git clone https://github.com/SEU_USUARIO/godesc-service-desk.git
+sudo chown -R $USER:$USER /var/www/godesc-service-desk
+cd /var/www/godesc-service-desk</code></pre>
+    </li>
+
+    <li class="step-item">
+      <div class="step-title">Instalar Dependências do Microservidor</div>
+      <pre><code>cd /var/www/godesc-service-desk/server
+npm install</code></pre>
+    </li>
+
+    <li class="step-item">
+      <div class="step-title">Configurar a Sessão do WhatsApp (Baileys Multi-Device)</div>
+      <p>
+        A pasta <code>server/baileys_auth_info</code> armazena as chaves de criptografia e credenciais do WhatsApp pareado.
+      </p>
+      <ul>
+        <li>Quando você iniciar o servidor, ele criará a sessão automaticamente.</li>
+        <li>Basta abrir a tela de <strong>Conexão WhatsApp</strong> no sistema web e escanear o QR Code com o aparelho oficial.</li>
+        <li>Uma vez escaneado, a conexão é <strong>permanente</strong>! Mesmo que o servidor reinicie, as credenciais salvas em <code>baileys_auth_info</code> restauram a conexão sem precisar ler o QR Code novamente.</li>
+      </ul>
+    </li>
+
+    <li class="step-item">
+      <div class="step-title">Configurar os Disparos de E-mail Corporativo (SMTP)</div>
+      <p>
+        As credenciais SMTP ficam gravadas no arquivo <code>server/email_config.json</code> ou podem ser configuradas pela tela web de T.I.:
+      </p>
+      <pre><code>{
+  "host": "smtp.titan.email",
+  "port": 465,
+  "secure": true,
+  "user": "suporte@seudominio.com.br",
+  "pass": "SuaSenhaSegura123",
+  "from": "GoDesc Service Desk &lt;suporte@seudominio.com.br&gt;",
+  "configured": true
+}</code></pre>
+      <div class="alert-box">
+        <strong>Vantagem da VPS para SMTP:</strong>
+        Serviços gratuitos na nuvem (como Vercel ou Render) bloqueiam conexões nas portas 465 e 587 por política anti-spam. Em uma VPS dedicada, a porta de saída SMTP está sempre liberada, garantindo envio 100% instantâneo dos alertas de tickets para técnicos e clientes.
+      </div>
+    </li>
+
+    <li class="step-item">
+      <div class="step-title">Iniciar o Microservidor com PM2 (Auto-Reinicialização)</div>
+      <p>Inicie o processo pelo PM2 para que ele nunca caia e reinicie com a VPS:</p>
+      <pre><code>cd /var/www/godesc-service-desk/server
+pm2 start index.js --name "godesc-api"
+pm2 save
+pm2 startup</code></pre>
+      <p>Execute o comando impresso pelo PM2 para registrar o início automático no boot da máquina.</p>
+    </li>
+  </ul>
+
+  <!-- SEÇÃO 6 -->
+  <h1>6. Frontend: Build de Produção e Nginx</h1>
+
+  <ul class="step-list">
+    <li class="step-item">
+      <div class="step-title">Configurar o Arquivo .env do Frontend</div>
+      <p>Na pasta raiz <code>/var/www/godesc-service-desk</code>, crie o arquivo <code>.env</code> com os dados do Supabase:</p>
+      <pre><code>VITE_SUPABASE_URL="https://hhoiexewnnbgwhgliefb.supabase.co"
+VITE_SUPABASE_ANON_KEY="SUA_CHAVE_ANONIMA_DO_SUPABASE"</code></pre>
+    </li>
+
+    <li class="step-item">
+      <div class="step-title">Instalar Dependências e Gerar o Build Otimizado</div>
+      <pre><code>cd /var/www/godesc-service-desk
+npm install
+npm run build</code></pre>
+      <p>Isso criará a pasta <code>/var/www/godesc-service-desk/dist</code> contendo todos os arquivos estáticos minificados e de alta performance.</p>
+    </li>
+
+    <li class="step-item">
+      <div class="step-title">Configurar o Nginx (Virtual Host + Proxy Reverso)</div>
+      <p>Crie o arquivo de configuração do site no Nginx:</p>
+      <pre><code>sudo nano /etc/nginx/sites-available/godesc</code></pre>
+      <p>Cole a configuração abaixo (substituindo <code>seudominio.com.br</code> pelo seu domínio ou IP):</p>
+      <pre><code>server {
+    listen 80;
+    server_name seudominio.com.br www.seudominio.com.br;
+
+    # Frontend SPA (React / Vite)
+    root /var/www/godesc-service-desk/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Proxy Reverso para a API e Microserviço WhatsApp/Email (Porta 10000)
+    location /api/ {
+        proxy_pass http://127.0.0.1:10000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Otimização de Cache para Assets
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff2|woff)$ {
+        expires 1y;
+        add_header Cache-Control "public, no-transform";
+    }
+}</code></pre>
+    </li>
+
+    <li class="step-item">
+      <div class="step-title">Ativar o Site no Nginx e Testar Configuração</div>
+      <pre><code>sudo ln -s /etc/nginx/sites-available/godesc /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl reload nginx</code></pre>
+    </li>
+  </ul>
+
+  <!-- SEÇÃO 7 -->
+  <div class="page-break"></div>
+  <h1>7. Certificado SSL Gratuito (HTTPS) com Let's Encrypt</h1>
+  <p>Gere o certificado SSL gratuito com renovação automática para proteger todas as comunicações:</p>
+  <pre><code>sudo certbot --nginx -d seudominio.com.br -d www.seudominio.com.br</code></pre>
+  <p>
+    Informe seu e-mail, aceite os termos e escolha a opção de redirecionar automaticamente todo o tráfego HTTP para HTTPS (Redirect).
+  </p>
+
+  <!-- SEÇÃO 8 -->
+  <h1>8. Comandos de Manutenção e Monitoramento</h1>
+  <p>Comandos úteis para o dia a dia de administração da sua VPS:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Comando</th>
+        <th>Ação</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>pm2 status</code></td>
+        <td>Verifica se o microservidor WhatsApp/E-mail está ativo e o consumo de memória</td>
+      </tr>
+      <tr>
+        <td><code>pm2 logs godesc-api</code></td>
+        <td>Exibe os logs em tempo real (conexões WhatsApp, disparos de e-mails, erros)</td>
+      </tr>
+      <tr>
+        <td><code>pm2 restart godesc-api</code></td>
+        <td>Reinicia o microservidor de WhatsApp e E-mail</td>
+      </tr>
+      <tr>
+        <td><code>sudo systemctl reload nginx</code></td>
+        <td>Recarrega as configurações do Nginx sem derrubar o site</td>
+      </tr>
+      <tr>
+        <td><code>git pull && npm run build</code></td>
+        <td>Atualiza o sistema com novas atualizações do GitHub e recompila a aplicação</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SEÇÃO 9 -->
+  <h1>9. Checklist de Validação Final</h1>
+  <div class="avoid-break">
+    <p>Antes de liberar o sistema para uso definitivo na empresa, valide os itens:</p>
+    <ul>
+      <li>✔ <strong>Acesso ao Sistema:</strong> Acesse <code>https://seudominio.com.br</code> e certifique-se de que a página inicial carrega sem erros.</li>
+      <li>✔ <strong>Login de T.I:</strong> Acesse com o login inicial (ex: <code>@admin.ceo</code> / senha cadastrada).</li>
+      <li>✔ <strong>Criação de Usuários e Chamados:</strong> Crie um novo chamado de teste e confirme que ele surge instantaneamente no Kanban e na lista de tickets via Supabase Realtime.</li>
+      <li>✔ <strong>Conexão WhatsApp:</strong> Acesse a aba WhatsApp, clique em conectar, escaneie o QR Code no seu celular e envie uma mensagem de teste.</li>
+      <li>✔ <strong>Disparo de E-mail de Teste:</strong> Na aba Configurações &gt; E-mail, clique em "Enviar E-mail de Teste" e confirme o recebimento na sua caixa de entrada.</li>
+    </ul>
+  </div>
+
+  <div style="margin-top: 30px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 16px; font-size: 8pt; color: #94a3b8;">
+    GoDesc 360 Service Desk &bull; Documento Oficial de Implantação e Manutenção &bull; Gerado para Hospedagem em VPS
+  </div>
+
+</body>
+</html>

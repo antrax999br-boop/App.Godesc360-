@@ -2,8 +2,8 @@ import React from 'react';
 import { useApp } from '../context/AppContext';
 
 import { APP_LOGO } from '../data/mockData';
-import { AppLogo } from './AppLogo';
-import { ThemeToggle } from './ThemeToggle';
+import { AppLogo } from './LogoSistema';
+import { ThemeToggle } from './AlternadorTema';
 import { Plus, ArrowRight, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 
