@@ -755,8 +755,8 @@ export const TIConfigView: React.FC = () => {
             </span>
           </button>
 
-          <div className="pt-4 border-t border-[#2A2F3A] p-3 rounded-xl bg-[#111827]/50 text-xs text-[#8d90a0] space-y-1">
-            <p className="font-bold text-white flex items-center gap-1.5">
+          <div className="pt-4 border-t border-slate-200 dark:border-[#2A2F3A] p-3 rounded-xl bg-slate-50 dark:bg-[#111827]/50 text-xs text-slate-600 dark:text-[#8d90a0] space-y-1">
+            <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
               <Kanban className="w-3.5 h-3.5 text-[#45dfa4]" />
               <span>Kanban Automático</span>
             </p>
@@ -767,25 +767,25 @@ export const TIConfigView: React.FC = () => {
         </div>
 
         {/* Dynamic Content Panel */}
-        <div className="flex-1 bg-[#151c25] border border-[#2A2F3A] rounded-2xl p-6 shadow-2xl overflow-hidden">
+        <div className="flex-1 bg-white dark:bg-[#151c25] border border-slate-200 dark:border-[#2A2F3A] rounded-2xl p-6 shadow-2xl overflow-hidden">
           {/* TAB 1: USERS & ROLES MANAGEMENT */}
           {activeTab === 'users' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">
                   <UserPlus className="w-5 h-5 text-[#45dfa4]" />
                   <span>Cadastrar Novo Usuário e Atribuir Sistemas</span>
                 </h2>
-                <p className="text-xs text-[#8d90a0]">
+                <p className="text-xs text-slate-500 dark:text-[#8d90a0]">
                   Crie usuários para acessar o GoDesc Service Desk, defina os módulos liberados e seu perfil de autorização.
                 </p>
               </div>
 
               {/* Add User Form */}
-              <form onSubmit={handleAddUser} className="bg-[#111827] border border-[#2A2F3A] p-5 sm:p-6 rounded-xl space-y-5">
+              <form onSubmit={handleAddUser} className="bg-slate-50/60 dark:bg-[#111827] border border-slate-200 dark:border-[#2A2F3A] p-5 sm:p-6 rounded-xl space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-white flex items-center gap-1">
+                    <label className="text-xs font-semibold text-slate-800 dark:text-white flex items-center gap-1">
                       <UserIcon className="w-3.5 h-3.5 text-[#45dfa4]" />
                       <span>Nome Completo</span>
                     </label>
@@ -795,12 +795,12 @@ export const TIConfigView: React.FC = () => {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Ex: Carlos Silva"
-                      className="w-full bg-[#151c25] border border-[#2A2F3A] focus:border-[#45dfa4] text-white rounded-lg p-2.5 text-xs focus:outline-none placeholder:text-[#8d90a0]"
+                      className="w-full bg-white dark:bg-[#151c25] border border-slate-300 dark:border-[#2A2F3A] focus:border-[#45dfa4] text-slate-900 dark:text-white rounded-lg p-2.5 text-xs focus:outline-none placeholder:text-slate-400 dark:placeholder:text-[#8d90a0]"
                     />
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-white flex items-center gap-1">
+                    <label className="text-xs font-semibold text-slate-800 dark:text-white flex items-center gap-1">
                       <Key className="w-3.5 h-3.5 text-[#45dfa4]" />
                       <span>Usuário (Login) *</span>
                     </label>
@@ -810,12 +810,12 @@ export const TIConfigView: React.FC = () => {
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       placeholder="Ex: carlos.silva"
-                      className="w-full bg-[#151c25] border border-[#2A2F3A] focus:border-[#45dfa4] text-white rounded-lg p-2.5 text-xs focus:outline-none placeholder:text-[#8d90a0]"
+                      className="w-full bg-white dark:bg-[#151c25] border border-slate-300 dark:border-[#2A2F3A] focus:border-[#45dfa4] text-slate-900 dark:text-white rounded-lg p-2.5 text-xs focus:outline-none placeholder:text-slate-400 dark:placeholder:text-[#8d90a0]"
                     />
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-white flex items-center gap-1">
+                    <label className="text-xs font-semibold text-slate-800 dark:text-white flex items-center gap-1">
                       <Mail className="w-3.5 h-3.5 text-[#45dfa4]" />
                       <span>E-mail Corporativo</span>
                     </label>
@@ -824,12 +824,12 @@ export const TIConfigView: React.FC = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="carlos@empresa.com"
-                      className="w-full bg-[#151c25] border border-[#2A2F3A] focus:border-[#45dfa4] text-white rounded-lg p-2.5 text-xs focus:outline-none placeholder:text-[#8d90a0]"
+                      className="w-full bg-white dark:bg-[#151c25] border border-slate-300 dark:border-[#2A2F3A] focus:border-[#45dfa4] text-slate-900 dark:text-white rounded-lg p-2.5 text-xs focus:outline-none placeholder:text-slate-400 dark:placeholder:text-[#8d90a0]"
                     />
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-white flex items-center gap-1">
+                    <label className="text-xs font-semibold text-slate-800 dark:text-white flex items-center gap-1">
                       <Key className="w-3.5 h-3.5 text-[#45dfa4]" />
                       <span>Senha de Acesso *</span>
                     </label>
@@ -839,14 +839,14 @@ export const TIConfigView: React.FC = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-[#151c25] border border-[#2A2F3A] focus:border-[#45dfa4] text-white rounded-lg p-2.5 text-xs focus:outline-none placeholder:text-[#8d90a0]"
+                      className="w-full bg-white dark:bg-[#151c25] border border-slate-300 dark:border-[#2A2F3A] focus:border-[#45dfa4] text-slate-900 dark:text-white rounded-lg p-2.5 text-xs focus:outline-none placeholder:text-slate-400 dark:placeholder:text-[#8d90a0]"
                     />
                   </div>
                 </div>
 
                 {/* Role selection & Preset */}
-                <div className="pt-2 border-t border-[#2A2F3A]">
-                  <label className="text-xs font-semibold text-white block mb-2">
+                <div className="pt-2 border-t border-slate-200 dark:border-[#2A2F3A]">
+                  <label className="text-xs font-semibold text-slate-900 dark:text-white block mb-2">
                     Perfil / Função no Sistema (Role)
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
@@ -863,8 +863,8 @@ export const TIConfigView: React.FC = () => {
                         onClick={() => handleRolePreset(item.id as any)}
                         className={`p-2.5 rounded-lg border text-left transition-all ${
                           role === item.id
-                            ? 'bg-[#45dfa4]/15 border-[#45dfa4] text-white'
-                            : 'bg-[#151c25] border-[#2A2F3A] text-[#8d90a0] hover:text-white hover:border-[#434655]'
+                            ? 'bg-emerald-500/15 border-emerald-500 text-emerald-950 dark:text-white font-semibold'
+                            : 'bg-slate-50 dark:bg-[#151c25] border-slate-200 dark:border-[#2A2F3A] text-slate-700 dark:text-[#8d90a0] hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-[#434655]'
                         }`}
                       >
                         <div className="text-xs font-bold flex items-center justify-between">
@@ -879,7 +879,7 @@ export const TIConfigView: React.FC = () => {
 
                 {/* Modules access checklist */}
                 <div className="pt-2 border-t border-[#2A2F3A]">
-                  <label className="text-xs font-semibold text-white block mb-2">
+                  <label className="text-xs font-semibold text-slate-900 dark:text-white block mb-2">
                     Módulos &amp; Telas que o Usuário Pode Acessar
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -890,8 +890,8 @@ export const TIConfigView: React.FC = () => {
                           key={mod.id}
                           className={`flex items-center gap-2 p-2 rounded-lg border text-xs cursor-pointer select-none transition-colors ${
                             isChecked
-                              ? 'bg-[#181c22] border-[#45dfa4]/50 text-white'
-                              : 'bg-[#151c25] border-[#2A2F3A] text-[#8d90a0]'
+                              ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-950 font-medium dark:bg-[#181c22] dark:border-[#45dfa4]/50 dark:text-white'
+                              : 'bg-slate-50 dark:bg-[#151c25] border-slate-200 dark:border-[#2A2F3A] text-slate-700 dark:text-[#8d90a0]'
                           }`}
                         >
                           <input
@@ -908,12 +908,12 @@ export const TIConfigView: React.FC = () => {
                 </div>
 
                 {/* Permissions toggles */}
-                <div className="pt-2 border-t border-[#2A2F3A]">
-                  <label className="text-xs font-semibold text-white block mb-2">
+                <div className="pt-2 border-t border-slate-200 dark:border-[#2A2F3A]">
+                  <label className="text-xs font-semibold text-slate-900 dark:text-white block mb-2">
                     Permissões Especiais de Controle
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                    <label className="flex items-center gap-2 text-[#c3c6d7]">
+                    <label className="flex items-center gap-2 text-slate-700 dark:text-[#c3c6d7]">
                       <input
                         type="checkbox"
                         checked={permConfig}
@@ -923,7 +923,7 @@ export const TIConfigView: React.FC = () => {
                       <span>Acessar Painel de Configurações</span>
                     </label>
 
-                    <label className="flex items-center gap-2 text-[#c3c6d7]">
+                    <label className="flex items-center gap-2 text-slate-700 dark:text-[#c3c6d7]">
                       <input
                         type="checkbox"
                         checked={permEditTickets}
@@ -933,7 +933,7 @@ export const TIConfigView: React.FC = () => {
                       <span>Editar Status de Chamados</span>
                     </label>
 
-                    <label className="flex items-center gap-2 text-[#c3c6d7]">
+                    <label className="flex items-center gap-2 text-slate-700 dark:text-[#c3c6d7]">
                       <input
                         type="checkbox"
                         checked={permDeleteTickets}
@@ -943,7 +943,7 @@ export const TIConfigView: React.FC = () => {
                       <span>Excluir Registros de Tickets</span>
                     </label>
 
-                    <label className="flex items-center gap-2 text-[#c3c6d7]">
+                    <label className="flex items-center gap-2 text-slate-700 dark:text-[#c3c6d7]">
                       <input
                         type="checkbox"
                         checked={permManageUsers}
@@ -953,7 +953,7 @@ export const TIConfigView: React.FC = () => {
                       <span>Criar e Alterar Usuários</span>
                     </label>
 
-                    <label className="flex items-center gap-2 text-[#c3c6d7]">
+                    <label className="flex items-center gap-2 text-slate-700 dark:text-[#c3c6d7]">
                       <input
                         type="checkbox"
                         checked={permManageCategories}
@@ -963,7 +963,7 @@ export const TIConfigView: React.FC = () => {
                       <span>Gerenciar Categorias &amp; Subcategorias</span>
                     </label>
 
-                    <label className="flex items-center gap-2 text-[#45dfa4] font-semibold">
+                    <label className="flex items-center gap-2 text-emerald-700 dark:text-[#45dfa4] font-semibold">
                       <input
                         type="checkbox"
                         checked={permViewAllKanbans}
@@ -976,10 +976,10 @@ export const TIConfigView: React.FC = () => {
                 </div>
 
                 {/* Permissões WhatsApp & Omnichannel */}
-                <div className="pt-2 border-t border-[#2A2F3A]">
-                  <label className="block text-white font-semibold mb-2">Permissões de Atendimento WhatsApp</label>
+                <div className="pt-2 border-t border-slate-200 dark:border-[#2A2F3A]">
+                  <label className="block text-slate-900 dark:text-white font-semibold mb-2">Permissões de Atendimento WhatsApp</label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                    <label className="flex items-center gap-2 text-[#45dfa4]">
+                    <label className="flex items-center gap-2 text-emerald-700 dark:text-[#45dfa4] font-medium">
                       <input
                         type="checkbox"
                         checked={permAttendanceQueue}
@@ -989,7 +989,7 @@ export const TIConfigView: React.FC = () => {
                       <span>Fila de Atendimento</span>
                     </label>
 
-                    <label className="flex items-center gap-2 text-[#45dfa4]">
+                    <label className="flex items-center gap-2 text-emerald-700 dark:text-[#45dfa4] font-medium">
                       <input
                         type="checkbox"
                         checked={permAttendanceChat}
@@ -999,7 +999,7 @@ export const TIConfigView: React.FC = () => {
                       <span>Chat em Tempo Real</span>
                     </label>
 
-                    <label className="flex items-center gap-2 text-[#c3c6d7]">
+                    <label className="flex items-center gap-2 text-slate-700 dark:text-[#c3c6d7]">
                       <input
                         type="checkbox"
                         checked={permAttendanceDashboard}
@@ -1009,7 +1009,7 @@ export const TIConfigView: React.FC = () => {
                       <span>Dashboard Atendimento</span>
                     </label>
 
-                    <label className="flex items-center gap-2 text-[#c3c6d7]">
+                    <label className="flex items-center gap-2 text-slate-700 dark:text-[#c3c6d7]">
                       <input
                         type="checkbox"
                         checked={permAttendanceChatbot}
@@ -1019,7 +1019,7 @@ export const TIConfigView: React.FC = () => {
                       <span>Chatbot Automático</span>
                     </label>
 
-                    <label className="flex items-center gap-2 text-[#c3c6d7]">
+                    <label className="flex items-center gap-2 text-slate-700 dark:text-[#c3c6d7]">
                       <input
                         type="checkbox"
                         checked={permAttendanceQueuesConfig}
@@ -1029,7 +1029,7 @@ export const TIConfigView: React.FC = () => {
                       <span>Configurar Filas</span>
                     </label>
 
-                    <label className="flex items-center gap-2 text-[#c3c6d7]">
+                    <label className="flex items-center gap-2 text-slate-700 dark:text-[#c3c6d7]">
                       <input
                         type="checkbox"
                         checked={permAttendanceWhatsApp}
@@ -1039,7 +1039,7 @@ export const TIConfigView: React.FC = () => {
                       <span>Conexão WhatsApp (QR)</span>
                     </label>
 
-                    <label className="flex items-center gap-2 text-[#c3c6d7]">
+                    <label className="flex items-center gap-2 text-slate-700 dark:text-[#c3c6d7]">
                       <input
                         type="checkbox"
                         checked={permAttendanceContacts}
@@ -1049,7 +1049,7 @@ export const TIConfigView: React.FC = () => {
                       <span>Contatos &amp; CRM</span>
                     </label>
 
-                    <label className="flex items-center gap-2 text-[#c3c6d7]">
+                    <label className="flex items-center gap-2 text-slate-700 dark:text-[#c3c6d7]">
                       <input
                         type="checkbox"
                         checked={permAttendanceSettings}
@@ -1075,10 +1075,10 @@ export const TIConfigView: React.FC = () => {
 
               {/* Users Table */}
               <div>
-                <h3 className="text-sm font-bold text-white mb-3">Usuários Cadastrados no Sistema</h3>
-                <div className="overflow-x-auto border border-[#2A2F3A] rounded-xl">
-                  <table className="w-full text-left text-xs text-[#c3c6d7]">
-                    <thead className="bg-[#111827] text-[#8d90a0] font-mono border-b border-[#2A2F3A]">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Usuários Cadastrados no Sistema</h3>
+                <div className="overflow-x-auto border border-slate-200 dark:border-[#2A2F3A] rounded-xl bg-white dark:bg-[#111827]/40">
+                  <table className="w-full text-left text-xs text-slate-700 dark:text-[#c3c6d7]">
+                    <thead className="bg-slate-100 dark:bg-[#111827] text-slate-600 dark:text-[#8d90a0] font-mono border-b border-slate-200 dark:border-[#2A2F3A]">
                       <tr>
                         <th className="p-3">Nome / E-mail</th>
                         <th className="p-3">Usuário</th>
@@ -1088,14 +1088,14 @@ export const TIConfigView: React.FC = () => {
                         <th className="p-3 text-right">Ações</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#2A2F3A] bg-[#111827]/40">
+                    <tbody className="divide-y divide-slate-200 dark:divide-[#2A2F3A] bg-white dark:bg-[#111827]/40">
                       {(managedUsers || []).map((u) => (
-                        <tr key={u.id} className="hover:bg-[#181c22] transition-colors">
+                        <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-[#181c22] transition-colors">
                           <td className="p-3">
-                            <div className="font-bold text-white">{u.name}</div>
-                            <div className="text-[10px] text-[#8d90a0] font-mono">{u.email}</div>
+                            <div className="font-bold text-slate-900 dark:text-white">{u.name}</div>
+                            <div className="text-[10px] text-slate-500 dark:text-[#8d90a0] font-mono">{u.email}</div>
                           </td>
-                          <td className="p-3 font-mono text-[#45dfa4]">@{u.username}</td>
+                          <td className="p-3 font-mono text-emerald-600 dark:text-[#45dfa4]">@{u.username}</td>
                           <td className="p-3">
                             <span
                               className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold border ${
@@ -1124,11 +1124,11 @@ export const TIConfigView: React.FC = () => {
                           </td>
                           <td className="p-3">
                             {u.role === 'ceo' || u.role === 'gestor' || u.role === 'admin' || u.permissions?.canViewAllKanbans ? (
-                              <span className="text-[#45dfa4] text-[10px] font-mono bg-[#45dfa4]/10 border border-[#45dfa4]/30 px-2 py-0.5 rounded-full">
+                              <span className="text-emerald-700 dark:text-[#45dfa4] text-[10px] font-mono bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full font-semibold">
                                 Sim (Acesso Geral)
                               </span>
                             ) : (
-                              <span className="text-[#8d90a0] text-[10px] font-mono bg-[#151c25] border border-[#2A2F3A] px-2 py-0.5 rounded-full">
+                              <span className="text-slate-600 dark:text-[#8d90a0] text-[10px] font-mono bg-slate-100 dark:bg-[#151c25] border border-slate-200 dark:border-[#2A2F3A] px-2 py-0.5 rounded-full">
                                 Não (Apenas o Seu)
                               </span>
                             )}
@@ -1150,7 +1150,7 @@ export const TIConfigView: React.FC = () => {
 
                             <button
                               onClick={() => setEditingUser(u)}
-                              className="p-1.5 bg-[#181c22] hover:bg-[#283240] text-[#c3c6d7] hover:text-white border border-[#2A2F3A] rounded-lg transition-colors"
+                              className="p-1.5 bg-slate-100 dark:bg-[#181c22] hover:bg-slate-200 dark:hover:bg-[#283240] text-slate-700 dark:text-[#c3c6d7] hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-[#2A2F3A] rounded-lg transition-colors"
                               title="Editar Usuário & Permissões"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
@@ -1236,9 +1236,9 @@ export const TIConfigView: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="overflow-x-auto border border-[#2A2F3A] rounded-xl">
-                  <table className="w-full text-left text-xs text-[#c3c6d7]">
-                    <thead className="bg-[#111827] text-[#8d90a0] font-mono border-b border-[#2A2F3A]">
+                <div className="overflow-x-auto border border-slate-200 dark:border-[#2A2F3A] rounded-xl bg-white dark:bg-[#111827]/40">
+                  <table className="w-full text-left text-xs text-slate-700 dark:text-[#c3c6d7]">
+                    <thead className="bg-slate-100 dark:bg-[#111827] text-slate-600 dark:text-[#8d90a0] font-mono border-b border-slate-200 dark:border-[#2A2F3A]">
                       <tr>
                         <th className="p-3">Usuário</th>
                         <th className="p-3">Nome / Perfil</th>
@@ -1248,13 +1248,13 @@ export const TIConfigView: React.FC = () => {
                         <th className="p-3 text-right">Desbloqueio</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#2A2F3A] bg-[#111827]/40">
+                    <tbody className="divide-y divide-slate-200 dark:divide-[#2A2F3A] bg-white dark:bg-[#111827]/40">
                       {managedUsers.map((u) => (
-                        <tr key={u.id} className="hover:bg-[#181c22] transition-colors">
-                          <td className="p-3 font-mono font-bold text-[#45dfa4]">@{u.username}</td>
+                        <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-[#181c22] transition-colors">
+                          <td className="p-3 font-mono font-bold text-emerald-600 dark:text-[#45dfa4]">@{u.username}</td>
                           <td className="p-3">
-                            <div className="text-white font-semibold">{u.name}</div>
-                            <div className="text-[10px] text-[#8d90a0] uppercase">{u.role}</div>
+                            <div className="text-slate-900 dark:text-white font-semibold">{u.name}</div>
+                            <div className="text-[10px] text-slate-500 dark:text-[#8d90a0] uppercase">{u.role}</div>
                           </td>
                           <td className="p-3 font-mono font-bold">
                             <span
@@ -1529,9 +1529,9 @@ export const TIConfigView: React.FC = () => {
                 </div>
               </form>
 
-              <div className="overflow-hidden border border-[#2A2F3A] rounded-xl">
-                <table className="w-full text-left text-xs text-[#c3c6d7]">
-                  <thead className="bg-[#111827] text-[#8d90a0] font-mono border-b border-[#2A2F3A]">
+              <div className="overflow-hidden border border-slate-200 dark:border-[#2A2F3A] rounded-xl bg-white dark:bg-[#111827]/40">
+                <table className="w-full text-left text-xs text-slate-700 dark:text-[#c3c6d7]">
+                  <thead className="bg-slate-100 dark:bg-[#111827] text-slate-600 dark:text-[#8d90a0] font-mono border-b border-slate-200 dark:border-[#2A2F3A]">
                     <tr>
                       <th className="p-3">Razão Social</th>
                       <th className="p-3">CNPJ</th>
@@ -1539,12 +1539,12 @@ export const TIConfigView: React.FC = () => {
                       <th className="p-3 text-right">Ações</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#2A2F3A] bg-[#111827]/40">
+                  <tbody className="divide-y divide-slate-200 dark:divide-[#2A2F3A] bg-white dark:bg-[#111827]/40">
                     {(companies || []).map((c) => (
-                      <tr key={c.id} className="hover:bg-[#181c22] transition-colors">
-                        <td className="p-3 text-white font-bold">{c.name}</td>
-                        <td className="p-3 font-mono text-[#45dfa4]">{c.cnpj}</td>
-                        <td className="p-3">{c.address}</td>
+                      <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-[#181c22] transition-colors">
+                        <td className="p-3 text-slate-900 dark:text-white font-bold">{c.name}</td>
+                        <td className="p-3 font-mono text-emerald-600 dark:text-[#45dfa4]">{c.cnpj}</td>
+                        <td className="p-3 text-slate-600 dark:text-[#c3c6d7]">{c.address}</td>
                         <td className="p-3 text-right">
                           <button
                             onClick={() => {
@@ -1552,7 +1552,7 @@ export const TIConfigView: React.FC = () => {
                                 deleteCompany(c.id);
                               }
                             }}
-                            className="p-1.5 bg-[#181c22] hover:bg-[#283240] text-[#8d90a0] hover:text-[#ffb4ab] border border-[#2A2F3A] rounded-lg transition-colors"
+                            className="p-1.5 bg-slate-100 dark:bg-[#181c22] hover:bg-red-50 dark:hover:bg-[#283240] text-slate-600 dark:text-[#8d90a0] hover:text-red-600 dark:hover:text-[#ffb4ab] border border-slate-200 dark:border-[#2A2F3A] rounded-lg transition-colors"
                             title="Remover Empresa"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -2504,13 +2504,13 @@ export const TIConfigView: React.FC = () => {
       {/* Modal: Edit User */}
       {editingUser && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#181c22] border border-[#2A2F3A] rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-[#2A2F3A]">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
+          <div className="bg-white dark:bg-[#181c22] border border-slate-200 dark:border-[#2A2F3A] rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-[#2A2F3A]">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Edit2 className="w-4 h-4 text-[#45dfa4]" />
                 <span>Editar Usuário: @{editingUser.username}</span>
               </h3>
-              <button onClick={() => setEditingUser(null)} className="text-[#8d90a0] hover:text-white">
+              <button onClick={() => setEditingUser(null)} className="text-slate-400 hover:text-slate-700 dark:text-[#8d90a0] dark:hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -2518,53 +2518,53 @@ export const TIConfigView: React.FC = () => {
             <form onSubmit={handleSaveEditUser} className="space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[#8d90a0] mb-1 font-semibold">Nome Completo</label>
+                  <label className="block text-slate-600 dark:text-[#8d90a0] mb-1 font-semibold">Nome Completo</label>
                   <input
                     type="text"
                     required
                     value={editingUser.name}
                     onChange={e => setEditingUser({ ...editingUser, name: e.target.value })}
-                    className="w-full bg-[#111827] border border-[#2A2F3A] rounded-lg p-2.5 text-white focus:outline-none focus:border-[#45dfa4]"
+                    className="w-full bg-slate-50 dark:bg-[#111827] border border-slate-300 dark:border-[#2A2F3A] rounded-lg p-2.5 text-slate-900 dark:text-white focus:outline-none focus:border-[#45dfa4]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[#8d90a0] mb-1 font-semibold">Usuário (Login)</label>
+                  <label className="block text-slate-600 dark:text-[#8d90a0] mb-1 font-semibold">Usuário (Login)</label>
                   <input
                     type="text"
                     required
                     value={editingUser.username}
                     onChange={e => setEditingUser({ ...editingUser, username: e.target.value })}
-                    className="w-full bg-[#111827] border border-[#2A2F3A] rounded-lg p-2.5 text-white focus:outline-none focus:border-[#45dfa4]"
+                    className="w-full bg-slate-50 dark:bg-[#111827] border border-slate-300 dark:border-[#2A2F3A] rounded-lg p-2.5 text-slate-900 dark:text-white focus:outline-none focus:border-[#45dfa4]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[#8d90a0] mb-1 font-semibold">E-mail Corporativo</label>
+                  <label className="block text-slate-600 dark:text-[#8d90a0] mb-1 font-semibold">E-mail Corporativo</label>
                   <input
                     type="email"
                     required
                     value={editingUser.email}
                     onChange={e => setEditingUser({ ...editingUser, email: e.target.value })}
-                    className="w-full bg-[#111827] border border-[#2A2F3A] rounded-lg p-2.5 text-white focus:outline-none focus:border-[#45dfa4]"
+                    className="w-full bg-slate-50 dark:bg-[#111827] border border-slate-300 dark:border-[#2A2F3A] rounded-lg p-2.5 text-slate-900 dark:text-white focus:outline-none focus:border-[#45dfa4]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[#8d90a0] mb-1 font-semibold">Alterar Senha</label>
+                  <label className="block text-slate-600 dark:text-[#8d90a0] mb-1 font-semibold">Alterar Senha</label>
                   <input
                     type="password"
                     value={editingUser.password || ''}
                     onChange={e => setEditingUser({ ...editingUser, password: e.target.value })}
                     placeholder="Deixe em branco para não alterar"
-                    className="w-full bg-[#111827] border border-[#2A2F3A] rounded-lg p-2.5 text-white focus:outline-none focus:border-[#45dfa4]"
+                    className="w-full bg-slate-50 dark:bg-[#111827] border border-slate-300 dark:border-[#2A2F3A] rounded-lg p-2.5 text-slate-900 dark:text-white focus:outline-none focus:border-[#45dfa4]"
                   />
                 </div>
               </div>
 
               {/* Perfil / Role Presets */}
-              <div className="pt-2 border-t border-[#2A2F3A]">
-                <label className="block text-white font-semibold mb-2">Perfil / Função no Sistema (Role)</label>
+              <div className="pt-2 border-t border-slate-200 dark:border-[#2A2F3A]">
+                <label className="block text-slate-900 dark:text-white font-semibold mb-2">Perfil / Função no Sistema (Role)</label>
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                   {[
                     { id: 'n1', label: 'Analista N1', desc: 'Atendimento e Triagem' },
@@ -2579,8 +2579,8 @@ export const TIConfigView: React.FC = () => {
                       onClick={() => handleEditUserRolePreset(item.id as any)}
                       className={`p-2 rounded-lg border text-left transition-all ${
                         editingUser.role === item.id
-                          ? 'bg-[#45dfa4]/15 border-[#45dfa4] text-white'
-                          : 'bg-[#111827] border-[#2A2F3A] text-[#8d90a0] hover:text-white'
+                          ? 'bg-emerald-500/15 border-emerald-500 text-emerald-950 dark:text-white font-semibold'
+                          : 'bg-slate-50 dark:bg-[#111827] border-slate-200 dark:border-[#2A2F3A] text-slate-700 dark:text-[#8d90a0] hover:text-slate-900 dark:hover:text-white'
                       }`}
                     >
                       <div className="text-[11px] font-bold flex items-center justify-between">
@@ -2594,8 +2594,8 @@ export const TIConfigView: React.FC = () => {
               </div>
 
               {/* Módulos Liberados */}
-              <div className="pt-2 border-t border-[#2A2F3A]">
-                <label className="block text-white font-semibold mb-2">Módulos &amp; Telas Liberadas</label>
+              <div className="pt-2 border-t border-slate-200 dark:border-[#2A2F3A]">
+                <label className="block text-slate-900 dark:text-white font-semibold mb-2">Módulos &amp; Telas Liberadas</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {AVAILABLE_MODULES.map((mod) => {
                     const isChecked = (editingUser.allowedModules || []).includes(mod.id);
@@ -2604,8 +2604,8 @@ export const TIConfigView: React.FC = () => {
                         key={mod.id}
                         className={`flex items-center gap-2 p-2 rounded-lg border text-[11px] cursor-pointer select-none transition-colors ${
                           isChecked
-                            ? 'bg-[#111827] border-[#45dfa4]/50 text-white'
-                            : 'bg-[#111827]/50 border-[#2A2F3A] text-[#8d90a0]'
+                            ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-950 font-semibold dark:bg-[#111827] dark:border-[#45dfa4]/50 dark:text-white'
+                            : 'bg-slate-50 dark:bg-[#111827]/50 border-slate-200 dark:border-[#2A2F3A] text-slate-700 dark:text-[#8d90a0]'
                         }`}
                       >
                         <input
@@ -2622,10 +2622,10 @@ export const TIConfigView: React.FC = () => {
               </div>
 
               {/* Permissões Especiais */}
-              <div className="pt-2 border-t border-[#2A2F3A]">
-                <label className="block text-white font-semibold mb-2">Permissões Especiais de Controle</label>
+              <div className="pt-2 border-t border-slate-200 dark:border-[#2A2F3A]">
+                <label className="block text-slate-900 dark:text-white font-semibold mb-2">Permissões Especiais de Controle</label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                  <label className="flex items-center gap-2 text-[#c3c6d7]">
+                  <label className="flex items-center gap-2 text-slate-700 dark:text-[#c3c6d7]">
                     <input
                       type="checkbox"
                       checked={!!editingUser.permissions?.canAccessConfig}
@@ -2635,7 +2635,7 @@ export const TIConfigView: React.FC = () => {
                     <span>Acessar Configurações</span>
                   </label>
 
-                  <label className="flex items-center gap-2 text-[#c3c6d7]">
+                  <label className="flex items-center gap-2 text-slate-700 dark:text-[#c3c6d7]">
                     <input
                       type="checkbox"
                       checked={!!editingUser.permissions?.canEditTickets}
@@ -2645,7 +2645,7 @@ export const TIConfigView: React.FC = () => {
                     <span>Editar Status</span>
                   </label>
 
-                  <label className="flex items-center gap-2 text-[#c3c6d7]">
+                  <label className="flex items-center gap-2 text-slate-700 dark:text-[#c3c6d7]">
                     <input
                       type="checkbox"
                       checked={!!editingUser.permissions?.canDeleteTickets}
@@ -2655,7 +2655,7 @@ export const TIConfigView: React.FC = () => {
                     <span>Excluir Tickets</span>
                   </label>
 
-                  <label className="flex items-center gap-2 text-[#c3c6d7]">
+                  <label className="flex items-center gap-2 text-slate-700 dark:text-[#c3c6d7]">
                     <input
                       type="checkbox"
                       checked={!!editingUser.permissions?.canManageUsers}
@@ -2665,7 +2665,7 @@ export const TIConfigView: React.FC = () => {
                     <span>Criar / Alterar Usuários</span>
                   </label>
 
-                  <label className="flex items-center gap-2 text-[#c3c6d7]">
+                  <label className="flex items-center gap-2 text-slate-700 dark:text-[#c3c6d7]">
                     <input
                       type="checkbox"
                       checked={!!editingUser.permissions?.canManageCategories}
@@ -2675,7 +2675,7 @@ export const TIConfigView: React.FC = () => {
                     <span>Gerenciar Categorias</span>
                   </label>
 
-                  <label className="flex items-center gap-2 text-[#45dfa4] font-semibold">
+                  <label className="flex items-center gap-2 text-emerald-700 dark:text-[#45dfa4] font-semibold">
                     <input
                       type="checkbox"
                       checked={!!editingUser.permissions?.canViewAllKanbans}
@@ -2688,10 +2688,10 @@ export const TIConfigView: React.FC = () => {
               </div>
 
               {/* Permissões WhatsApp & Omnichannel no Modal de Edição */}
-              <div className="pt-2 border-t border-[#2A2F3A]">
-                <label className="block text-white font-semibold mb-2">Permissões de Atendimento WhatsApp</label>
+              <div className="pt-2 border-t border-slate-200 dark:border-[#2A2F3A]">
+                <label className="block text-slate-900 dark:text-white font-semibold mb-2">Permissões de Atendimento WhatsApp</label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                  <label className="flex items-center gap-2 text-[#45dfa4]">
+                  <label className="flex items-center gap-2 text-emerald-700 dark:text-[#45dfa4] font-medium">
                     <input
                       type="checkbox"
                       checked={editingUser.permissions?.canAccessAttendanceQueue !== false}
@@ -2701,7 +2701,7 @@ export const TIConfigView: React.FC = () => {
                     <span>Fila de Atendimento</span>
                   </label>
 
-                  <label className="flex items-center gap-2 text-[#45dfa4]">
+                  <label className="flex items-center gap-2 text-emerald-700 dark:text-[#45dfa4] font-medium">
                     <input
                       type="checkbox"
                       checked={editingUser.permissions?.canAccessAttendanceChat !== false}
@@ -2711,7 +2711,7 @@ export const TIConfigView: React.FC = () => {
                     <span>Chat em Tempo Real</span>
                   </label>
 
-                  <label className="flex items-center gap-2 text-[#c3c6d7]">
+                  <label className="flex items-center gap-2 text-slate-700 dark:text-[#c3c6d7]">
                     <input
                       type="checkbox"
                       checked={!!editingUser.permissions?.canAccessAttendanceDashboard}
@@ -2721,7 +2721,7 @@ export const TIConfigView: React.FC = () => {
                     <span>Dashboard Atendimento</span>
                   </label>
 
-                  <label className="flex items-center gap-2 text-[#c3c6d7]">
+                  <label className="flex items-center gap-2 text-slate-700 dark:text-[#c3c6d7]">
                     <input
                       type="checkbox"
                       checked={!!editingUser.permissions?.canAccessAttendanceChatbot}
@@ -2731,7 +2731,7 @@ export const TIConfigView: React.FC = () => {
                     <span>Chatbot Automático</span>
                   </label>
 
-                  <label className="flex items-center gap-2 text-[#c3c6d7]">
+                  <label className="flex items-center gap-2 text-slate-700 dark:text-[#c3c6d7]">
                     <input
                       type="checkbox"
                       checked={!!editingUser.permissions?.canAccessAttendanceQueuesConfig}
@@ -2741,7 +2741,7 @@ export const TIConfigView: React.FC = () => {
                     <span>Configurar Filas</span>
                   </label>
 
-                  <label className="flex items-center gap-2 text-[#c3c6d7]">
+                  <label className="flex items-center gap-2 text-slate-700 dark:text-[#c3c6d7]">
                     <input
                       type="checkbox"
                       checked={!!editingUser.permissions?.canAccessAttendanceWhatsApp}
@@ -2751,7 +2751,7 @@ export const TIConfigView: React.FC = () => {
                     <span>Conexão WhatsApp (QR)</span>
                   </label>
 
-                  <label className="flex items-center gap-2 text-[#c3c6d7]">
+                  <label className="flex items-center gap-2 text-slate-700 dark:text-[#c3c6d7]">
                     <input
                       type="checkbox"
                       checked={!!editingUser.permissions?.canAccessAttendanceContacts}
@@ -2761,7 +2761,7 @@ export const TIConfigView: React.FC = () => {
                     <span>Contatos &amp; CRM</span>
                   </label>
 
-                  <label className="flex items-center gap-2 text-[#c3c6d7]">
+                  <label className="flex items-center gap-2 text-slate-700 dark:text-[#c3c6d7]">
                     <input
                       type="checkbox"
                       checked={!!editingUser.permissions?.canAccessAttendanceSettings}
@@ -2774,7 +2774,7 @@ export const TIConfigView: React.FC = () => {
               </div>
 
               {/* Actions Footer */}
-              <div className="pt-4 border-t border-[#2A2F3A] flex items-center justify-between gap-3">
+              <div className="pt-4 border-t border-slate-200 dark:border-[#2A2F3A] flex items-center justify-between gap-3">
                 {editingUser.username !== userSession.username &&
                   (userSession.role === 'admin' ||
                     userSession.role === 'ceo' ||
@@ -2790,7 +2790,7 @@ export const TIConfigView: React.FC = () => {
                         triggerSystemNotification('Usuário Excluído', `O usuário @${editingUser.username} foi removido.`, 'Configurações', 'Baixa');
                       }
                     }}
-                    className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors"
+                    className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>Excluir Usuário</span>
@@ -2801,7 +2801,7 @@ export const TIConfigView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setEditingUser(null)}
-                    className="px-4 py-2.5 bg-[#1f2630] hover:bg-[#283240] text-[#c3c6d7] rounded-xl font-semibold text-xs transition-colors"
+                    className="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 dark:bg-[#1f2630] dark:hover:bg-[#283240] text-slate-700 dark:text-[#c3c6d7] rounded-xl font-semibold text-xs transition-colors"
                   >
                     Cancelar
                   </button>

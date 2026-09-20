@@ -119,79 +119,155 @@ html.light .bg-\[\#182030\], body.theme-light .bg-\[\#182030\] {
 
 /* Card, Panel, Header, Aside and Dialog Backgrounds */
 html.light header, body.theme-light header,
-html.light .bg-\[\#18181b\]\/90, body.theme-light .bg-\[\#18181b\]\/90,
-html.light .bg-\[\#18181b\/90\], body.theme-light .bg-\[\#18181b\/90\],
-html.light .bg-\[\#18181b\], body.theme-light .bg-\[\#18181b\],
-html.light .bg-\[\#141416\], body.theme-light .bg-\[\#141416\],
-html.light .bg-\[\#181c22\], body.theme-light .bg-\[\#181c22\],
-html.light .bg-\[\#111827\], body.theme-light .bg-\[\#111827\],
-html.light .bg-\[\#1B1F27\], body.theme-light .bg-\[\#1B1F27\],
-html.light .bg-\[\#111622\], body.theme-light .bg-\[\#111622\],
-html.light .bg-\[\#141824\], body.theme-light .bg-\[\#141824\],
-html.light .bg-\[\#12161f\], body.theme-light .bg-\[\#12161f\],
-html.light .bg-\[\#1a202c\], body.theme-light .bg-\[\#1a202c\] {
+html.light [class*="bg-[#18181b]"], body.theme-light [class*="bg-[#18181b]"],
+html.light [class*="bg-[#141416]"], body.theme-light [class*="bg-[#141416]"],
+html.light [class*="bg-[#181c22]"], body.theme-light [class*="bg-[#181c22]"],
+html.light [class*="bg-[#111827]"], body.theme-light [class*="bg-[#111827]"],
+html.light [class*="bg-[#1B1F27]"], body.theme-light [class*="bg-[#1B1F27]"],
+html.light [class*="bg-[#111622]"], body.theme-light [class*="bg-[#111622]"],
+html.light [class*="bg-[#141824]"], body.theme-light [class*="bg-[#141824]"],
+html.light [class*="bg-[#12161f]"], body.theme-light [class*="bg-[#12161f]"],
+html.light [class*="bg-[#1a202c]"], body.theme-light [class*="bg-[#1a202c]"] {
   background-color: #ffffff !important; /* Branco puro elegante */
 }
 
-/* Sub-containers, inputs, secondary tags and sections */
-html.light .bg-\[\#151c25\], body.theme-light .bg-\[\#151c25\],
-html.light .bg-\[\#1a1a1e\], body.theme-light .bg-\[\#1a1a1e\],
-html.light .bg-\[\#2e353f\], body.theme-light .bg-\[\#2e353f\],
-html.light .bg-\[\#262a31\], body.theme-light .bg-\[\#262a31\],
-html.light .bg-\[\#252c38\], body.theme-light .bg-\[\#252c38\],
-html.light .bg-\[\#252b36\], body.theme-light .bg-\[\#252b36\],
-html.light .bg-\[\#192029\], body.theme-light .bg-\[\#192029\],
-html.light .bg-\[\#19202e\], body.theme-light .bg-\[\#19202e\],
-html.light .bg-\[\#1e2634\], body.theme-light .bg-\[\#1e2634\],
-html.light .bg-\[\#222938\], body.theme-light .bg-\[\#222938\],
-html.light .bg-\[\#1f2632\], body.theme-light .bg-\[\#1f2632\] {
+/* Sub-containers, inputs, secondary tags, chips and sections */
+html.light [class*="bg-[#151c25]"], body.theme-light [class*="bg-[#151c25]"],
+html.light [class*="bg-[#1a1a1e]"], body.theme-light [class*="bg-[#1a1a1e]"],
+html.light [class*="bg-[#2e353f]"], body.theme-light [class*="bg-[#2e353f]"],
+html.light [class*="bg-[#262a31]"], body.theme-light [class*="bg-[#262a31]"],
+html.light [class*="bg-[#252c38]"], body.theme-light [class*="bg-[#252c38]"],
+html.light [class*="bg-[#252b36]"], body.theme-light [class*="bg-[#252b36]"],
+html.light [class*="bg-[#192029]"], body.theme-light [class*="bg-[#192029]"],
+html.light [class*="bg-[#19202e]"], body.theme-light [class*="bg-[#19202e]"],
+html.light [class*="bg-[#1e2634]"], body.theme-light [class*="bg-[#1e2634]"],
+html.light [class*="bg-[#222938]"], body.theme-light [class*="bg-[#222938]"],
+html.light [class*="bg-[#1f2632]"], body.theme-light [class*="bg-[#1f2632]"],
+html.light [class*="bg-[#27272a]"], body.theme-light [class*="bg-[#27272a]"],
+html.light [class*="bg-[#1f2630]"], body.theme-light [class*="bg-[#1f2630]"],
+html.light [class*="bg-[#283240]"], body.theme-light [class*="bg-[#283240]"],
+html.light [class*="bg-[#232a34]"], body.theme-light [class*="bg-[#232a34]"],
+html.light [class*="bg-[#323238]"], body.theme-light [class*="bg-[#323238]"],
+html.light [class*="bg-[#2a2f3a]"], body.theme-light [class*="bg-[#2a2f3a]"],
+html.light [class*="bg-[#383d4a]"], body.theme-light [class*="bg-[#383d4a]"],
+html.light [class*="bg-[#2e3748]"], body.theme-light [class*="bg-[#2e3748]"],
+html.light [class*="bg-[#252f40]"], body.theme-light [class*="bg-[#252f40]"],
+html.light [class*="bg-[#202b40]"], body.theme-light [class*="bg-[#202b40]"],
+html.light [class*="bg-[#2e3644]"], body.theme-light [class*="bg-[#2e3644]"],
+html.light [class*="bg-[#3d4758]"], body.theme-light [class*="bg-[#3d4758]"],
+html.light [class*="bg-[#3f3f46]"], body.theme-light [class*="bg-[#3f3f46]"],
+html.light [class*="bg-[#1e1e24]"], body.theme-light [class*="bg-[#1e1e24]"] {
   background-color: #f1f5f9 !important; /* Cinza claro suave */
 }
 
-/* Secondary interactive items & neutral chips */
-html.light .bg-\[\#27272a\], body.theme-light .bg-\[\#27272a\],
-html.light .bg-\[\#1f2630\], body.theme-light .bg-\[\#1f2630\],
-html.light .bg-\[\#283240\], body.theme-light .bg-\[\#283240\],
-html.light .bg-\[\#232a34\], body.theme-light .bg-\[\#232a34\],
-html.light .bg-\[\#323238\], body.theme-light .bg-\[\#323238\],
-html.light .bg-\[\#2a2f3a\], body.theme-light .bg-\[\#2a2f3a\],
-html.light .bg-\[\#383d4a\], body.theme-light .bg-\[\#383d4a\],
-html.light .bg-\[\#2e3748\], body.theme-light .bg-\[\#2e3748\],
-html.light .bg-\[\#252f40\], body.theme-light .bg-\[\#252f40\],
-html.light .bg-\[\#202b40\], body.theme-light .bg-\[\#202b40\],
-html.light .bg-\[\#2e3644\], body.theme-light .bg-\[\#2e3644\],
-html.light .bg-\[\#3d4758\], body.theme-light .bg-\[\#3d4758\],
-html.light .bg-\[\#3f3f46\], body.theme-light .bg-\[\#3f3f46\] {
-  background-color: #e2e8f0 !important;
+/* Explicit opacity variants for tables, cards and checklist items */
+html.light .bg-\[\#111827\]\/40, body.theme-light .bg-\[\#111827\]\/40,
+html.light .bg-\[\#111827\]\/50, body.theme-light .bg-\[\#111827\]\/50,
+html.light .bg-\[\#181c22\]\/40, body.theme-light .bg-\[\#181c22\]\/40,
+html.light .bg-\[\#181c22\]\/50, body.theme-light .bg-\[\#181c22\]\/50,
+html.light .bg-\[\#151c25\]\/50, body.theme-light .bg-\[\#151c25\]\/50,
+html.light .bg-\[\#1e1e24\]\/50, body.theme-light .bg-\[\#1e1e24\]\/50,
+html.light .bg-\[\#27272a\]\/50, body.theme-light .bg-\[\#27272a\]\/50 {
+  background-color: #ffffff !important;
 }
 
 /* Borders in Light Mode */
-html.light .border-\[\#27272a\], body.theme-light .border-\[\#27272a\],
-html.light .border-\[\#18181b\], body.theme-light .border-\[\#18181b\],
-html.light .border-\[\#141416\], body.theme-light .border-\[\#141416\],
-html.light .border-\[\#323238\], body.theme-light .border-\[\#323238\],
-html.light .border-\[\#2A2F3A\], body.theme-light .border-\[\#2A2F3A\],
-html.light .border-\[\#232d3f\], body.theme-light .border-\[\#232d3f\],
-html.light .border-\[\#1c2433\], body.theme-light .border-\[\#1c2433\],
-html.light .border-\[\#222938\], body.theme-light .border-\[\#222938\],
-html.light .border-\[\#2d3748\], body.theme-light .border-\[\#2d3748\],
-html.light .border-\[\#1a202c\], body.theme-light .border-\[\#1a202c\],
-html.light .border-\[\#1e2638\], body.theme-light .border-\[\#1e2638\] {
+html.light [class*="border-[#27272a]"], body.theme-light [class*="border-[#27272a]"],
+html.light [class*="border-[#18181b]"], body.theme-light [class*="border-[#18181b]"],
+html.light [class*="border-[#141416]"], body.theme-light [class*="border-[#141416]"],
+html.light [class*="border-[#323238]"], body.theme-light [class*="border-[#323238]"],
+html.light [class*="border-[#2A2F3A]"], body.theme-light [class*="border-[#2A2F3A]"],
+html.light [class*="border-[#232d3f]"], body.theme-light [class*="border-[#232d3f]"],
+html.light [class*="border-[#1c2433]"], body.theme-light [class*="border-[#1c2433]"],
+html.light [class*="border-[#222938]"], body.theme-light [class*="border-[#222938]"],
+html.light [class*="border-[#2d3748]"], body.theme-light [class*="border-[#2d3748]"],
+html.light [class*="border-[#1a202c]"], body.theme-light [class*="border-[#1a202c]"],
+html.light [class*="border-[#1e2638]"], body.theme-light [class*="border-[#1e2638]"],
+html.light [class*="border-[#434655]"], body.theme-light [class*="border-[#434655]"],
+html.light [class*="border-[#3f3f46]"], body.theme-light [class*="border-[#3f3f46]"],
+html.light [class*="border-[#252f40]"], body.theme-light [class*="border-[#252f40]"],
+html.light [class*="border-[#3e4c66]"], body.theme-light [class*="border-[#3e4c66]"],
+html.light [class*="border-[#2a364f]"], body.theme-light [class*="border-[#2a364f]"],
+html.light [class*="border-[#435069]"], body.theme-light [class*="border-[#435069]"] {
   border-color: #e2e8f0 !important; /* Borda sutil e elegante */
 }
 
-html.light .border-\[\#434655\], body.theme-light .border-\[\#434655\],
-html.light .border-\[\#3f3f46\], body.theme-light .border-\[\#3f3f46\],
-html.light .border-\[\#252f40\], body.theme-light .border-\[\#252f40\],
-html.light .border-\[\#3e4c66\], body.theme-light .border-\[\#3e4c66\],
-html.light .border-\[\#2a364f\], body.theme-light .border-\[\#2a364f\],
-html.light .border-\[\#435069\], body.theme-light .border-\[\#435069\] {
-  border-color: #cbd5e1 !important;
+html.light .divide-\[\#27272a\] > :not([hidden]) ~ :not([hidden]),
+html.light .divide-\[\#27272a\]\/50 > :not([hidden]) ~ :not([hidden]),
+html.light .divide-\[\#2A2F3A\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: #f1f5f9 !important;
 }
 
-html.light .divide-\[\#27272a\] > :not([hidden]) ~ :not([hidden]),
-html.light .divide-\[\#27272a\]\/50 > :not([hidden]) ~ :not([hidden]) {
-  border-color: #f1f5f9 !important;
+/* Tables in Light Mode */
+html.light table, body.theme-light table {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+}
+html.light thead, body.theme-light thead,
+html.light thead tr, body.theme-light thead tr,
+html.light thead th, body.theme-light thead th {
+  background-color: #f8fafc !important;
+  color: #475569 !important;
+  border-color: #e2e8f0 !important;
+}
+html.light tbody, body.theme-light tbody {
+  background-color: #ffffff !important;
+}
+html.light tbody tr, body.theme-light tbody tr {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+html.light tbody tr:hover, body.theme-light tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+html.light tbody td, body.theme-light tbody td {
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+html.light tbody td .text-white, body.theme-light tbody td .text-white {
+  color: #0f172a !important;
+}
+
+/* Modals & Dialogs in Light Mode */
+html.light [role="dialog"], body.theme-light [role="dialog"],
+html.light .fixed [class*="bg-[#181c22]"], body.theme-light .fixed [class*="bg-[#181c22]"],
+html.light .fixed [class*="bg-[#111827]"], body.theme-light .fixed [class*="bg-[#111827]"] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Checkbox & Module checklist buttons inside forms/modals in Light Mode */
+html.light label[class*="border-[#2A2F3A]"],
+html.light label[class*="border-[#27272a]"] {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #334155 !important;
+}
+html.light label[class*="border-[#45dfa4]"],
+html.light label[class*="border-emerald"] {
+  background-color: rgba(16, 185, 129, 0.08) !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  color: #064e3b !important;
+  font-weight: 600 !important;
+}
+html.light label[class*="border-[#45dfa4]"] span,
+html.light label[class*="border-emerald"] span {
+  color: #064e3b !important;
+}
+
+/* Role preset selector buttons in Light Mode */
+html.light button[class*="border-[#45dfa4]"],
+html.light button[class*="border-emerald"] {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+  border-color: rgba(16, 185, 129, 0.5) !important;
+  color: #064e3b !important;
+}
+html.light button[class*="border-[#45dfa4]"] span,
+html.light button[class*="border-[#45dfa4]"] p,
+html.light button[class*="border-emerald"] span,
+html.light button[class*="border-emerald"] p {
+  color: #064e3b !important;
 }
 
 /* Typography in Light Mode */
@@ -220,6 +296,15 @@ html.light h6.text-white,
 html.light p.text-white,
 html.light span.text-white:not(.keep-white),
 html.light div.text-white:not(.keep-white) {
+  color: #0f172a !important;
+}
+
+html.light label:not([class*="bg-emerald"]):not([class*="bg-green"]):not([class*="bg-red"]):not([class*="bg-blue"]):not([class*="text-emerald"]):not([class*="text-green"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-[#45dfa4]"]),
+body.theme-light label:not([class*="bg-emerald"]):not([class*="bg-green"]):not([class*="bg-red"]):not([class*="bg-blue"]):not([class*="text-emerald"]):not([class*="text-green"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-[#45dfa4]"]) {
+  color: #1e293b !important;
+}
+
+html.light label.text-white, body.theme-light label.text-white {
   color: #0f172a !important;
 }
 
