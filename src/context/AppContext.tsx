@@ -164,6 +164,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   });
 
+  // Dedicated TI Session State & Persistence
+  const [tiSession, setTiSession] = useState<TISession>(() => {
+    const saved = localStorage.getItem('godesc_ti_session');
+    if (saved) {
+      try {
+        const parsed: TISession = JSON.parse(saved);
+        if (parsed.isAuthenticated && parsed.expiresAt > Date.now()) {
+          return parsed;
+        }
+      } catch (e) { /* ignore */ }
+    }
+    return {
+      isAuthenticated: false,
+      username: '',
+      name: '',
+      email: '',
+      role: 'client',
+      loginAt: '',
+      expiresAt: 0,
+      ip: '127.0.0.1',
+      userAgent: 'Mozilla/5.0'
+    };
+  });
+
+  useEffect(() => {
+    localStorage.setItem('godesc_ti_session', JSON.stringify(tiSession));
+  }, [tiSession]);
+
   // User-specific Theme preference: 'dark' | 'light' (Dark mode is default)
   const [theme, setThemeState] = useState<'dark' | 'light'>(() => {
     try {
@@ -1061,29 +1089,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('godesc_calendar_events', JSON.stringify(calendarEvents));
   }, [calendarEvents]);
 
-  // Dedicated TI Session State & Persistence
-  const [tiSession, setTiSession] = useState<TISession>(() => {
-    const saved = localStorage.getItem('godesc_ti_session');
-    if (saved) {
-      try {
-        const parsed: TISession = JSON.parse(saved);
-        if (parsed.isAuthenticated && parsed.expiresAt > Date.now()) {
-          return parsed;
-        }
-      } catch (e) { /* ignore */ }
-    }
-    return {
-      isAuthenticated: false,
-      username: '',
-      name: '',
-      email: '',
-      role: 'client',
-      loginAt: '',
-      expiresAt: 0,
-      ip: '127.0.0.1',
-      userAgent: 'Mozilla/5.0'
-    };
-  });
 
   // T.I Security Audit Logs State & Persistence
   const [auditLogs, setAuditLogs] = useState<TISecurityLog[]>(() => {
@@ -1108,9 +1113,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ];
   });
 
-  useEffect(() => {
-    localStorage.setItem('godesc_ti_session', JSON.stringify(tiSession));
-  }, [tiSession]);
 
   useEffect(() => {
     localStorage.setItem('godesc_ti_audit_logs', JSON.stringify(auditLogs));
