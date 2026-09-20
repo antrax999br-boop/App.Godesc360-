@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { CalendarEvent } from '../types';
+import { ThemeToggle } from './ThemeToggle';
 import {
   Calendar as CalendarIcon,
   Plus,
@@ -177,6 +178,7 @@ export const CalendarEventsView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2.5">
+          <ThemeToggle compact buttonId="btn-calendar-theme-toggle" />
           {/* Toggle View Mode */}
           <div className="hidden sm:flex bg-[#181c22] p-0.5 rounded-lg border border-[#2A2F3A] text-xs">
             <button

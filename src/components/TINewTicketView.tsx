@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { processFileAttachment } from '../utils/fileUtils';
+import { ThemeToggle } from './ThemeToggle';
 import {
   User,
   FolderTree,
@@ -192,6 +193,7 @@ export const TINewTicketView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          <ThemeToggle compact buttonId="btn-newticket-theme-toggle" />
           <span className="text-xs text-[#8d90a0] font-mono hidden md:inline">
             Operador: <strong className="text-white">{tiSession.name || 'Suporte T.I.'}</strong>
           </span>

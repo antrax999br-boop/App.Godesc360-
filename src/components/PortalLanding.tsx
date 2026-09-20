@@ -2,6 +2,8 @@ import React from 'react';
 import { useApp } from '../context/AppContext';
 
 import { APP_LOGO } from '../data/mockData';
+import { AppLogo } from './AppLogo';
+import { ThemeToggle } from './ThemeToggle';
 import { Plus, ArrowRight, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -12,15 +14,12 @@ export const PortalLanding: React.FC = () => {
     <div className="min-h-screen bg-[#1e1e24] text-[#dfe2eb] flex flex-col justify-between selection:bg-[#45dfa4]/30 selection:text-[#45dfa4]">
       {/* Top Header with GoDesc Logo */}
       <header className="w-full border-b border-[#27272a] bg-[#18181b]/90 backdrop-blur-md px-6 md:px-12 py-4 flex items-center justify-between">
-        <div
-          className="flex items-center gap-3 cursor-pointer"
+        <AppLogo
+          size="md"
           onClick={() => setCurrentScreen('portal_landing')}
-        >
-          <img
-            src={APP_LOGO}
-            alt="Logo Geral"
-            className="h-10 w-auto object-contain"
-          />
+        />
+        <div className="flex items-center gap-3">
+          <ThemeToggle compact buttonId="btn-portal-landing-theme" />
         </div>
       </header>
 

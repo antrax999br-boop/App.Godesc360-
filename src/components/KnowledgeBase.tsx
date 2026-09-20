@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { ThemeToggle } from './ThemeToggle';
 import {
   ArrowLeft,
   Plus,
@@ -181,6 +182,8 @@ export const KnowledgeBase: React.FC = () => {
             <span>Base de Conhecimento</span>
           </h1>
         </div>
+
+        <ThemeToggle compact buttonId="btn-kb-theme-toggle" />
       </header>
 
       {/* Main Two-Column Layout */}

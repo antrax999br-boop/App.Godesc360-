@@ -1,5 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
+import { ThemeToggle } from './ThemeToggle';
 import {
   Activity,
   ArrowLeft,
@@ -41,7 +42,8 @@ export const SystemStatusView: React.FC = () => {
           </h1>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <ThemeToggle compact buttonId="btn-status-theme-toggle" />
           <span className="text-xs font-mono text-[#8d90a0]">
             Atualizado a cada 60s
           </span>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { VaultCredential } from '../types';
+import { ThemeToggle } from './ThemeToggle';
 import {
   Key,
   Plus,
@@ -204,14 +205,16 @@ export const TIVaultView: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Action: + Nova Credencial in Standard System Green! */}
-        <button
-          onClick={handleOpenNewModal}
-          className="px-4 py-2 bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 font-bold text-xs rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-[#45dfa4]/20 cursor-pointer"
-        >
-          <Plus className="w-4 h-4 text-gray-950" />
-          <span>+ Nova Credencial</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <ThemeToggle compact buttonId="btn-vault-theme-toggle" />
+          <button
+            onClick={handleOpenNewModal}
+            className="px-4 py-2 bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 font-bold text-xs rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-[#45dfa4]/20 cursor-pointer"
+          >
+            <Plus className="w-4 h-4 text-gray-950" />
+            <span>+ Nova Credencial</span>
+          </button>
+        </div>
       </header>
 
       {/* Main Content Area */}

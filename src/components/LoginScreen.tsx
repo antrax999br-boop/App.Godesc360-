@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 
 import { APP_LOGO } from '../data/mockData';
+import { AppLogo } from './AppLogo';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield, Sparkles, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -89,14 +90,10 @@ export const LoginScreen: React.FC = () => {
       >
         {/* Brand Header */}
         <div className="text-center mb-8">
-          <div
-            className="flex items-center justify-center cursor-pointer mb-2"
-            onClick={() => setCurrentScreen('portal_landing')}
-          >
-            <img
-              src={APP_LOGO}
-              alt="Logo Geral"
-              className="h-12 w-auto object-contain"
+          <div className="flex items-center justify-center mb-2">
+            <AppLogo
+              size="xl"
+              onClick={() => setCurrentScreen('portal_landing')}
             />
           </div>
           <p className="text-xs font-mono text-[#8d90a0] tracking-wider uppercase">

@@ -36,7 +36,7 @@ import { AttendanceDashboardView } from './components/AttendanceDashboardView';
 import { TIDetailedDashboardView } from './components/TIDetailedDashboardView';
 
 const ScreenRenderer: React.FC = () => {
-  const { currentScreen } = useApp();
+  const { currentScreen, theme } = useApp();
 
   const renderActiveScreen = () => {
     switch (currentScreen) {
@@ -189,7 +189,7 @@ const ScreenRenderer: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#1e1e24] text-[#dfe2eb] font-sans antialiased">
+    <div className={`min-h-screen ${theme === 'light' ? 'bg-[#f8fafc] text-[#0f172a]' : 'bg-[#1e1e24] text-[#dfe2eb]'} font-sans antialiased transition-colors duration-200`}>
       <AnimatePresence mode="wait">
         <motion.div
           key={currentScreen}

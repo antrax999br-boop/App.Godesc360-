@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { APP_LOGO } from '../data/mockData';
+import { AppLogo } from './AppLogo';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, ShieldAlert, Sparkles, AlertCircle, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
+import { ThemeToggle } from './ThemeToggle';
 
 export const TILoginScreen: React.FC = () => {
   const { tiLogin, currentScreen, setCurrentScreen } = useApp();
@@ -56,10 +58,13 @@ export const TILoginScreen: React.FC = () => {
         >
           ← Voltar ao Início
         </button>
-        <span className="text-xs font-mono text-[#45dfa4] bg-[#181c22] px-3 py-1 rounded-full border border-[#45dfa4]/30 flex items-center gap-1.5">
-          <ShieldCheck className="w-3.5 h-3.5" />
-          <span>Área Protegida T.I.</span>
-        </span>
+        <div className="flex items-center gap-2">
+          <ThemeToggle compact buttonId="btn-login-theme-toggle" />
+          <span className="text-xs font-mono text-[#45dfa4] bg-[#181c22] px-3 py-1 rounded-full border border-[#45dfa4]/30 flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Área Protegida T.I.</span>
+          </span>
+        </div>
       </div>
 
       {/* Main Login Card Container */}
@@ -71,14 +76,10 @@ export const TILoginScreen: React.FC = () => {
       >
         {/* Brand Header */}
         <div className="text-center mb-8">
-          <div
-            className="flex items-center justify-center cursor-pointer mb-2"
-            onClick={() => setCurrentScreen('portal_landing')}
-          >
-            <img
-              src={APP_LOGO}
-              alt="Logo Geral"
-              className="h-12 w-auto object-contain"
+          <div className="flex items-center justify-center mb-2">
+            <AppLogo
+              size="xl"
+              onClick={() => setCurrentScreen('portal_landing')}
             />
           </div>
           <p className="text-xs font-mono text-[#45dfa4] tracking-wider uppercase font-bold">

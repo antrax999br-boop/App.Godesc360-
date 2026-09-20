@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { ArrowLeft, ShieldCheck, Search, Filter, RefreshCw, FileText, Lock, CheckCircle2, AlertTriangle, XCircle, LogOut } from 'lucide-react';
 import { TISecurityEventType } from '../types';
+import { ThemeToggle } from './ThemeToggle';
 
 export const TIAuditLogsView: React.FC = () => {
   const { auditLogs, setCurrentScreen, userSession } = useApp();
@@ -65,7 +66,8 @@ export const TIAuditLogsView: React.FC = () => {
           </h1>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <ThemeToggle compact buttonId="btn-audit-theme-toggle" />
           <button
             onClick={() => setCurrentScreen('ti_config')}
             className="text-xs font-mono text-[#45dfa4] hover:underline bg-[#111827] px-3 py-1.5 rounded-lg border border-[#2A2F3A]"

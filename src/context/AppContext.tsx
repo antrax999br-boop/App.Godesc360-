@@ -45,6 +45,9 @@ interface AppContextType {
   currentScreen: ScreenView;
   setCurrentScreen: (screen: ScreenView) => void;
   userSession: UserSession;
+  theme: 'dark' | 'light';
+  toggleTheme: () => void;
+  setTheme: (theme: 'dark' | 'light') => void;
   login: (username: string, role?: 'admin' | 'technician' | 'client', customUserData?: Partial<UserAccount>) => void;
   logout: () => void;
   // Managed Users (Cadastro & Permissões de Usuários)
@@ -160,6 +163,69 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       role: 'client'
     };
   });
+
+  // User-specific Theme preference: 'dark' | 'light' (Dark mode is default)
+  const [theme, setThemeState] = useState<'dark' | 'light'>(() => {
+    try {
+      const savedSession = localStorage.getItem('godesc_session');
+      if (savedSession) {
+        const parsed = JSON.parse(savedSession);
+        if (parsed?.username) {
+          const userTheme = localStorage.getItem(`godesc_theme_${parsed.username.toLowerCase()}`);
+          if (userTheme === 'light' || userTheme === 'dark') return userTheme;
+          if (parsed.themePreference === 'light' || parsed.themePreference === 'dark') return parsed.themePreference;
+        }
+      }
+      const defaultTheme = localStorage.getItem('godesc_theme_default');
+      if (defaultTheme === 'light' || defaultTheme === 'dark') return defaultTheme;
+    } catch (e) {}
+    return 'dark';
+  });
+
+  // Synchronize CSS class with current theme
+  useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+    if (theme === 'light') {
+      root.classList.add('light');
+      root.classList.remove('dark');
+      body.classList.add('theme-light');
+      body.classList.remove('theme-dark');
+      root.style.colorScheme = 'light';
+    } else {
+      root.classList.remove('light');
+      root.classList.add('dark');
+      body.classList.remove('theme-light');
+      body.classList.add('theme-dark');
+      root.style.colorScheme = 'dark';
+    }
+  }, [theme]);
+
+  const setTheme = (newTheme: 'dark' | 'light') => {
+    setThemeState(newTheme);
+    try {
+      localStorage.setItem('godesc_theme_default', newTheme);
+      if (userSession?.username) {
+        const key = `godesc_theme_${userSession.username.toLowerCase()}`;
+        localStorage.setItem(key, newTheme);
+        setUserSession(prev => ({ ...prev, themePreference: newTheme }));
+        setManagedUsers(prev =>
+          prev.map(u =>
+            u.username.toLowerCase() === userSession.username.toLowerCase()
+              ? { ...u, themePreference: newTheme }
+              : u
+          )
+        );
+      }
+    } catch (e) {
+      console.warn('Erro ao salvar preferência de tema:', e);
+    }
+  };
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+  };
 
   // Initial default managed users
   const DEFAULT_MANAGED_USERS: UserAccount[] = [
@@ -331,11 +397,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateManagedUser = (id: string, updates: Partial<UserAccount>) => {
+    let updatedList: UserAccount[] = [];
     setManagedUsers(prev => {
-      const updated = prev.map(u => u.id === id ? { ...u, ...updates } : u);
-      saveManagedUsersToCloud(updated);
-      return updated;
+      updatedList = prev.map(u => (u.id === id ? { ...u, ...updates } : u));
+      saveManagedUsersToCloud(updatedList);
+      return updatedList;
     });
+
+    // Se o usuário editado for o usuário atualmente logado, sincroniza a sessão ativa imediatamente
+    const target = updatedList.find(u => u.id === id) || managedUsers.find(u => u.id === id);
+    const targetUsername = (updates.username || target?.username || '').trim().toLowerCase();
+    const currentUsername = (userSession.username || '').trim().toLowerCase();
+    const currentTiUsername = (tiSession.username || '').trim().toLowerCase();
+
+    const isCurrent =
+      Boolean(targetUsername) &&
+      (targetUsername === currentUsername || targetUsername === currentTiUsername);
+
+    if (isCurrent && updates.permissions) {
+      setUserSession(prev => {
+        const next = {
+          ...prev,
+          role: updates.role || prev.role,
+          permissions: { ...prev.permissions, ...updates.permissions }
+        };
+        try { localStorage.setItem('godesc_session', JSON.stringify(next)); } catch (e) {}
+        return next;
+      });
+      setTiSession(prev => {
+        const next = {
+          ...prev,
+          role: updates.role || prev.role,
+          permissions: { ...prev.permissions, ...updates.permissions }
+        };
+        try { localStorage.setItem('godesc_ti_session', JSON.stringify(next)); } catch (e) {}
+        return next;
+      });
+    }
   };
 
   const deleteManagedUser = (id: string) => {
@@ -912,6 +1010,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
+  // Sincroniza automaticamente as permissões e dados da sessão ativa quando managedUsers for atualizado
+  useEffect(() => {
+    const activeUsername = (userSession.username || tiSession.username || '').trim().toLowerCase();
+    if (activeUsername) {
+      const matched = managedUsers.find(u => u.username.toLowerCase() === activeUsername);
+      if (matched && matched.permissions) {
+        const needsUserSync = JSON.stringify(userSession.permissions) !== JSON.stringify(matched.permissions) || userSession.role !== matched.role;
+        const needsTiSync = JSON.stringify(tiSession.permissions) !== JSON.stringify(matched.permissions) || tiSession.role !== matched.role;
+
+        if (needsUserSync) {
+          setUserSession(prev => {
+            const next = {
+              ...prev,
+              role: matched.role || prev.role,
+              permissions: { ...matched.permissions }
+            };
+            try { localStorage.setItem('godesc_session', JSON.stringify(next)); } catch (e) {}
+            return next;
+          });
+        }
+        if (needsTiSync) {
+          setTiSession(prev => {
+            const next = {
+              ...prev,
+              role: matched.role || prev.role,
+              permissions: { ...matched.permissions }
+            };
+            try { localStorage.setItem('godesc_ti_session', JSON.stringify(next)); } catch (e) {}
+            return next;
+          });
+        }
+      }
+    }
+  }, [managedUsers, userSession.username, tiSession.username]);
 
   useEffect(() => {
     localStorage.setItem('godesc_session', JSON.stringify(userSession));
@@ -1122,15 +1254,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ];
     const canUnlock = userRole === 'ceo' || userRole === 'gestor' || userRole === 'admin' || userAccount.permissions?.canUnlockTIAccount === true;
 
+    const isMasterRole = userRole === 'ceo' || userRole === 'gestor' || userRole === 'admin';
+
     const userPermissions = {
-      canAccessConfig: userAccount.permissions?.canAccessConfig ?? (userRole === 'ceo' || userRole === 'gestor' || userRole === 'admin'),
+      canAccessConfig: userAccount.permissions?.canAccessConfig ?? isMasterRole,
       canEditTickets: userAccount.permissions?.canEditTickets ?? true,
-      canDeleteTickets: userAccount.permissions?.canDeleteTickets ?? (userRole === 'ceo' || userRole === 'gestor' || userRole === 'admin'),
-      canManageUsers: userAccount.permissions?.canManageUsers ?? (userRole === 'ceo' || userRole === 'gestor' || userRole === 'admin'),
-      canManageCategories: userAccount.permissions?.canManageCategories ?? (userRole === 'ceo' || userRole === 'gestor' || userRole === 'admin'),
-      canViewAllKanbans: userAccount.permissions?.canViewAllKanbans ?? (userRole === 'ceo' || userRole === 'gestor' || userRole === 'admin'),
-      canUnlockTIAccount: canUnlock
+      canDeleteTickets: userAccount.permissions?.canDeleteTickets ?? isMasterRole,
+      canManageUsers: userAccount.permissions?.canManageUsers ?? isMasterRole,
+      canManageCategories: userAccount.permissions?.canManageCategories ?? isMasterRole,
+      canViewAllKanbans: userAccount.permissions?.canViewAllKanbans ?? isMasterRole,
+      canUnlockTIAccount: canUnlock,
+      // Permissões WhatsApp & Omnichannel
+      canAccessAttendanceQueue: userAccount.permissions?.canAccessAttendanceQueue ?? true,
+      canAccessAttendanceChat: userAccount.permissions?.canAccessAttendanceChat ?? true,
+      canAccessAttendanceDashboard: userAccount.permissions?.canAccessAttendanceDashboard ?? isMasterRole,
+      canAccessAttendanceChatbot: userAccount.permissions?.canAccessAttendanceChatbot ?? isMasterRole,
+      canAccessAttendanceQueuesConfig: userAccount.permissions?.canAccessAttendanceQueuesConfig ?? isMasterRole,
+      canAccessAttendanceWhatsApp: userAccount.permissions?.canAccessAttendanceWhatsApp ?? isMasterRole,
+      canAccessAttendanceContacts: userAccount.permissions?.canAccessAttendanceContacts ?? isMasterRole,
+      canAccessAttendanceSettings: userAccount.permissions?.canAccessAttendanceSettings ?? isMasterRole
     };
+
+    // Apply the logged-in user's personalized theme preference
+    const userThemeKey = `godesc_theme_${userAccount.username.toLowerCase()}`;
+    let appliedUserTheme: 'dark' | 'light' = 'dark';
+    try {
+      const savedUserTheme = localStorage.getItem(userThemeKey);
+      if (savedUserTheme === 'light' || savedUserTheme === 'dark') {
+        appliedUserTheme = savedUserTheme;
+      } else if (userAccount.themePreference === 'light' || userAccount.themePreference === 'dark') {
+        appliedUserTheme = userAccount.themePreference;
+      }
+    } catch (e) {}
+    setThemeState(appliedUserTheme);
 
     const newSession: TISession = {
       isAuthenticated: true,
@@ -1143,7 +1299,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ip: '192.168.1.105',
       userAgent: window.navigator?.userAgent || 'Browser Client',
       allowedModules: userAllowedModules,
-      permissions: userPermissions
+      permissions: userPermissions,
+      themePreference: appliedUserTheme
     };
 
     setTiSession(newSession);
@@ -1157,7 +1314,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       role: userRole,
       avatar: userAccount.username.charAt(0).toUpperCase(),
       allowedModules: userAllowedModules,
-      permissions: userPermissions
+      permissions: userPermissions,
+      themePreference: appliedUserTheme
     });
 
     addAuditLog({
@@ -1592,6 +1750,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteTicket = (ticketId: string) => {
+    // Verificação rigorosa de permissão de exclusão de tickets:
+    // 1. Se canDeleteTickets foi configurado como false, a exclusão é PROIBIDA imediatamente.
+    const activeUsername = (userSession.username || tiSession.username || '').trim().toLowerCase();
+    const matchedUser = activeUsername ? managedUsers.find(u => u.username.toLowerCase() === activeUsername) : null;
+
+    // Prioridade absoluta: permissão explícita configurada no usuário (true ou false)
+    const explicitPerm =
+      userSession.permissions?.canDeleteTickets !== undefined
+        ? userSession.permissions.canDeleteTickets
+        : (tiSession.permissions?.canDeleteTickets !== undefined
+            ? tiSession.permissions.canDeleteTickets
+            : matchedUser?.permissions?.canDeleteTickets);
+
+    const isMasterRole =
+      userSession.role === 'ceo' ||
+      userSession.role === 'gestor' ||
+      userSession.role === 'admin' ||
+      tiSession.role === 'ceo' ||
+      tiSession.role === 'gestor' ||
+      tiSession.role === 'admin';
+
+    const canDelete = explicitPerm !== undefined ? Boolean(explicitPerm) : isMasterRole;
+
+    if (!canDelete) {
+      alert('Você não possui permissão para excluir tickets/chamados. Contate o administrador.');
+      return;
+    }
+
     setTickets(prev => prev.filter(t => t.id !== ticketId));
     setSelectedTicket(prev => (prev?.id === ticketId ? null : prev));
     supabase.from('tickets').delete().eq('id', ticketId).then(({ error }) => {
@@ -3126,6 +3312,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         currentScreen,
         setCurrentScreen,
         userSession,
+        theme,
+        toggleTheme,
+        setTheme,
         login,
         logout,
         managedUsers,

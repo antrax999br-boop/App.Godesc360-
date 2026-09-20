@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { DatabaseNote, DatabaseFolder } from '../types';
+import { ThemeToggle } from './ThemeToggle';
 import {
   Folder,
   FolderPlus,
@@ -183,6 +184,7 @@ export const DatabaseNotesView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2.5">
+          <ThemeToggle compact buttonId="btn-notes-theme-toggle" />
           <button
             onClick={() => setIsCreatingFolder(true)}
             className="px-3 py-1.5 bg-[#1f2630] hover:bg-[#283240] text-[#c3c6d7] hover:text-white border border-[#2A2F3A] text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors"

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { APP_LOGO } from '../data/mockData';
+import { AppLogo } from './AppLogo';
+import { ThemeToggle } from './ThemeToggle';
 import {
   LayoutDashboard,
   Ticket as TicketIcon,
@@ -191,7 +193,8 @@ export const TIDashboard: React.FC = () => {
     soundEnabled,
     setSoundEnabled,
     companies,
-    attendanceConversations
+    attendanceConversations,
+    theme
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -352,16 +355,10 @@ export const TIDashboard: React.FC = () => {
         >
           {/* Brand Top */}
           <div className="px-6 mb-6 flex items-center justify-between">
-            <div
-              className="flex items-center gap-2 cursor-pointer"
+            <AppLogo
+              size="md"
               onClick={() => setCurrentScreen('ti_dashboard')}
-            >
-              <img
-                src={APP_LOGO}
-                alt="Logo Geral"
-                className="h-8 w-auto object-contain"
-              />
-            </div>
+            />
 
             <button
               onClick={() => setIsSidebarOpenMobile(false)}
@@ -519,203 +516,245 @@ export const TIDashboard: React.FC = () => {
             </div>
 
             {/* Collapsible Atendimento Section (WhatsApp & Chatbot) */}
-            <div className="py-1">
-              <button
-                onClick={() => setAttendanceSubmenuOpen(!attendanceSubmenuOpen)}
-                className="w-full px-4 py-1.5 flex items-center justify-between text-[10px] font-mono text-[#8d90a0] uppercase tracking-wider hover:text-white transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-2">
-                  <span>Atendimento WhatsApp</span>
-                  <span className="w-2 h-2 rounded-full bg-[#45dfa4] animate-pulse" />
-                </div>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${attendanceSubmenuOpen ? '' : '-rotate-90'}`} />
-              </button>
+            {(() => {
+              const isGestor =
+                userSession.role === 'ceo' ||
+                userSession.role === 'gestor' ||
+                userSession.role === 'admin' ||
+                Boolean(userSession.permissions?.canAccessConfig);
 
-              {attendanceSubmenuOpen && (
-                <div className="space-y-0.5 mt-1">
-                  <button
-                    id="menu-attendance-queue"
-                    onClick={() => setCurrentScreen('attendance_queue')}
-                    className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                      currentScreen === 'attendance_queue'
-                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Layers className="w-4 h-4 text-[#45dfa4]" />
-                      <span>Fila de Atendimento</span>
-                    </div>
-                    <span className="px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-[#45dfa4]/20 text-[#45dfa4] border border-[#45dfa4]/30">
-                      Novo
-                    </span>
-                  </button>
+              const canShowAttendanceQueue = isGestor || userSession.permissions?.canAccessAttendanceQueue !== false;
+              const canShowAttendanceChat = isGestor || userSession.permissions?.canAccessAttendanceChat !== false;
+              const canShowAttendanceDashboard = isGestor || Boolean(userSession.permissions?.canAccessAttendanceDashboard);
+              const canShowAttendanceChatbot = isGestor || Boolean(userSession.permissions?.canAccessAttendanceChatbot);
+              const canShowAttendanceQueuesConfig = isGestor || Boolean(userSession.permissions?.canAccessAttendanceQueuesConfig);
+              const canShowAttendanceWhatsApp = isGestor || Boolean(userSession.permissions?.canAccessAttendanceWhatsApp);
+              const canShowAttendanceContacts = isGestor || Boolean(userSession.permissions?.canAccessAttendanceContacts);
+              const canShowAttendanceSettings = isGestor || Boolean(userSession.permissions?.canAccessAttendanceSettings);
 
-                  <button
-                    id="menu-attendance-chat"
-                    onClick={() => setCurrentScreen('attendance_chat')}
-                    className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                      currentScreen === 'attendance_chat'
-                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <MessageSquare className="w-4 h-4 text-[#45dfa4]" />
-                      <span>Chat em Tempo Real</span>
-                    </div>
-                    <span className="px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-[#45dfa4]/20 text-[#45dfa4] border border-[#45dfa4]/30">
-                      Ao Vivo
-                    </span>
-                  </button>
+              const hasAnyWhatsAppAccess =
+                canShowAttendanceQueue ||
+                canShowAttendanceChat ||
+                canShowAttendanceDashboard ||
+                canShowAttendanceChatbot ||
+                canShowAttendanceQueuesConfig ||
+                canShowAttendanceWhatsApp ||
+                canShowAttendanceContacts ||
+                canShowAttendanceSettings;
 
-                  {/* Admin-only Attendance Configuration Submenus */}
-                  {(userSession.role === 'ceo' || userSession.role === 'gestor' || userSession.role === 'admin' || userSession.permissions?.canAccessConfig) && (
-                    <>
+              return (
+                <>
+                  {hasAnyWhatsAppAccess && (
+                    <div className="py-1">
                       <button
-                        id="menu-attendance-dashboard"
-                        onClick={() => setCurrentScreen('attendance_dashboard')}
-                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                          currentScreen === 'attendance_dashboard'
-                            ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                            : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
-                        }`}
+                        onClick={() => setAttendanceSubmenuOpen(!attendanceSubmenuOpen)}
+                        className="w-full px-4 py-1.5 flex items-center justify-between text-[10px] font-mono text-[#8d90a0] uppercase tracking-wider hover:text-white transition-colors cursor-pointer"
                       >
-                        <TrendingUp className="w-4 h-4 text-[#45dfa4]" />
-                        <span>Dashboard Atendimento</span>
-                      </button>
-
-                      <button
-                        id="menu-attendance-chatbot"
-                        onClick={() => setCurrentScreen('attendance_chatbot')}
-                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                          currentScreen === 'attendance_chatbot'
-                            ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                            : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
-                        }`}
-                      >
-                        <Bot className="w-4 h-4 text-[#45dfa4]" />
-                        <span>Chatbot Automático</span>
-                      </button>
-
-                      <button
-                        id="menu-attendance-queues-config"
-                        onClick={() => setCurrentScreen('attendance_queues_config')}
-                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                          currentScreen === 'attendance_queues_config'
-                            ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                            : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
-                        }`}
-                      >
-                        <Layers className="w-4 h-4 text-[#45dfa4]" />
-                        <span>Configurar Filas</span>
-                      </button>
-
-                      <button
-                        id="menu-attendance-whatsapp"
-                        onClick={() => setCurrentScreen('attendance_whatsapp')}
-                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                          currentScreen === 'attendance_whatsapp'
-                            ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                            : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
-                        }`}
-                      >
-                        <Smartphone className="w-4 h-4 text-[#45dfa4]" />
-                        <span>Conexão WhatsApp</span>
-                      </button>
-
-                      <button
-                        id="menu-attendance-contacts"
-                        onClick={() => setCurrentScreen('attendance_contacts')}
-                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                          currentScreen === 'attendance_contacts'
-                            ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                            : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
-                        }`}
-                      >
-                        <Users className="w-4 h-4 text-[#45dfa4]" />
-                        <span>Contatos & CRM</span>
-                      </button>
-
-                      <button
-                        id="menu-attendance-settings"
-                        onClick={() => setCurrentScreen('attendance_settings')}
-                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                          currentScreen === 'attendance_settings'
-                            ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                            : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
-                        }`}
-                      >
-                        <Clock className="w-4 h-4 text-[#45dfa4]" />
-                        <span>Horários & Ausência</span>
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Collapsible Administração Section */}
-            <div className="py-1">
-              <button
-                onClick={() => setAdminSubmenuOpen(!adminSubmenuOpen)}
-                className="w-full px-4 py-1.5 flex items-center justify-between text-[10px] font-mono text-[#8d90a0] uppercase tracking-wider hover:text-white transition-colors cursor-pointer"
-              >
-                <span>Administração</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${adminSubmenuOpen ? '' : '-rotate-90'}`} />
-              </button>
-
-              {adminSubmenuOpen && (
-                <div className="space-y-0.5 mt-1">
-                  {(userSession.role === 'ceo' || userSession.role === 'gestor' || userSession.role === 'admin' || userSession.permissions?.canAccessConfig) && (
-                    <>
-                      <button
-                        id="menu-ti-config"
-                        onClick={() => setCurrentScreen('ti_config')}
-                        className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                          currentScreen === 'ti_config'
-                            ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                            : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Settings className="w-4 h-4 text-[#45dfa4]" />
-                          <span>Configurações</span>
+                        <div className="flex items-center gap-2">
+                          <span>Atendimento WhatsApp</span>
+                          <span className="w-2 h-2 rounded-full bg-[#45dfa4] animate-pulse" />
                         </div>
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${attendanceSubmenuOpen ? '' : '-rotate-90'}`} />
                       </button>
 
-                      <button
-                        id="menu-ti-audit-logs"
-                        onClick={() => setCurrentScreen('ti_audit_logs')}
-                        className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                          currentScreen === 'ti_audit_logs'
-                            ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                            : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Activity className="w-4 h-4 text-[#45dfa4]" />
-                          <span>Logs de Auditoria</span>
+                      {attendanceSubmenuOpen && (
+                        <div className="space-y-0.5 mt-1">
+                          {canShowAttendanceQueue && (
+                            <button
+                              id="menu-attendance-queue"
+                              onClick={() => setCurrentScreen('attendance_queue')}
+                              className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                                currentScreen === 'attendance_queue'
+                                  ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                                  : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Layers className="w-4 h-4 text-[#45dfa4]" />
+                                <span>Fila de Atendimento</span>
+                              </div>
+                              <span className="px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-[#45dfa4]/20 text-[#45dfa4] border border-[#45dfa4]/30">
+                                Novo
+                              </span>
+                            </button>
+                          )}
+
+                          {canShowAttendanceChat && (
+                            <button
+                              id="menu-attendance-chat"
+                              onClick={() => setCurrentScreen('attendance_chat')}
+                              className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                                currentScreen === 'attendance_chat'
+                                  ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                                  : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <MessageSquare className="w-4 h-4 text-[#45dfa4]" />
+                                <span>Chat em Tempo Real</span>
+                              </div>
+                              <span className="px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-[#45dfa4]/20 text-[#45dfa4] border border-[#45dfa4]/30">
+                                Ao Vivo
+                              </span>
+                            </button>
+                          )}
+
+                          {canShowAttendanceDashboard && (
+                            <button
+                              id="menu-attendance-dashboard"
+                              onClick={() => setCurrentScreen('attendance_dashboard')}
+                              className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                                currentScreen === 'attendance_dashboard'
+                                  ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                                  : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                              }`}
+                            >
+                              <TrendingUp className="w-4 h-4 text-[#45dfa4]" />
+                              <span>Dashboard Atendimento</span>
+                            </button>
+                          )}
+
+                          {canShowAttendanceChatbot && (
+                            <button
+                              id="menu-attendance-chatbot"
+                              onClick={() => setCurrentScreen('attendance_chatbot')}
+                              className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                                currentScreen === 'attendance_chatbot'
+                                  ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                                  : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                              }`}
+                            >
+                              <Bot className="w-4 h-4 text-[#45dfa4]" />
+                              <span>Chatbot Automático</span>
+                            </button>
+                          )}
+
+                          {canShowAttendanceQueuesConfig && (
+                            <button
+                              id="menu-attendance-queues-config"
+                              onClick={() => setCurrentScreen('attendance_queues_config')}
+                              className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                                currentScreen === 'attendance_queues_config'
+                                  ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                                  : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                              }`}
+                            >
+                              <Layers className="w-4 h-4 text-[#45dfa4]" />
+                              <span>Configurar Filas</span>
+                            </button>
+                          )}
+
+                          {canShowAttendanceWhatsApp && (
+                            <button
+                              id="menu-attendance-whatsapp"
+                              onClick={() => setCurrentScreen('attendance_whatsapp')}
+                              className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                                currentScreen === 'attendance_whatsapp'
+                                  ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                                  : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                              }`}
+                            >
+                              <Smartphone className="w-4 h-4 text-[#45dfa4]" />
+                              <span>Conexão WhatsApp</span>
+                            </button>
+                          )}
+
+                          {canShowAttendanceContacts && (
+                            <button
+                              id="menu-attendance-contacts"
+                              onClick={() => setCurrentScreen('attendance_contacts')}
+                              className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                                currentScreen === 'attendance_contacts'
+                                  ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                                  : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                              }`}
+                            >
+                              <Users className="w-4 h-4 text-[#45dfa4]" />
+                              <span>Contatos & CRM</span>
+                            </button>
+                          )}
+
+                          {canShowAttendanceSettings && (
+                            <button
+                              id="menu-attendance-settings"
+                              onClick={() => setCurrentScreen('attendance_settings')}
+                              className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                                currentScreen === 'attendance_settings'
+                                  ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                                  : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                              }`}
+                            >
+                              <Clock className="w-4 h-4 text-[#45dfa4]" />
+                              <span>Horários & Ausência</span>
+                            </button>
+                          )}
                         </div>
-                      </button>
-                    </>
+                      )}
+                    </div>
                   )}
 
-                  <button
-                    id="menu-ti-database"
-                    onClick={() => setCurrentScreen('ti_database')}
-                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
-                      currentScreen === 'ti_database'
-                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
-                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
-                    }`}
-                  >
-                    <Database className="w-4 h-4 text-[#45dfa4]" />
-                    <span>Base de Dados</span>
-                  </button>
-                </div>
-              )}
-            </div>
+                  {/* Collapsible Administração Section (Somente Gestores/Admin) */}
+                  {isGestor && (
+                    <div className="py-1">
+                      <button
+                        onClick={() => setAdminSubmenuOpen(!adminSubmenuOpen)}
+                        className="w-full px-4 py-1.5 flex items-center justify-between text-[10px] font-mono text-[#8d90a0] uppercase tracking-wider hover:text-white transition-colors cursor-pointer"
+                      >
+                        <span>Administração</span>
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${adminSubmenuOpen ? '' : '-rotate-90'}`} />
+                      </button>
+
+                      {adminSubmenuOpen && (
+                        <div className="space-y-0.5 mt-1">
+                          <button
+                            id="menu-ti-config"
+                            onClick={() => setCurrentScreen('ti_config')}
+                            className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                              currentScreen === 'ti_config'
+                                ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                                : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Settings className="w-4 h-4 text-[#45dfa4]" />
+                              <span>Configurações</span>
+                            </div>
+                          </button>
+
+                          <button
+                            id="menu-ti-audit-logs"
+                            onClick={() => setCurrentScreen('ti_audit_logs')}
+                            className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                              currentScreen === 'ti_audit_logs'
+                                ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                                : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Activity className="w-4 h-4 text-[#45dfa4]" />
+                              <span>Logs de Auditoria</span>
+                            </div>
+                          </button>
+
+                          <button
+                            id="menu-ti-database"
+                            onClick={() => setCurrentScreen('ti_database')}
+                            className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                              currentScreen === 'ti_database'
+                                ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                                : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                            }`}
+                          >
+                            <Database className="w-4 h-4 text-[#45dfa4]" />
+                            <span>Base de Dados</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           {/* User Footer Session */}
@@ -730,13 +769,16 @@ export const TIDashboard: React.FC = () => {
               </div>
             </div>
 
-            <button
-              onClick={logout}
-              className="text-[#8d90a0] hover:text-[#ffb4ab] p-1 rounded-lg transition-colors cursor-pointer"
-              title="Sair da Plataforma"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <ThemeToggle compact buttonId="btn-sidebar-theme-toggle" />
+              <button
+                onClick={logout}
+                className="text-[#8d90a0] hover:text-[#ffb4ab] p-1.5 rounded-lg hover:bg-[#151c25] transition-colors cursor-pointer"
+                title="Sair da Plataforma"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </aside>
       )}
@@ -745,36 +787,52 @@ export const TIDashboard: React.FC = () => {
       <main className={`flex-1 flex flex-col min-w-0 ${!isTvMode ? 'md:ml-64' : ''}`}>
         {/* Top Header Bar */}
         {!isTvMode && (
-          <header className="sticky top-0 z-30 bg-[#18181b]/90 backdrop-blur-md border-b border-[#27272a] flex justify-between items-center h-16 px-4 sm:px-6 md:px-8">
+          <header className={`sticky top-0 z-30 backdrop-blur-md border-b flex justify-between items-center h-16 px-4 sm:px-6 md:px-8 transition-colors ${
+            theme === 'light'
+              ? 'bg-white/95 border-slate-200 shadow-sm text-slate-800'
+              : 'bg-[#18181b]/90 border-[#27272a] text-white'
+          }`}>
             <div className="flex items-center gap-4 flex-1">
               <button
                 onClick={() => setIsSidebarOpenMobile(true)}
-                className="md:hidden text-[#c3c6d7] hover:text-white p-1"
+                className={`md:hidden p-1 ${
+                  theme === 'light' ? 'text-slate-600 hover:text-slate-900' : 'text-[#c3c6d7] hover:text-white'
+                }`}
               >
                 <Menu className="w-6 h-6" />
               </button>
 
               {/* Global Search */}
               <div className="hidden sm:flex relative w-64 md:w-80 group">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#8d90a0] group-focus-within:text-[#45dfa4] transition-colors" />
+                <Search className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${
+                  theme === 'light'
+                    ? 'text-slate-400 group-focus-within:text-emerald-600'
+                    : 'text-[#8d90a0] group-focus-within:text-[#45dfa4]'
+                }`} />
                 <input
                   id="search-global-ti"
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Buscar ticket, cliente ou inventário..."
-                  className="w-full bg-[#151c25] border border-[#27272a] rounded-lg pl-9 pr-4 py-1.5 text-xs text-white placeholder:text-[#8d90a0] focus:outline-none focus:border-[#45dfa4] transition-all"
+                  className={`w-full rounded-lg pl-9 pr-4 py-1.5 text-xs transition-all focus:outline-none ${
+                    theme === 'light'
+                      ? 'bg-slate-100 border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white'
+                      : 'bg-[#151c25] border border-[#27272a] text-white placeholder:text-[#8d90a0] focus:border-[#45dfa4]'
+                  }`}
                 />
               </div>
 
               {/* Sub-tab navigation switcher */}
-              <div className="hidden md:flex items-center bg-[#151c25] border border-[#27272a] p-1 rounded-xl gap-1">
+              <div className={`hidden md:flex items-center border p-1 rounded-xl gap-1 ${
+                theme === 'light' ? 'bg-slate-100 border-slate-200' : 'bg-[#151c25] border-[#27272a]'
+              }`}>
                 <button
                   onClick={() => setCurrentScreen('ti_dashboard')}
                   className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                     currentScreen === 'ti_dashboard'
                       ? 'bg-[#45dfa4] text-gray-950 font-bold shadow-md'
-                      : 'text-[#8d90a0] hover:text-white'
+                      : (theme === 'light' ? 'text-slate-600 hover:text-slate-900' : 'text-[#8d90a0] hover:text-white')
                   }`}
                 >
                   Visão Geral
@@ -784,7 +842,7 @@ export const TIDashboard: React.FC = () => {
                   className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                     currentScreen === 'ti_dashboard_detailed'
                       ? 'bg-[#45dfa4] text-gray-950 font-bold shadow-md'
-                      : 'text-[#8d90a0] hover:text-white'
+                      : (theme === 'light' ? 'text-slate-600 hover:text-slate-900' : 'text-[#8d90a0] hover:text-white')
                   }`}
                 >
                   Detalhamento Mensal
@@ -792,11 +850,17 @@ export const TIDashboard: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <ThemeToggle compact buttonId="btn-topbar-theme-toggle" />
+
               <button
                 id="btn-switch-client-portal"
                 onClick={() => setCurrentScreen('client_home')}
-                className="hidden lg:flex items-center gap-1.5 text-xs font-mono text-[#c3c6d7] hover:text-[#45dfa4] bg-[#151c25] border border-[#27272a] px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                className={`hidden lg:flex items-center gap-1.5 text-xs font-mono px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
+                  theme === 'light'
+                    ? 'bg-slate-100 border-slate-200 text-slate-700 hover:text-emerald-700 hover:bg-slate-200/70'
+                    : 'bg-[#151c25] border-[#27272a] text-[#c3c6d7] hover:text-[#45dfa4]'
+                }`}
               >
                 <ExternalLink className="w-3.5 h-3.5" />
                 <span>Portal do Cliente</span>
@@ -807,7 +871,11 @@ export const TIDashboard: React.FC = () => {
                 <button
                   id="btn-notif-bell-ti"
                   onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)}
-                  className="text-[#c3c6d7] hover:text-white hover:bg-[#151c25] rounded-lg p-2 transition-all relative cursor-pointer"
+                  className={`rounded-lg p-2 transition-all relative cursor-pointer ${
+                    theme === 'light'
+                      ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      : 'text-[#c3c6d7] hover:text-white hover:bg-[#151c25]'
+                  }`}
                   title="Notificações"
                 >
                   <Bell className="w-5 h-5" />

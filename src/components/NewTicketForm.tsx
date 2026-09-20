@@ -16,6 +16,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import { APP_LOGO } from '../data/mockData';
+import { AppLogo } from './AppLogo';
 import { TicketPriority, TicketAttachment } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -169,16 +170,10 @@ export const NewTicketForm: React.FC = () => {
       {/* Top Header */}
       <header className="bg-[#18181b] border-b border-[#27272a] sticky top-0 z-50">
         <div className="flex justify-between items-center w-full px-6 md:px-12 py-3 max-w-7xl mx-auto">
-          <div
-            className="flex items-center gap-3 cursor-pointer"
+          <AppLogo
+            size="md"
             onClick={() => setCurrentScreen(userSession.isAuthenticated ? 'ti_dashboard' : 'portal_landing')}
-          >
-            <img
-              src={APP_LOGO}
-              alt="Logo Geral"
-              className="h-10 w-auto object-contain"
-            />
-          </div>
+          />
 
           <nav className="hidden md:flex gap-6 items-center">
             <button

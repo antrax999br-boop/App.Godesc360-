@@ -88,3 +88,238 @@ code, pre, textarea.font-mono, input.font-mono {
   transform: translateY(-2px);
 }
 
+/* ========================================================
+   LIGHT MODE DESIGN SYSTEM - GODESC 360 (Branco & Verde)
+   Ativado exclusivamente quando a classe .light ou .theme-light estiver presente.
+   No modo escuro, o sistema permanece 100% inalterado.
+   ======================================================== */
+
+html.light, body.theme-light, .theme-light {
+  color-scheme: light;
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+/* Background Mappings for Light Mode */
+html.light .bg-\[\#1e1e24\], body.theme-light .bg-\[\#1e1e24\],
+html.light .bg-\[\#0d141d\], body.theme-light .bg-\[\#0d141d\],
+html.light .bg-\[\#0f151e\], body.theme-light .bg-\[\#0f151e\],
+html.light .bg-\[\#0D1117\], body.theme-light .bg-\[\#0D1117\],
+html.light .bg-\[\#0d1117\], body.theme-light .bg-\[\#0d1117\],
+html.light .bg-\[\#080f17\], body.theme-light .bg-\[\#080f17\],
+html.light .bg-\[\#0e121b\], body.theme-light .bg-\[\#0e121b\],
+html.light .bg-\[\#10141e\], body.theme-light .bg-\[\#10141e\],
+html.light .bg-\[\#0b0e14\], body.theme-light .bg-\[\#0b0e14\],
+html.light .bg-\[\#080b10\], body.theme-light .bg-\[\#080b10\],
+html.light .bg-\[\#070b11\], body.theme-light .bg-\[\#070b11\],
+html.light .bg-\[\#0f141f\], body.theme-light .bg-\[\#0f141f\],
+html.light .bg-\[\#182030\], body.theme-light .bg-\[\#182030\] {
+  background-color: #f8fafc !important; /* Fundo limpo de tela */
+}
+
+/* Card, Panel, Header, Aside and Dialog Backgrounds */
+html.light header, body.theme-light header,
+html.light .bg-\[\#18181b\]\/90, body.theme-light .bg-\[\#18181b\]\/90,
+html.light .bg-\[\#18181b\/90\], body.theme-light .bg-\[\#18181b\/90\],
+html.light .bg-\[\#18181b\], body.theme-light .bg-\[\#18181b\],
+html.light .bg-\[\#141416\], body.theme-light .bg-\[\#141416\],
+html.light .bg-\[\#181c22\], body.theme-light .bg-\[\#181c22\],
+html.light .bg-\[\#111827\], body.theme-light .bg-\[\#111827\],
+html.light .bg-\[\#1B1F27\], body.theme-light .bg-\[\#1B1F27\],
+html.light .bg-\[\#111622\], body.theme-light .bg-\[\#111622\],
+html.light .bg-\[\#141824\], body.theme-light .bg-\[\#141824\],
+html.light .bg-\[\#12161f\], body.theme-light .bg-\[\#12161f\],
+html.light .bg-\[\#1a202c\], body.theme-light .bg-\[\#1a202c\] {
+  background-color: #ffffff !important; /* Branco puro elegante */
+}
+
+/* Sub-containers, inputs, secondary tags and sections */
+html.light .bg-\[\#151c25\], body.theme-light .bg-\[\#151c25\],
+html.light .bg-\[\#1a1a1e\], body.theme-light .bg-\[\#1a1a1e\],
+html.light .bg-\[\#2e353f\], body.theme-light .bg-\[\#2e353f\],
+html.light .bg-\[\#262a31\], body.theme-light .bg-\[\#262a31\],
+html.light .bg-\[\#252c38\], body.theme-light .bg-\[\#252c38\],
+html.light .bg-\[\#252b36\], body.theme-light .bg-\[\#252b36\],
+html.light .bg-\[\#192029\], body.theme-light .bg-\[\#192029\],
+html.light .bg-\[\#19202e\], body.theme-light .bg-\[\#19202e\],
+html.light .bg-\[\#1e2634\], body.theme-light .bg-\[\#1e2634\],
+html.light .bg-\[\#222938\], body.theme-light .bg-\[\#222938\],
+html.light .bg-\[\#1f2632\], body.theme-light .bg-\[\#1f2632\] {
+  background-color: #f1f5f9 !important; /* Cinza claro suave */
+}
+
+/* Secondary interactive items & neutral chips */
+html.light .bg-\[\#27272a\], body.theme-light .bg-\[\#27272a\],
+html.light .bg-\[\#1f2630\], body.theme-light .bg-\[\#1f2630\],
+html.light .bg-\[\#283240\], body.theme-light .bg-\[\#283240\],
+html.light .bg-\[\#232a34\], body.theme-light .bg-\[\#232a34\],
+html.light .bg-\[\#323238\], body.theme-light .bg-\[\#323238\],
+html.light .bg-\[\#2a2f3a\], body.theme-light .bg-\[\#2a2f3a\],
+html.light .bg-\[\#383d4a\], body.theme-light .bg-\[\#383d4a\],
+html.light .bg-\[\#2e3748\], body.theme-light .bg-\[\#2e3748\],
+html.light .bg-\[\#252f40\], body.theme-light .bg-\[\#252f40\],
+html.light .bg-\[\#202b40\], body.theme-light .bg-\[\#202b40\],
+html.light .bg-\[\#2e3644\], body.theme-light .bg-\[\#2e3644\],
+html.light .bg-\[\#3d4758\], body.theme-light .bg-\[\#3d4758\],
+html.light .bg-\[\#3f3f46\], body.theme-light .bg-\[\#3f3f46\] {
+  background-color: #e2e8f0 !important;
+}
+
+/* Borders in Light Mode */
+html.light .border-\[\#27272a\], body.theme-light .border-\[\#27272a\],
+html.light .border-\[\#18181b\], body.theme-light .border-\[\#18181b\],
+html.light .border-\[\#141416\], body.theme-light .border-\[\#141416\],
+html.light .border-\[\#323238\], body.theme-light .border-\[\#323238\],
+html.light .border-\[\#2A2F3A\], body.theme-light .border-\[\#2A2F3A\],
+html.light .border-\[\#232d3f\], body.theme-light .border-\[\#232d3f\],
+html.light .border-\[\#1c2433\], body.theme-light .border-\[\#1c2433\],
+html.light .border-\[\#222938\], body.theme-light .border-\[\#222938\],
+html.light .border-\[\#2d3748\], body.theme-light .border-\[\#2d3748\],
+html.light .border-\[\#1a202c\], body.theme-light .border-\[\#1a202c\],
+html.light .border-\[\#1e2638\], body.theme-light .border-\[\#1e2638\] {
+  border-color: #e2e8f0 !important; /* Borda sutil e elegante */
+}
+
+html.light .border-\[\#434655\], body.theme-light .border-\[\#434655\],
+html.light .border-\[\#3f3f46\], body.theme-light .border-\[\#3f3f46\],
+html.light .border-\[\#252f40\], body.theme-light .border-\[\#252f40\],
+html.light .border-\[\#3e4c66\], body.theme-light .border-\[\#3e4c66\],
+html.light .border-\[\#2a364f\], body.theme-light .border-\[\#2a364f\],
+html.light .border-\[\#435069\], body.theme-light .border-\[\#435069\] {
+  border-color: #cbd5e1 !important;
+}
+
+html.light .divide-\[\#27272a\] > :not([hidden]) ~ :not([hidden]),
+html.light .divide-\[\#27272a\]\/50 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #f1f5f9 !important;
+}
+
+/* Typography in Light Mode */
+html.light .text-\[\#dfe2eb\], body.theme-light .text-\[\#dfe2eb\],
+html.light .text-\[\#dce3f0\], body.theme-light .text-\[\#dce3f0\] {
+  color: #0f172a !important; /* Texto principal escuro e nítido */
+}
+
+html.light .text-\[\#c3c6d7\], body.theme-light .text-\[\#c3c6d7\],
+html.light .text-\[\#a0a5b8\], body.theme-light .text-\[\#a0a5b8\] {
+  color: #334155 !important; /* Texto secundário ardósia 700 */
+}
+
+html.light .text-\[\#8d90a0\], body.theme-light .text-\[\#8d90a0\],
+html.light .text-\[\#5e6375\], body.theme-light .text-\[\#5e6375\] {
+  color: #64748b !important; /* Texto auxiliar / legendas */
+}
+
+/* Ensure headings and labels that use text-white become readable slate, unless inside colored buttons */
+html.light h1.text-white,
+html.light h2.text-white,
+html.light h3.text-white,
+html.light h4.text-white,
+html.light h5.text-white,
+html.light h6.text-white,
+html.light p.text-white,
+html.light span.text-white:not(.keep-white),
+html.light div.text-white:not(.keep-white) {
+  color: #0f172a !important;
+}
+
+/* Brand Green in Light Mode */
+/* On white/light backgrounds, text with neon green #45dfa4 needs higher contrast: deep emerald #047857 */
+html.light .text-\[\#45dfa4\], body.theme-light .text-\[\#45dfa4\] {
+  color: #047857 !important;
+}
+
+/* Light brand badges with green background */
+html.light .bg-\[\#45dfa4\]\/10, body.theme-light .bg-\[\#45dfa4\]\/10,
+html.light .bg-\[\#45dfa4\]\/15, body.theme-light .bg-\[\#45dfa4\]\/15,
+html.light .bg-\[\#45dfa4\]\/20, body.theme-light .bg-\[\#45dfa4\]\/20 {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+}
+
+html.light .border-\[\#45dfa4\]\/30, body.theme-light .border-\[\#45dfa4\]\/30,
+html.light .border-\[\#45dfa4\]\/40, body.theme-light .border-\[\#45dfa4\]\/40,
+html.light .border-\[\#45dfa4\]\/50, body.theme-light .border-\[\#45dfa4\]\/50 {
+  border-color: rgba(16, 185, 129, 0.35) !important;
+}
+
+/* Forms & Inputs in Light Mode */
+html.light input:not([type="checkbox"]):not([type="radio"]),
+html.light select,
+html.light textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+html.light input:focus,
+html.light select:focus,
+html.light textarea:focus {
+  border-color: #10b981 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25) !important;
+}
+
+/* Light Mode Hover Effects */
+html.light .hover\:bg-\[\#1f2630\]:hover,
+html.light .hover\:bg-\[\#151c25\]:hover,
+html.light .hover\:bg-\[\#1a1a1e\]:hover {
+  background-color: #f1f5f9 !important;
+}
+
+html.light .hover\:text-white:hover {
+  color: #0f172a !important;
+}
+
+/* Scrollbars in Light Mode */
+html.light ::-webkit-scrollbar-track,
+body.theme-light ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+html.light ::-webkit-scrollbar-thumb,
+body.theme-light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+html.light ::-webkit-scrollbar-thumb:hover,
+body.theme-light ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Header & Aside subtle shadow in Light Mode */
+html.light aside,
+body.theme-light aside {
+  border-right-color: #e2e8f0 !important;
+  box-shadow: 1px 0 6px 0 rgba(0, 0, 0, 0.04);
+}
+
+html.light header,
+body.theme-light header {
+  border-bottom-color: #e2e8f0 !important;
+  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.03);
+}
+
+/* ========================================================
+   LOGO VISIBILITY & BLACK CONTOUR IN DARK MODE
+   Contorno preto expressivo na logo GoDesc no modo escuro
+   ======================================================== */
+html:not(.light) img[src*="logo"],
+body:not(.theme-light) img[src*="logo"],
+html.dark img[src*="logo"],
+body.theme-dark img[src*="logo"] {
+  filter: drop-shadow(2px 0 0 #000000) drop-shadow(-2px 0 0 #000000) drop-shadow(0 2px 0 #000000) drop-shadow(0 -2px 0 #000000) drop-shadow(1px 1px 0 #000000) drop-shadow(-1px -1px 0 #000000) drop-shadow(0 0 6px rgba(0, 0, 0, 0.95)) !important;
+}
+
+/* No modo claro, se renderizar /logo-geral.png clássico, inverte o texto para visibilidade total */
+html.light img[src*="logo-geral.png"],
+body.theme-light img[src*="logo-geral.png"] {
+  filter: brightness(0.12) contrast(2) drop-shadow(0 1px 2px rgba(0,0,0,0.08)) !important;
+}
+
+

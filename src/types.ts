@@ -44,7 +44,7 @@ export interface WhatsAppConnection {
 
 export type ConversationStatus = 'WAITING' | 'IN_PROGRESS' | 'BOT' | 'TRANSFERRED' | 'CLOSED';
 
-export type SenderType = 'CUSTOMER' | 'AGENT' | 'BOT' | 'SYSTEM';
+export type SenderType = 'CUSTOMER' | 'CLIENT' | 'AGENT' | 'BOT' | 'SYSTEM';
 
 export type MessageType = 'TEXT' | 'IMAGE' | 'AUDIO' | 'VIDEO' | 'DOCUMENT' | 'LOCATION' | 'SYSTEM';
 
@@ -56,19 +56,20 @@ export interface AttendanceMessage {
   externalMessageId?: string;
   senderType: SenderType;
   senderId?: string;
-  senderName: string;
-  messageType: MessageType;
+  senderName?: string;
+  messageType?: MessageType;
   content: string;
   mediaUrl?: string;
-  status: MessageStatus;
+  status?: MessageStatus;
   quotedMessageId?: string;
-  createdAt: string;
+  createdAt?: string;
+  timestamp?: string;
 }
 
 export interface AttendanceConversation {
   id: string;
-  companyId: string;
-  contactId: string;
+  companyId?: string;
+  contactId?: string;
   contactName: string;
   contactPhone: string;
   contactJid?: string;
@@ -78,18 +79,22 @@ export interface AttendanceConversation {
   departmentId?: string;
   assignedUserId?: string;
   assignedUserName?: string;
+  assignedUser?: string;
   status: ConversationStatus;
   botActive: boolean;
-  priority: TicketPriority;
-  startedAt: string;
+  priority?: TicketPriority;
+  startedAt?: string;
   assignedAt?: string;
   closedAt?: string;
-  lastMessageText: string;
-  lastMessageAt: string;
+  lastMessageText?: string;
+  lastMessageAt?: string;
+  lastMessageTimestamp?: string;
   unreadCount: number;
   rating?: number;
   ticketId?: string;
   tags?: string[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AttendanceContact {
@@ -321,6 +326,25 @@ export interface SystemNotification {
   ticketId?: string;
 }
 
+export interface UserPermissions {
+  canAccessConfig?: boolean;
+  canEditTickets?: boolean;
+  canDeleteTickets?: boolean;
+  canManageUsers?: boolean;
+  canManageCategories?: boolean;
+  canViewAllKanbans?: boolean;
+  canUnlockTIAccount?: boolean;
+  // Permissões de Atendimento WhatsApp
+  canAccessAttendanceQueue?: boolean;
+  canAccessAttendanceChat?: boolean;
+  canAccessAttendanceDashboard?: boolean;
+  canAccessAttendanceChatbot?: boolean;
+  canAccessAttendanceQueuesConfig?: boolean;
+  canAccessAttendanceWhatsApp?: boolean;
+  canAccessAttendanceContacts?: boolean;
+  canAccessAttendanceSettings?: boolean;
+}
+
 export interface UserAccount {
   id: string;
   name: string;
@@ -330,15 +354,8 @@ export interface UserAccount {
   role: 'admin' | 'technician' | 'client' | 'n1' | 'n2' | 'n3' | 'gestor' | 'ceo';
   avatar?: string;
   allowedModules?: ScreenView[];
-  permissions?: {
-    canAccessConfig?: boolean;
-    canEditTickets?: boolean;
-    canDeleteTickets?: boolean;
-    canManageUsers?: boolean;
-    canManageCategories?: boolean;
-    canViewAllKanbans?: boolean;
-    canUnlockTIAccount?: boolean;
-  };
+  permissions?: UserPermissions;
+  themePreference?: 'dark' | 'light';
   // TI Security Lockout Control
   failed_login_attempts?: number;
   locked?: boolean;
@@ -361,15 +378,8 @@ export interface TISession {
   ip: string;
   userAgent: string;
   allowedModules?: ScreenView[];
-  permissions?: {
-    canAccessConfig?: boolean;
-    canEditTickets?: boolean;
-    canDeleteTickets?: boolean;
-    canManageUsers?: boolean;
-    canManageCategories?: boolean;
-    canViewAllKanbans?: boolean;
-    canUnlockTIAccount?: boolean;
-  };
+  permissions?: UserPermissions;
+  themePreference?: 'dark' | 'light';
 }
 
 export interface UserSession {
@@ -380,15 +390,8 @@ export interface UserSession {
   role: 'admin' | 'technician' | 'client' | 'n1' | 'n2' | 'n3' | 'gestor' | 'ceo';
   avatar?: string;
   allowedModules?: ScreenView[];
-  permissions?: {
-    canAccessConfig?: boolean;
-    canEditTickets?: boolean;
-    canDeleteTickets?: boolean;
-    canManageUsers?: boolean;
-    canManageCategories?: boolean;
-    canViewAllKanbans?: boolean;
-    canUnlockTIAccount?: boolean;
-  };
+  permissions?: UserPermissions;
+  themePreference?: 'dark' | 'light';
 }
 
 export interface KBArticle {

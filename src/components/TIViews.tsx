@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { INITIAL_CLIENTS, INITIAL_DOMAINS } from '../data/mockData';
 import { Ticket, TicketPriority, TicketStatus } from '../types';
 import { getOperatorsForQueue } from '../utils/queueUtils';
+import { ThemeToggle } from './ThemeToggle';
 import {
   Search,
   Plus,
@@ -44,8 +45,23 @@ export const TITicketsView: React.FC = () => {
     setCurrentScreen,
     triggerSystemNotification,
     managedUsers,
-    companies
+    companies,
+    userSession,
+    tiSession
   } = useApp();
+
+  const activeUsername = (userSession.username || tiSession?.username || '').trim().toLowerCase();
+  const matchedUser = activeUsername ? managedUsers.find(u => u.username.toLowerCase() === activeUsername) : null;
+
+  const explicitPerm =
+    userSession.permissions?.canDeleteTickets !== undefined
+      ? userSession.permissions.canDeleteTickets
+      : (tiSession?.permissions?.canDeleteTickets !== undefined
+          ? tiSession.permissions.canDeleteTickets
+          : matchedUser?.permissions?.canDeleteTickets);
+
+  const isMasterRole = userSession.role === 'ceo' || userSession.role === 'gestor' || userSession.role === 'admin';
+  const canDeleteTickets = explicitPerm !== undefined ? Boolean(explicitPerm) : isMasterRole;
 
   const [search, setSearch] = useState('');
   const [selectedQueue, setSelectedQueue] = useState<string>('Todas');
@@ -184,6 +200,10 @@ export const TITicketsView: React.FC = () => {
 
   const handleDelete = (e: React.MouseEvent, ticket: Ticket) => {
     e.stopPropagation();
+    if (!canDeleteTickets) {
+      alert('Você não possui permissão para excluir tickets/chamados.');
+      return;
+    }
     if (window.confirm(`Tem certeza que deseja excluir o ticket ${ticket.ticketNumber}?`)) {
       deleteTicket(ticket.id);
       triggerSystemNotification(
@@ -223,6 +243,7 @@ export const TITicketsView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          <ThemeToggle compact buttonId="btn-tickets-theme-toggle" />
           <button
             onClick={() => setCurrentScreen('ti_new_ticket')}
             className="px-4 py-2 bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 font-bold text-xs rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-[#45dfa4]/20 cursor-pointer"
@@ -534,14 +555,16 @@ export const TITicketsView: React.FC = () => {
                           <Eye className="w-3.5 h-3.5" />
                         </button>
 
-                        {/* Delete Ticket */}
-                        <button
-                          onClick={(e) => handleDelete(e, t)}
-                          className="p-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/40 text-red-400 transition-colors cursor-pointer border border-red-500/30"
-                          title="Excluir Ticket"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {/* Delete Ticket (Condicionado à Permissão) */}
+                        {canDeleteTickets && (
+                          <button
+                            onClick={(e) => handleDelete(e, t)}
+                            className="p-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/40 text-red-400 transition-colors cursor-pointer border border-red-500/30"
+                            title="Excluir Ticket"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1047,13 +1070,16 @@ export const TIQueueView: React.FC = () => {
           </div>
         </div>
 
-        <button
-          onClick={() => setShowNewTaskModal(true)}
-          className="px-3.5 py-1.5 bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 font-bold text-xs rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-md"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Nova Tarefa ({activeUserKey})</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <ThemeToggle compact buttonId="btn-queue-theme-toggle" />
+          <button
+            onClick={() => setShowNewTaskModal(true)}
+            className="px-3.5 py-1.5 bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 font-bold text-xs rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-md"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Nova Tarefa ({activeUserKey})</span>
+          </button>
+        </div>
       </header>
 
       {/* Info & User Selector Banner */}
@@ -1451,13 +1477,16 @@ export const TIDomainsView: React.FC = () => {
           </h1>
         </div>
 
-        <button
-          onClick={() => setShowNewDomainModal(true)}
-          className="px-3.5 py-1.5 bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 font-bold text-xs rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Provisionar Domínio</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <ThemeToggle compact buttonId="btn-domains-theme-toggle" />
+          <button
+            onClick={() => setShowNewDomainModal(true)}
+            className="px-3.5 py-1.5 bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 font-bold text-xs rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Provisionar Domínio</span>
+          </button>
+        </div>
       </header>
 
       <main className="flex-1 max-w-7xl mx-auto w-full p-6">
@@ -1576,6 +1605,8 @@ export const TIClientsView: React.FC = () => {
             <span>Gestão de Clientes &amp; Contratos</span>
           </h1>
         </div>
+
+        <ThemeToggle compact buttonId="btn-clients-theme-toggle" />
       </header>
 
       <main className="flex-1 max-w-7xl mx-auto w-full p-6">
@@ -1642,6 +1673,8 @@ export const TIMonitoringView: React.FC = () => {
             <span>Telemetria &amp; Monitoramento de Infraestrutura</span>
           </h1>
         </div>
+
+        <ThemeToggle compact buttonId="btn-monitoring-theme-toggle" />
       </header>
 
       <main className="flex-1 max-w-7xl mx-auto w-full p-6 space-y-6">

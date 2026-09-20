@@ -416,9 +416,9 @@ export const INITIAL_DOMAINS: DomainItem[] = [
   }
 ];
 
-export const APP_LOGO = '/logo-geral.png';
-export const LOGO_URL = '/logo-geral.png';
-export const LOGO_ALT_URL = '/logo-geral.png';
+export const APP_LOGO = '/logo-geral-dark-contour.png';
+export const LOGO_URL = '/logo-geral-dark-contour.png';
+export const LOGO_ALT_URL = '/logo-geral-dark-contour.png';
 
 export const INITIAL_DATABASE_FOLDERS = [
   {

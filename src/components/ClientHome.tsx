@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { INITIAL_KB_ARTICLES, APP_LOGO } from '../data/mockData';
+import { AppLogo } from './AppLogo';
 
 export const ClientHome: React.FC = () => {
   const {
@@ -44,17 +45,13 @@ export const ClientHome: React.FC = () => {
       {/* TopNavBar */}
       <header className="fixed top-0 left-0 w-full z-50 bg-[#18181b]/90 backdrop-blur-md border-b border-[#27272a] flex justify-between items-center h-16 px-6 md:px-12 transition-all duration-300">
         <div className="flex items-center gap-6">
-          <button
+          <div
             id="brand-home-link"
             onClick={() => setCurrentScreen('portal_landing')}
-            className="text-left flex items-center gap-3 cursor-pointer group"
+            className="text-left flex items-center cursor-pointer"
           >
-            <img
-              src={APP_LOGO}
-              alt="Logo Geral"
-              className="h-9 w-auto object-contain"
-            />
-          </button>
+            <AppLogo size="md" />
+          </div>
 
           <nav className="hidden md:flex gap-6 ml-6">
             <button

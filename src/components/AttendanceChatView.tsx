@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { ThemeToggle } from './ThemeToggle';
 import {
   AttendanceConversation,
   AttendanceMessage,
@@ -252,9 +253,12 @@ export const AttendanceChatView: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-[#8d90a0]">
-          <span className="w-2 h-2 rounded-full bg-[#45dfa4] animate-pulse" />
-          <span className="font-mono text-[#45dfa4]">Servidor Ativo</span>
+        <div className="flex items-center gap-3">
+          <ThemeToggle compact buttonId="btn-chat-theme-toggle" />
+          <div className="flex items-center gap-2 text-xs text-[#8d90a0]">
+            <span className="w-2 h-2 rounded-full bg-[#45dfa4] animate-pulse" />
+            <span className="font-mono text-[#45dfa4]">Servidor Ativo</span>
+          </div>
         </div>
       </div>
 
