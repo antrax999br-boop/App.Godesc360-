@@ -14,6 +14,7 @@ import {
   ArticleItem,
   CategoryGroup,
   TicketAttachment,
+  TIInternalNote,
   TISession,
   TISecurityLog,
   VaultCredential,
@@ -25,7 +26,8 @@ import {
   AttendanceContact,
   ChatbotFlow,
   BusinessHoursConfig,
-  SenderType
+  SenderType,
+  ExpenseItem
 } from '../types';
 import {
   INITIAL_TICKETS,
@@ -61,6 +63,8 @@ interface AppContextType {
   reassignTicket: (ticketId: string, queue?: ServiceQueue, assignedTo?: string, note?: string) => void;
   deleteTicket: (ticketId: string) => void;
   addTicketMessage: (ticketId: string, text: string, role: 'client' | 'ti', attachments?: TicketAttachment[]) => void;
+  // Nota interna TI — visível apenas ao T.I., nunca envia e-mail
+  addTicketInternalNote: (ticketId: string, text: string, attachments?: TicketAttachment[]) => void;
   notifications: SystemNotification[];
   unreadNotificationCount: number;
   markNotificationAsRead: (id: string) => void;
@@ -141,6 +145,11 @@ interface AppContextType {
     messageText?: string;
     attachments?: TicketAttachment[];
   }) => Promise<void>;
+  // Financeiro & Reembolsos por Analista
+  expenses: ExpenseItem[];
+  addExpenseItem: (expenseData: Omit<ExpenseItem, 'id' | 'createdAt'>) => ExpenseItem;
+  updateExpenseItem: (id: string, updates: Partial<ExpenseItem>) => void;
+  deleteExpenseItem: (id: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -264,8 +273,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       password: 'ceo',
       email: 'ceo@godesc.com.br',
       role: 'ceo',
-      allowedModules: ['ti_dashboard', 'ti_tickets', 'ti_queue', 'ti_database', 'ti_calendar', 'knowledge_base', 'system_status', 'ti_config', 'ti_new_ticket'],
-      permissions: { canAccessConfig: true, canEditTickets: true, canDeleteTickets: true, canManageUsers: true, canManageCategories: true, canViewAllKanbans: true },
+      allowedModules: ['ti_dashboard', 'ti_tickets', 'ti_queue', 'ti_database', 'ti_calendar', 'ti_financeiro', 'knowledge_base', 'system_status', 'ti_config', 'ti_new_ticket'],
+      permissions: { canAccessConfig: true, canEditTickets: true, canDeleteTickets: true, canManageUsers: true, canManageCategories: true, canViewAllKanbans: true, canViewAllExpenses: true },
       createdAt: '01/01/2026'
     },
     {
@@ -275,8 +284,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       password: 'gestor',
       email: 'gestor@godesc.com.br',
       role: 'gestor',
-      allowedModules: ['ti_dashboard', 'ti_tickets', 'ti_queue', 'ti_database', 'ti_calendar', 'knowledge_base', 'system_status', 'ti_config', 'ti_new_ticket'],
-      permissions: { canAccessConfig: true, canEditTickets: true, canDeleteTickets: true, canManageUsers: true, canManageCategories: true, canViewAllKanbans: true },
+      allowedModules: ['ti_dashboard', 'ti_tickets', 'ti_queue', 'ti_database', 'ti_calendar', 'ti_financeiro', 'knowledge_base', 'system_status', 'ti_config', 'ti_new_ticket'],
+      permissions: { canAccessConfig: true, canEditTickets: true, canDeleteTickets: true, canManageUsers: true, canManageCategories: true, canViewAllKanbans: true, canViewAllExpenses: true },
       createdAt: '01/01/2026'
     },
     {
@@ -286,8 +295,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       password: 't.i',
       email: 't.i@godesc.com.br',
       role: 'admin',
-      allowedModules: ['ti_dashboard', 'ti_tickets', 'ti_queue', 'ti_database', 'ti_calendar', 'knowledge_base', 'system_status', 'ti_config', 'ti_new_ticket'],
-      permissions: { canAccessConfig: true, canEditTickets: true, canDeleteTickets: true, canManageUsers: true, canManageCategories: true, canViewAllKanbans: true },
+      allowedModules: ['ti_dashboard', 'ti_tickets', 'ti_queue', 'ti_database', 'ti_calendar', 'ti_financeiro', 'knowledge_base', 'system_status', 'ti_config', 'ti_new_ticket'],
+      permissions: { canAccessConfig: true, canEditTickets: true, canDeleteTickets: true, canManageUsers: true, canManageCategories: true, canViewAllKanbans: true, canViewAllExpenses: true },
       createdAt: '01/01/2026'
     },
     {
@@ -297,8 +306,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       password: 'n3',
       email: 'n3@godesc.com.br',
       role: 'n3',
-      allowedModules: ['ti_dashboard', 'ti_tickets', 'ti_queue', 'ti_database', 'ti_calendar', 'knowledge_base', 'system_status', 'ti_new_ticket'],
-      permissions: { canAccessConfig: false, canEditTickets: true, canDeleteTickets: false, canManageUsers: false, canManageCategories: false, canViewAllKanbans: false },
+      allowedModules: ['ti_dashboard', 'ti_tickets', 'ti_queue', 'ti_database', 'ti_calendar', 'ti_financeiro', 'knowledge_base', 'system_status', 'ti_new_ticket'],
+      permissions: { canAccessConfig: false, canEditTickets: true, canDeleteTickets: false, canManageUsers: false, canManageCategories: false, canViewAllKanbans: false, canViewAllExpenses: false },
       createdAt: '01/01/2026'
     },
     {
@@ -308,8 +317,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       password: 'n2',
       email: 'n2@godesc.com.br',
       role: 'n2',
-      allowedModules: ['ti_dashboard', 'ti_tickets', 'ti_queue', 'ti_database', 'ti_calendar', 'knowledge_base', 'system_status', 'ti_new_ticket'],
-      permissions: { canAccessConfig: false, canEditTickets: true, canDeleteTickets: false, canManageUsers: false, canManageCategories: false, canViewAllKanbans: false },
+      allowedModules: ['ti_dashboard', 'ti_tickets', 'ti_queue', 'ti_database', 'ti_calendar', 'ti_financeiro', 'knowledge_base', 'system_status', 'ti_new_ticket'],
+      permissions: { canAccessConfig: false, canEditTickets: true, canDeleteTickets: false, canManageUsers: false, canManageCategories: false, canViewAllKanbans: false, canViewAllExpenses: false },
       createdAt: '01/01/2026'
     },
     {
@@ -319,8 +328,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       password: 'n1',
       email: 'n1@godesc.com.br',
       role: 'n1',
-      allowedModules: ['ti_dashboard', 'ti_tickets', 'ti_queue', 'knowledge_base', 'ti_new_ticket'],
-      permissions: { canAccessConfig: false, canEditTickets: false, canDeleteTickets: false, canManageUsers: false, canManageCategories: false, canViewAllKanbans: false },
+      allowedModules: ['ti_dashboard', 'ti_tickets', 'ti_queue', 'ti_financeiro', 'knowledge_base', 'ti_new_ticket'],
+      permissions: { canAccessConfig: false, canEditTickets: false, canDeleteTickets: false, canManageUsers: false, canManageCategories: false, canViewAllKanbans: false, canViewAllExpenses: false },
       createdAt: '01/01/2026'
     }
   ];
@@ -624,6 +633,75 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     return INITIAL_CALENDAR_EVENTS;
   });
+
+  // Financeiro & Reembolsos state
+  const [expenses, setExpenses] = useState<ExpenseItem[]>(() => {
+    const saved = localStorage.getItem('godesc_expenses');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) { /* ignore */ }
+    }
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const today = new Date().toISOString().slice(0, 10);
+    return [
+      {
+        id: 'exp-demo-1',
+        userId: 'usr-ti',
+        userEmail: 't.i@godesc.com.br',
+        userName: 'Técnico T.I',
+        date: today,
+        category: 'Transporte / Combustível',
+        description: 'Combustível visita técnica cliente Alpha',
+        receiptNumber: 'NF-10293',
+        amount: 150.00,
+        amountRaw: '150,00',
+        monthYear: currentMonth,
+        status: 'Aprovado',
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: 'exp-demo-2',
+        userId: 'usr-ti',
+        userEmail: 't.i@godesc.com.br',
+        userName: 'Técnico T.I',
+        date: today,
+        category: 'Alimentação',
+        description: 'Almoço em deslocamento externo',
+        receiptNumber: 'CF-8821',
+        amount: 45.50,
+        amountRaw: '45,50',
+        monthYear: currentMonth,
+        status: 'Pendente',
+        createdAt: new Date().toISOString()
+      }
+    ];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('godesc_expenses', JSON.stringify(expenses));
+    } catch (e) {}
+  }, [expenses]);
+
+  const addExpenseItem = (expenseData: Omit<ExpenseItem, 'id' | 'createdAt'>): ExpenseItem => {
+    const newItem: ExpenseItem = {
+      ...expenseData,
+      id: `exp-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      createdAt: new Date().toISOString()
+    };
+    setExpenses(prev => [newItem, ...prev]);
+    return newItem;
+  };
+
+  const updateExpenseItem = (id: string, updates: Partial<ExpenseItem>) => {
+    setExpenses(prev => prev.map(exp => exp.id === id ? { ...exp, ...updates } : exp));
+  };
+
+  const deleteExpenseItem = (id: string) => {
+    setExpenses(prev => prev.filter(exp => exp.id !== id));
+  };
 
   // Active Toast (Bottom-right popup) - Default to null so no popup shows on app load
   const [activeToast, setActiveToast] = useState<SystemNotification | null>(null);
@@ -1265,6 +1343,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       canManageUsers: userAccount.permissions?.canManageUsers ?? isMasterRole,
       canManageCategories: userAccount.permissions?.canManageCategories ?? isMasterRole,
       canViewAllKanbans: userAccount.permissions?.canViewAllKanbans ?? isMasterRole,
+      canViewAllExpenses: userAccount.permissions?.canViewAllExpenses ?? isMasterRole,
       canUnlockTIAccount: canUnlock,
       // Permissões WhatsApp & Omnichannel
       canAccessAttendanceQueue: userAccount.permissions?.canAccessAttendanceQueue ?? true,
@@ -1876,6 +1955,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         attachments
       });
     }
+  };
+
+  // Nota interna do T.I. — NUNCA envia e-mail, NUNCA visível ao cliente
+  const addTicketInternalNote = (ticketId: string, text: string, attachments?: TicketAttachment[]) => {
+    const nowFormatted = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const authorName = userSession.name || 'Técnico TI';
+    const authorRole = userSession.role || 'technician';
+
+    const newNote: TIInternalNote = {
+      id: `ti-note-${Date.now()}`,
+      authorName,
+      authorRole,
+      text,
+      timestamp: nowFormatted,
+      attachments: attachments && attachments.length > 0 ? attachments : undefined
+    };
+
+    setTickets(prev => prev.map(tk => {
+      if (tk.id !== ticketId) return tk;
+      return {
+        ...tk,
+        updatedAt: `Hoje às ${nowFormatted}`,
+        tiInternalNotes: [...(tk.tiInternalNotes || []), newNote]
+      };
+    }));
+
+    setSelectedTicket(prev => {
+      if (!prev || prev.id !== ticketId) return prev;
+      return {
+        ...prev,
+        updatedAt: `Hoje às ${nowFormatted}`,
+        tiInternalNotes: [...(prev.tiInternalNotes || []), newNote]
+      };
+    });
+
+    // Salva no Supabase (campo separado, sem disparar e-mail)
+    const currentTicket = tickets.find(tk => tk.id === ticketId);
+    const updatedNotes = [...(currentTicket?.tiInternalNotes || []), newNote];
+    supabase.from('tickets').update({
+      ti_internal_notes: updatedNotes,
+      updated_at: `Hoje às ${nowFormatted}`
+    }).eq('id', ticketId).then(({ error }) => {
+      if (error) console.warn('Supabase internal note update error:', error);
+    });
   };
 
   const markNotificationAsRead = (id: string) => {
@@ -3329,6 +3452,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         reassignTicket,
         deleteTicket,
         addTicketMessage,
+        addTicketInternalNote,
         notifications,
         unreadNotificationCount,
         markNotificationAsRead,
@@ -3405,7 +3529,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         saveEmailConfig,
         disconnectEmailConfig,
         testEmailConnection,
-        dispatchTicketEmail
+        dispatchTicketEmail,
+        // Financeiro & Reembolsos por Analista
+        expenses,
+        addExpenseItem,
+        updateExpenseItem,
+        deleteExpenseItem
       }}
     >
       {children}

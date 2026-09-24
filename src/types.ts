@@ -17,6 +17,7 @@ export type ScreenView =
   | 'ti_audit_logs'     // Logs de Auditoria de Segurança do TI
   | 'ti_vault'          // Cofre de Senhas & Gerenciamento Seguro de Credenciais
   | 'ti_new_ticket'     // Abertura Interna de Chamado pelo Suporte T.I.
+  | 'ti_financeiro'     // Financeiro & Reembolsos por Analista
   // Módulo de Atendimento WhatsApp & Chatbot Multi-Tenant
   | 'attendance_dashboard'
   | 'attendance_chat'
@@ -280,6 +281,16 @@ export interface TicketAttachment {
   url?: string;
 }
 
+// Nota interna de TI — NUNCA enviada por e-mail, nunca visível ao cliente
+export interface TIInternalNote {
+  id: string;
+  authorName: string;      // nome do técnico que adicionou
+  authorRole: string;      // role do técnico
+  text: string;
+  timestamp: string;
+  attachments?: TicketAttachment[];
+}
+
 export interface TicketMessage {
   id: string;
   sender: string;
@@ -312,6 +323,8 @@ export interface Ticket {
   pausedAt?: string;
   attachments: TicketAttachment[];
   messages: TicketMessage[];
+  // Notas internas do T.I. — NÃO visíveis ao cliente, NÃO geram e-mail
+  tiInternalNotes?: TIInternalNote[];
 }
 
 export interface SystemNotification {
@@ -333,6 +346,7 @@ export interface UserPermissions {
   canManageUsers?: boolean;
   canManageCategories?: boolean;
   canViewAllKanbans?: boolean;
+  canViewAllExpenses?: boolean;
   canUnlockTIAccount?: boolean;
   // Permissões de Atendimento WhatsApp
   canAccessAttendanceQueue?: boolean;
@@ -458,4 +472,25 @@ export interface EmailConfig {
   notifyOnCreate: boolean;
   notifyOnStatusChange: boolean;
   notifyOnMessage: boolean;
+}
+
+export type ExpenseCategory = string;
+
+export type ExpenseStatus = 'Pendente' | 'Aprovado' | 'Pago' | 'Rejeitado';
+
+export interface ExpenseItem {
+  id: string;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  date: string;          // YYYY-MM-DD
+  category: ExpenseCategory;
+  description: string;
+  receiptNumber?: string;
+  amount: number;        // valor numérico calculado
+  amountRaw?: string;    // valor digitado pelo usuário (com vírgula ou ponto)
+  monthYear: string;     // YYYY-MM (ex: 2026-09)
+  status: ExpenseStatus;
+  notes?: string;
+  createdAt: string;
 }

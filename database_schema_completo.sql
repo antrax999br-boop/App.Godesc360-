@@ -145,7 +145,28 @@ CREATE TABLE IF NOT EXISTS public.companies (
 ALTER TABLE public.companies ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Acesso total publico companies" ON public.companies FOR ALL USING (true) WITH CHECK (true);
 
--- 8. PUBLICAÇÃO EM TEMPO REAL (REALTIME)
+-- 8. TABELA DE FINANCEIRO & REEMBOLSOS POR ANALISTA
+CREATE TABLE IF NOT EXISTS public.expenses (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  user_email TEXT NOT NULL,
+  user_name TEXT NOT NULL,
+  date TEXT NOT NULL,
+  category TEXT NOT NULL,
+  description TEXT NOT NULL,
+  receipt_number TEXT,
+  amount NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+  amount_raw TEXT,
+  month_year TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'Pendente',
+  notes TEXT,
+  created_at TEXT NOT NULL
+);
+
+ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Acesso total publico expenses" ON public.expenses FOR ALL USING (true) WITH CHECK (true);
+
+-- 9. PUBLICAÇÃO EM TEMPO REAL (REALTIME)
 -- Permite que alterações feitas por um usuário reflitam instantaneamente na tela dos outros
 DO $$
 BEGIN
@@ -165,3 +186,4 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.db_folders;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.db_notes;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.ticket_categories;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.companies;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.expenses;

@@ -23,6 +23,7 @@ import { TIAuditLogsView } from './components/LogsAuditoriaTIView';
 import { TINewTicketView } from './components/NovoChamadoTIView';
 import { TIVaultView } from './components/CofreSenhasTIView';
 import { ProtectedTIRoute } from './components/RotaProtegidaTI';
+import { FinanceiroView } from './components/FinanceiroView';
 import { AnimatePresence, motion } from 'motion/react';
 
 import { AttendanceWhatsAppView } from './components/AtendimentoWhatsAppView';
@@ -181,6 +182,12 @@ const ScreenRenderer: React.FC = () => {
         return (
           <ProtectedTIRoute requiredModule="ti_vault">
             <TIVaultView key="ti_vault" />
+          </ProtectedTIRoute>
+        );
+      case 'ti_financeiro':
+        return (
+          <ProtectedTIRoute requiredModule="ti_financeiro">
+            <FinanceiroView key="ti_financeiro" />
           </ProtectedTIRoute>
         );
       default:

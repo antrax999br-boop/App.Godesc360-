@@ -47,7 +47,8 @@ import {
   FileText,
   Download,
   Bot,
-  Smartphone
+  Smartphone,
+  DollarSign
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Ticket, ScreenView } from '../types';
@@ -597,6 +598,19 @@ export const TIDetailedDashboardView: React.FC = () => {
                   >
                     <Key className="w-4 h-4 text-[#45dfa4]" />
                     <span>Cofre de Senhas</span>
+                  </button>
+
+                  <button
+                    id="menu-ti-financeiro-detailed"
+                    onClick={() => setCurrentScreen('ti_financeiro')}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                      currentScreen === 'ti_financeiro'
+                        ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                        : 'text-[#c3c6d7] hover:text-white hover:bg-[#1a202c]'
+                    }`}
+                  >
+                    <DollarSign className="w-4 h-4 text-[#45dfa4]" />
+                    <span>Financeiro & Reembolso</span>
                   </button>
 
                   {isGestor && (

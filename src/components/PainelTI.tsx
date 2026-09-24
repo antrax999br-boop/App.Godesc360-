@@ -42,7 +42,8 @@ import {
   Monitor,
   AlertCircle,
   Bot,
-  Smartphone
+  Smartphone,
+  DollarSign
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Ticket } from '../types';
@@ -213,6 +214,7 @@ export const TIDashboard: React.FC = () => {
   const [serviceDeskSubmenuOpen, setServiceDeskSubmenuOpen] = useState(true);
   const [attendanceSubmenuOpen, setAttendanceSubmenuOpen] = useState(true);
   const [adminSubmenuOpen, setAdminSubmenuOpen] = useState(true);
+  const [financeiroSubmenuOpen, setFinanceiroSubmenuOpen] = useState(true);
 
   // Filtered tickets logic
   const filteredTickets = tickets.filter((t) => {
@@ -514,6 +516,39 @@ export const TIDashboard: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Collapsible Financeiro Section */}
+            {((userSession.allowedModules || []).includes('ti_financeiro') || userSession.role === 'ceo' || userSession.role === 'gestor' || userSession.role === 'admin') && (
+              <div className="py-1">
+                <button
+                  onClick={() => setFinanceiroSubmenuOpen(!financeiroSubmenuOpen)}
+                  className="w-full px-4 py-1.5 flex items-center justify-between text-[10px] font-mono text-[#8d90a0] uppercase tracking-wider hover:text-white transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <span>Financeiro</span>
+                    <DollarSign className="w-3 h-3 text-emerald-400" />
+                  </div>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${financeiroSubmenuOpen ? '' : '-rotate-90'}`} />
+                </button>
+
+                {financeiroSubmenuOpen && (
+                  <div className="space-y-0.5 mt-1">
+                    <button
+                      id="menu-ti-financeiro"
+                      onClick={() => setCurrentScreen('ti_financeiro')}
+                      className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                        currentScreen === 'ti_financeiro'
+                          ? 'bg-[#45dfa4]/10 text-[#45dfa4] border-l-2 border-[#45dfa4] rounded-r-lg font-medium'
+                          : 'text-[#c3c6d7] hover:text-white hover:bg-[#1f2630]'
+                      }`}
+                    >
+                      <DollarSign className="w-4 h-4 text-[#45dfa4]" />
+                      <span>Financeiro & Reembolso</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Collapsible Atendimento Section (WhatsApp & Chatbot) */}
             {(() => {

@@ -46,6 +46,7 @@ const AVAILABLE_MODULES: { id: ScreenView; label: string }[] = [
   { id: 'ti_queue', label: 'Kanban de Tarefas' },
   { id: 'ti_database', label: 'Base de Dados & Notas' },
   { id: 'ti_calendar', label: 'Calendário & Eventos' },
+  { id: 'ti_financeiro', label: 'Financeiro & Reembolsos por Analista' },
   { id: 'knowledge_base', label: 'Base de Conhecimento' },
   { id: 'system_status', label: 'Status do Sistema' },
   { id: 'ti_config', label: 'Configurações Administrativas' },
@@ -100,6 +101,7 @@ export const TIConfigView: React.FC = () => {
   const [permManageUsers, setPermManageUsers] = useState(false);
   const [permManageCategories, setPermManageCategories] = useState(false);
   const [permViewAllKanbans, setPermViewAllKanbans] = useState(false);
+  const [permViewAllExpenses, setPermViewAllExpenses] = useState(false);
   // Permissões WhatsApp
   const [permAttendanceQueue, setPermAttendanceQueue] = useState(true);
   const [permAttendanceChat, setPermAttendanceChat] = useState(true);
@@ -349,6 +351,7 @@ export const TIConfigView: React.FC = () => {
       setPermManageUsers(true);
       setPermManageCategories(true);
       setPermViewAllKanbans(true);
+      setPermViewAllExpenses(true);
       setPermAttendanceQueue(true);
       setPermAttendanceChat(true);
       setPermAttendanceDashboard(true);
@@ -365,6 +368,7 @@ export const TIConfigView: React.FC = () => {
       setPermManageUsers(false);
       setPermManageCategories(false);
       setPermViewAllKanbans(false);
+      setPermViewAllExpenses(false);
       setPermAttendanceQueue(true);
       setPermAttendanceChat(true);
       setPermAttendanceDashboard(false);
@@ -381,6 +385,7 @@ export const TIConfigView: React.FC = () => {
       setPermManageUsers(false);
       setPermManageCategories(false);
       setPermViewAllKanbans(false);
+      setPermViewAllExpenses(false);
       setPermAttendanceQueue(true);
       setPermAttendanceChat(true);
       setPermAttendanceDashboard(false);
@@ -398,6 +403,7 @@ export const TIConfigView: React.FC = () => {
       setPermManageUsers(false);
       setPermManageCategories(false);
       setPermViewAllKanbans(false);
+      setPermViewAllExpenses(false);
       setPermAttendanceQueue(true);
       setPermAttendanceChat(true);
       setPermAttendanceDashboard(false);
@@ -438,6 +444,7 @@ export const TIConfigView: React.FC = () => {
         canManageUsers: permManageUsers,
         canManageCategories: permManageCategories,
         canViewAllKanbans: permViewAllKanbans,
+        canViewAllExpenses: permViewAllExpenses,
         canAccessAttendanceQueue: permAttendanceQueue,
         canAccessAttendanceChat: permAttendanceChat,
         canAccessAttendanceDashboard: permAttendanceDashboard,
@@ -498,6 +505,7 @@ export const TIConfigView: React.FC = () => {
         canManageUsers: true,
         canManageCategories: true,
         canViewAllKanbans: true,
+        canViewAllExpenses: true,
         canAccessAttendanceQueue: true,
         canAccessAttendanceChat: true,
         canAccessAttendanceDashboard: true,
@@ -516,6 +524,7 @@ export const TIConfigView: React.FC = () => {
         canManageUsers: false,
         canManageCategories: false,
         canViewAllKanbans: false,
+        canViewAllExpenses: false,
         canAccessAttendanceQueue: true,
         canAccessAttendanceChat: true,
         canAccessAttendanceDashboard: false,
@@ -534,6 +543,7 @@ export const TIConfigView: React.FC = () => {
         canManageUsers: false,
         canManageCategories: false,
         canViewAllKanbans: false,
+        canViewAllExpenses: false,
         canAccessAttendanceQueue: true,
         canAccessAttendanceChat: true,
         canAccessAttendanceDashboard: false,
@@ -552,6 +562,7 @@ export const TIConfigView: React.FC = () => {
         canManageUsers: false,
         canManageCategories: false,
         canViewAllKanbans: false,
+        canViewAllExpenses: false,
         canAccessAttendanceQueue: true,
         canAccessAttendanceChat: true,
         canAccessAttendanceDashboard: false,
@@ -972,6 +983,16 @@ export const TIConfigView: React.FC = () => {
                       />
                       <span>Visualizar Kanban de Todos Usuários</span>
                     </label>
+
+                    <label className="flex items-center gap-2 text-emerald-700 dark:text-[#45dfa4] font-semibold">
+                      <input
+                        type="checkbox"
+                        checked={permViewAllExpenses}
+                        onChange={e => setPermViewAllExpenses(e.target.checked)}
+                        className="accent-[#45dfa4]"
+                      />
+                      <span>Visualizar Financeiro de Outras Pessoas</span>
+                    </label>
                   </div>
                 </div>
 
@@ -1085,6 +1106,7 @@ export const TIConfigView: React.FC = () => {
                         <th className="p-3">Perfil / Função</th>
                         <th className="p-3">Status Segurança</th>
                         <th className="p-3">Ver Kanban Geral</th>
+                        <th className="p-3">Ver Financeiro Geral</th>
                         <th className="p-3 text-right">Ações</th>
                       </tr>
                     </thead>
@@ -1130,6 +1152,17 @@ export const TIConfigView: React.FC = () => {
                             ) : (
                               <span className="text-slate-600 dark:text-[#8d90a0] text-[10px] font-mono bg-slate-100 dark:bg-[#151c25] border border-slate-200 dark:border-[#2A2F3A] px-2 py-0.5 rounded-full">
                                 Não (Apenas o Seu)
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            {u.role === 'ceo' || u.role === 'gestor' || u.role === 'admin' || u.permissions?.canViewAllExpenses ? (
+                              <span className="text-emerald-700 dark:text-[#45dfa4] text-[10px] font-mono bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full font-semibold">
+                                Sim (Todos)
+                              </span>
+                            ) : (
+                              <span className="text-slate-600 dark:text-[#8d90a0] text-[10px] font-mono bg-slate-100 dark:bg-[#151c25] border border-slate-200 dark:border-[#2A2F3A] px-2 py-0.5 rounded-full">
+                                Não (Apenas Próprio)
                               </span>
                             )}
                           </td>
@@ -2683,6 +2716,16 @@ export const TIConfigView: React.FC = () => {
                       className="accent-[#45dfa4]"
                     />
                     <span>Ver Kanban Geral</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 text-emerald-700 dark:text-[#45dfa4] font-semibold">
+                    <input
+                      type="checkbox"
+                      checked={!!editingUser.permissions?.canViewAllExpenses}
+                      onChange={() => toggleEditUserPermission('canViewAllExpenses')}
+                      className="accent-[#45dfa4]"
+                    />
+                    <span>Ver Financeiro Geral</span>
                   </label>
                 </div>
               </div>
