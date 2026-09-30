@@ -573,11 +573,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCompanies(prev => prev.filter(c => c.id !== id));
   };
 
+  // ── HELPERS: Persistência Resiliente de Notas Internas e Timeline de Eventos ──
+  const getStoredInternalNotes = (ticketId: string): TIInternalNote[] => {
+    try {
+      const all = localStorage.getItem('godesc_ti_internal_notes');
+      if (all) {
+        const parsed = JSON.parse(all);
+        if (parsed && Array.isArray(parsed[ticketId])) return parsed[ticketId];
+      }
+    } catch (e) {}
+    return [];
+  };
+
+  const saveStoredInternalNotes = (ticketId: string, notes: TIInternalNote[]) => {
+    try {
+      const all = localStorage.getItem('godesc_ti_internal_notes');
+      const parsed = all ? JSON.parse(all) : {};
+      parsed[ticketId] = notes;
+      localStorage.setItem('godesc_ti_internal_notes', JSON.stringify(parsed));
+    } catch (e) {}
+  };
+
+  const getStoredEvents = (ticketId: string): TicketEvent[] => {
+    try {
+      const all = localStorage.getItem('godesc_ticket_events');
+      if (all) {
+        const parsed = JSON.parse(all);
+        if (parsed && Array.isArray(parsed[ticketId])) return parsed[ticketId];
+      }
+    } catch (e) {}
+    return [];
+  };
+
+  const saveStoredEvents = (ticketId: string, evts: TicketEvent[]) => {
+    try {
+      const all = localStorage.getItem('godesc_ticket_events');
+      const parsed = all ? JSON.parse(all) : {};
+      parsed[ticketId] = evts;
+      localStorage.setItem('godesc_ticket_events', JSON.stringify(parsed));
+    } catch (e) {}
+  };
+
   // Tickets state with Supabase & localStorage fallback
   const [tickets, setTickets] = useState<Ticket[]>(() => {
     const saved = localStorage.getItem('godesc_tickets');
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+      try {
+        const parsed: Ticket[] = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.map(t => ({
+            ...t,
+            tiInternalNotes: (t.tiInternalNotes && t.tiInternalNotes.length > 0) ? t.tiInternalNotes : getStoredInternalNotes(t.id),
+            events: (t.events && t.events.length > 0) ? t.events : getStoredEvents(t.id)
+          }));
+        }
+      } catch (e) { /* ignore */ }
     }
     return [];
   });
@@ -782,6 +832,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               return m;
             });
 
+            const localNotes = getStoredInternalNotes(item.id);
+            const localEvents = getStoredEvents(item.id);
+            const serverNotes = item.ti_internal_notes || item.tiInternalNotes || [];
+            const serverEvents = item.events || [];
+
             return {
               id: item.id,
               ticketNumber: item.ticket_number,
@@ -803,7 +858,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               pausedReason: item.paused_reason,
               pausedAt: item.paused_at,
               attachments: atts,
-              messages: formattedMsgs
+              messages: formattedMsgs,
+              tiInternalNotes: serverNotes.length > 0 ? serverNotes : localNotes,
+              events: serverEvents.length > 0 ? serverEvents : localEvents
             };
           });
           setTickets(mapped);
@@ -830,6 +887,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const msgs = newItem.messages || [];
             const reqEmail = extractEmail(newItem, msgs);
             const atts = (newItem.attachments && newItem.attachments.length > 0) ? newItem.attachments : (msgs[0]?.attachments || []);
+            const localNotes = getStoredInternalNotes(newItem.id);
+            const localEvents = getStoredEvents(newItem.id);
+            const serverNotes = newItem.ti_internal_notes || newItem.tiInternalNotes || [];
+            const serverEvents = newItem.events || [];
 
             const newTicket: Ticket = {
               id: newItem.id,
@@ -852,7 +913,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               pausedReason: newItem.paused_reason,
               pausedAt: newItem.paused_at,
               attachments: atts,
-              messages: msgs
+              messages: msgs,
+              tiInternalNotes: serverNotes.length > 0 ? serverNotes : localNotes,
+              events: serverEvents.length > 0 ? serverEvents : localEvents
             };
             setTickets(prev => {
               if (prev.some(t => t.id === newTicket.id)) return prev;
@@ -897,8 +960,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               attachments: atts,
               messages: msgs
             };
-            setTickets(prev => prev.map(t => (t.id === updatedTicket.id ? updatedTicket : t)));
-            setSelectedTicket(prev => (prev?.id === updatedTicket.id ? updatedTicket : prev));
+            setTickets(prev => prev.map(t => {
+              if (t.id === updated.id) {
+                const notes = (updated.ti_internal_notes && updated.ti_internal_notes.length > 0)
+                  ? updated.ti_internal_notes
+                  : (t.tiInternalNotes && t.tiInternalNotes.length > 0 ? t.tiInternalNotes : getStoredInternalNotes(updated.id));
+                const evts = (updated.events && updated.events.length > 0)
+                  ? updated.events
+                  : (t.events && t.events.length > 0 ? t.events : getStoredEvents(updated.id));
+                return { ...updatedTicket, tiInternalNotes: notes, events: evts };
+              }
+              return t;
+            }));
+            setSelectedTicket(prev => {
+              if (prev?.id === updated.id) {
+                const notes = (updated.ti_internal_notes && updated.ti_internal_notes.length > 0)
+                  ? updated.ti_internal_notes
+                  : (prev.tiInternalNotes && prev.tiInternalNotes.length > 0 ? prev.tiInternalNotes : getStoredInternalNotes(updated.id));
+                const evts = (updated.events && updated.events.length > 0)
+                  ? updated.events
+                  : (prev.events && prev.events.length > 0 ? prev.events : getStoredEvents(updated.id));
+                return { ...updatedTicket, tiInternalNotes: notes, events: evts };
+              }
+              return prev;
+            });
           } else if (payload.eventType === 'DELETE') {
             const deletedId = payload.old.id;
             setTickets(prev => prev.filter(t => t.id !== deletedId));
@@ -975,8 +1060,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .on('broadcast', { event: 'ticket_updated' }, (payload) => {
         if (payload?.payload?.ticket) {
           const updatedTicket: Ticket = payload.payload.ticket;
-          setTickets(prev => prev.map(t => (t.id === updatedTicket.id ? updatedTicket : t)));
-          setSelectedTicket(prev => (prev?.id === updatedTicket.id ? updatedTicket : prev));
+          setTickets(prev => prev.map(t => {
+            if (t.id === updatedTicket.id) {
+              const notes = (updatedTicket.tiInternalNotes && updatedTicket.tiInternalNotes.length > 0)
+                ? updatedTicket.tiInternalNotes
+                : (t.tiInternalNotes && t.tiInternalNotes.length > 0 ? t.tiInternalNotes : getStoredInternalNotes(t.id));
+              const evts = (updatedTicket.events && updatedTicket.events.length > 0)
+                ? updatedTicket.events
+                : (t.events && t.events.length > 0 ? t.events : getStoredEvents(t.id));
+              return { ...updatedTicket, tiInternalNotes: notes, events: evts };
+            }
+            return t;
+          }));
+          setSelectedTicket(prev => {
+            if (prev?.id === updatedTicket.id) {
+              const notes = (updatedTicket.tiInternalNotes && updatedTicket.tiInternalNotes.length > 0)
+                ? updatedTicket.tiInternalNotes
+                : (prev.tiInternalNotes && prev.tiInternalNotes.length > 0 ? prev.tiInternalNotes : getStoredInternalNotes(prev.id));
+              const evts = (updatedTicket.events && updatedTicket.events.length > 0)
+                ? updatedTicket.events
+                : (prev.events && prev.events.length > 0 ? prev.events : getStoredEvents(prev.id));
+              return { ...updatedTicket, tiInternalNotes: notes, events: evts };
+            }
+            return prev;
+          });
         }
       })
       .subscribe();
@@ -1706,12 +1813,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       description: `Status alterado para "${status}" por ${userSession.name || 'Tecnico TI'}.`
     };
 
+    const existingNotes = currentTicket?.tiInternalNotes && currentTicket.tiInternalNotes.length > 0 ? currentTicket.tiInternalNotes : getStoredInternalNotes(ticketId);
+    const existingEvents = currentTicket?.events || getStoredEvents(ticketId);
+    const updatedEvents = [...existingEvents, newStatusEvent];
+    saveStoredInternalNotes(ticketId, existingNotes);
+    saveStoredEvents(ticketId, updatedEvents);
+
     const updatedTicket: Ticket = currentTicket ? {
       ...currentTicket,
       status,
       updatedAt: `Hoje às ${nowFormatted}`,
       messages: updatedMessages,
-      events: [...(currentTicket.events || []), newStatusEvent]
+      events: updatedEvents,
+      tiInternalNotes: existingNotes
     } : {
       id: ticketId,
       ticketNumber: `#${ticketId}`,
@@ -1729,20 +1843,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: `Hoje às ${nowFormatted}`,
       updatedAt: `Hoje às ${nowFormatted}`,
       attachments: [],
-      messages: updatedMessages
+      messages: updatedMessages,
+      events: updatedEvents,
+      tiInternalNotes: existingNotes
     };
 
     // Atualiza estados do React
     setTickets(prev => prev.map(tk => (tk.id === ticketId ? updatedTicket : tk)));
     setSelectedTicket(prev => (prev && prev.id === ticketId ? updatedTicket : prev));
 
-    // Salva no Supabase
+    // Salva no Supabase (com fallback)
     supabase.from('tickets').update({
       status: updatedTicket.status,
       updated_at: updatedTicket.updatedAt,
-      messages: updatedTicket.messages
+      messages: updatedTicket.messages,
+      ti_internal_notes: updatedTicket.tiInternalNotes,
+      events: updatedTicket.events
     }).eq('id', ticketId).then(({ error }) => {
-      if (error) console.warn('Supabase status update error:', error);
+      if (error) {
+        supabase.from('tickets').update({
+          status: updatedTicket.status,
+          updated_at: updatedTicket.updatedAt,
+          messages: updatedTicket.messages
+        }).eq('id', ticketId).then(() => {});
+      }
     });
 
     try {
@@ -1815,13 +1939,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             newValue: queue !== undefined ? (queue || 'N1') : (assignedTo || 'Sem Operador'),
             description: evDesc
           };
+          const notes = (tk.tiInternalNotes && tk.tiInternalNotes.length > 0) ? tk.tiInternalNotes : getStoredInternalNotes(ticketId);
+          const evts = [...(tk.events || []), reassignEvent];
+          saveStoredInternalNotes(ticketId, notes);
+          saveStoredEvents(ticketId, evts);
+
           updatedTicketObj = {
             ...tk,
             queue: queue !== undefined ? queue : (tk.queue || 'N1'),
             assignedTo: assignedTo !== undefined ? assignedTo : tk.assignedTo,
             updatedAt: `Hoje às ${nowFormatted}`,
             messages: updatedMessages,
-            events: [...(tk.events || []), reassignEvent]
+            events: evts,
+            tiInternalNotes: notes
           };
           return updatedTicketObj;
         }
@@ -1841,13 +1971,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             timestamp: nowFormatted
           });
         }
+        const notes = (prev.tiInternalNotes && prev.tiInternalNotes.length > 0) ? prev.tiInternalNotes : getStoredInternalNotes(ticketId);
         return {
           ...prev,
           queue: queue !== undefined ? queue : (prev.queue || 'N1'),
           assignedTo: assignedTo !== undefined ? assignedTo : prev.assignedTo,
           updatedAt: `Hoje às ${nowFormatted}`,
           messages: updatedMessages,
-          events: updatedTicketObj ? updatedTicketObj.events : prev.events
+          events: updatedTicketObj ? updatedTicketObj.events : prev.events,
+          tiInternalNotes: notes
         };
       }
       return prev;
@@ -1859,9 +1991,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         queue: obj.queue,
         assigned_to: obj.assignedTo,
         updated_at: obj.updatedAt,
-        messages: obj.messages
+        messages: obj.messages,
+        ti_internal_notes: obj.tiInternalNotes,
+        events: obj.events
       }).eq('id', ticketId).then(({ error }) => {
-        if (error) console.warn('Supabase reassign update error:', error);
+        if (error) {
+          supabase.from('tickets').update({
+            queue: obj.queue,
+            assigned_to: obj.assignedTo,
+            updated_at: obj.updatedAt,
+            messages: obj.messages
+          }).eq('id', ticketId).then(() => {});
+        }
       });
 
       try {
@@ -2019,33 +2160,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       attachments: attachments && attachments.length > 0 ? attachments : undefined
     };
 
+    let updatedTicketObj: Ticket | null = null;
+
     setTickets(prev => prev.map(tk => {
       if (tk.id !== ticketId) return tk;
-      return {
+      const currentNotes = (tk.tiInternalNotes && tk.tiInternalNotes.length > 0) ? tk.tiInternalNotes : getStoredInternalNotes(ticketId);
+      const updatedNotes = [...currentNotes, newNote];
+      saveStoredInternalNotes(ticketId, updatedNotes);
+      updatedTicketObj = {
         ...tk,
         updatedAt: `Hoje às ${nowFormatted}`,
-        tiInternalNotes: [...(tk.tiInternalNotes || []), newNote]
+        tiInternalNotes: updatedNotes
       };
+      return updatedTicketObj;
     }));
 
     setSelectedTicket(prev => {
       if (!prev || prev.id !== ticketId) return prev;
+      const currentNotes = (prev.tiInternalNotes && prev.tiInternalNotes.length > 0) ? prev.tiInternalNotes : getStoredInternalNotes(ticketId);
+      const updatedNotes = [...currentNotes, newNote];
+      saveStoredInternalNotes(ticketId, updatedNotes);
       return {
         ...prev,
         updatedAt: `Hoje às ${nowFormatted}`,
-        tiInternalNotes: [...(prev.tiInternalNotes || []), newNote]
+        tiInternalNotes: updatedNotes
       };
     });
 
     // Salva no Supabase (campo separado, sem disparar e-mail)
     const currentTicket = tickets.find(tk => tk.id === ticketId);
-    const updatedNotes = [...(currentTicket?.tiInternalNotes || []), newNote];
+    const existingNotes = currentTicket?.tiInternalNotes && currentTicket.tiInternalNotes.length > 0 ? currentTicket.tiInternalNotes : getStoredInternalNotes(ticketId);
+    const updatedNotes = [...existingNotes, newNote];
+    saveStoredInternalNotes(ticketId, updatedNotes);
+
     supabase.from('tickets').update({
       ti_internal_notes: updatedNotes,
       updated_at: `Hoje às ${nowFormatted}`
     }).eq('id', ticketId).then(({ error }) => {
-      if (error) console.warn('Supabase internal note update error:', error);
+      if (error) console.warn('Supabase internal note update error (fallback local storage active):', error);
     });
+
+    if (updatedTicketObj) {
+      try {
+        const syncChannel = supabase.channel('ticket_sync_channel');
+        syncChannel.send({
+          type: 'broadcast',
+          event: 'ticket_updated',
+          payload: { ticket: updatedTicketObj }
+        });
+      } catch (err) {}
+    }
   };
 
   // Editar campos do ticket (categoria, subcategoria, prioridade, titulo etc.) — apenas TI
@@ -2072,16 +2236,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       newValue: String(newVal ?? ''),
       description: `Campo "${fieldLabels[key] || key}" alterado de "${(currentTicket as any)?.[key] ?? ''}" para "${newVal ?? ''}" por ${actorName}.`
     }));
+
+    let updatedTicketObj: Ticket | null = null;
+
     setTickets(prev => prev.map(tk => {
       if (tk.id !== ticketId) return tk;
-      return { ...tk, ...updates, updatedAt: `Hoje às ${nowFormatted}`, events: [...(tk.events || []), ...newEvents] };
+      const notes = (tk.tiInternalNotes && tk.tiInternalNotes.length > 0) ? tk.tiInternalNotes : getStoredInternalNotes(ticketId);
+      const evts = [...(tk.events || []), ...newEvents];
+      saveStoredInternalNotes(ticketId, notes);
+      saveStoredEvents(ticketId, evts);
+      updatedTicketObj = { ...tk, ...updates, updatedAt: `Hoje às ${nowFormatted}`, events: evts, tiInternalNotes: notes };
+      return updatedTicketObj;
     }));
     setSelectedTicket(prev => {
       if (!prev || prev.id !== ticketId) return prev;
-      return { ...prev, ...updates, updatedAt: `Hoje às ${nowFormatted}`, events: [...(prev.events || []), ...newEvents] };
+      const notes = (prev.tiInternalNotes && prev.tiInternalNotes.length > 0) ? prev.tiInternalNotes : getStoredInternalNotes(ticketId);
+      const evts = [...(prev.events || []), ...newEvents];
+      saveStoredInternalNotes(ticketId, notes);
+      saveStoredEvents(ticketId, evts);
+      return { ...prev, ...updates, updatedAt: `Hoje às ${nowFormatted}`, events: evts, tiInternalNotes: notes };
     });
     supabase.from('tickets').update({ ...updates, updated_at: `Hoje às ${nowFormatted}` }).eq('id', ticketId)
       .then(({ error }) => { if (error) console.warn('Supabase updateTicketFields error:', error); });
+
+    if (updatedTicketObj) {
+      try {
+        const syncChannel = supabase.channel('ticket_sync_channel');
+        syncChannel.send({
+          type: 'broadcast',
+          event: 'ticket_updated',
+          payload: { ticket: updatedTicketObj }
+        });
+      } catch (err) {}
+    }
   };
 
   const markNotificationAsRead = (id: string) => {

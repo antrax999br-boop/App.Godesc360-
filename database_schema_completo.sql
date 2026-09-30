@@ -24,8 +24,13 @@ CREATE TABLE IF NOT EXISTS public.tickets (
   paused_reason TEXT,
   paused_at TEXT,
   messages JSONB DEFAULT '[]'::jsonb,
-  attachments JSONB DEFAULT '[]'::jsonb
+  attachments JSONB DEFAULT '[]'::jsonb,
+  ti_internal_notes JSONB DEFAULT '[]'::jsonb,
+  events JSONB DEFAULT '[]'::jsonb
 );
+
+ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS ti_internal_notes JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS events JSONB DEFAULT '[]'::jsonb;
 
 ALTER TABLE public.tickets ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Acesso total publico tickets" ON public.tickets;
