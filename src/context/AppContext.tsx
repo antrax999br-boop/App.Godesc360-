@@ -157,6 +157,7 @@ interface AppContextType {
   expenses: ExpenseItem[];
   addExpenseItem: (expenseData: Omit<ExpenseItem, 'id' | 'createdAt'>) => ExpenseItem;
   updateExpenseItem: (id: string, updates: Partial<ExpenseItem>) => void;
+  updateExpensesBatch: (ids: string[], updates: Partial<ExpenseItem>) => void;
   deleteExpenseItem: (id: string) => void;
 }
 
@@ -755,6 +756,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateExpenseItem = (id: string, updates: Partial<ExpenseItem>) => {
     setExpenses(prev => prev.map(exp => exp.id === id ? { ...exp, ...updates } : exp));
+  };
+
+  const updateExpensesBatch = (ids: string[], updates: Partial<ExpenseItem>) => {
+    const idSet = new Set(ids);
+    setExpenses(prev => prev.map(exp => idSet.has(exp.id) ? { ...exp, ...updates } : exp));
   };
 
   const deleteExpenseItem = (id: string) => {
@@ -3960,6 +3966,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         expenses,
         addExpenseItem,
         updateExpenseItem,
+        updateExpensesBatch,
         deleteExpenseItem
       }}
     >

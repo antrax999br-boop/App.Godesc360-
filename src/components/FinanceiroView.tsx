@@ -7,24 +7,16 @@ import {
   DollarSign,
   Plus,
   Trash2,
-  FileText,
-  Printer,
   Calendar,
   User,
   Mail,
   CheckCircle,
   Clock,
-  Download,
-  AlertCircle,
   FileSpreadsheet,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
   Search,
-  Filter,
-  X,
-  ArrowLeft,
-  ShieldAlert
+  ArrowLeft
 } from 'lucide-react';
 
 export const parseCurrency = (val: string | number | undefined): number => {
@@ -64,6 +56,7 @@ export const FinanceiroView: React.FC = () => {
     expenses,
     addExpenseItem,
     updateExpenseItem,
+    updateExpensesBatch,
     deleteExpenseItem,
     setCurrentScreen,
     theme
@@ -88,9 +81,6 @@ export const FinanceiroView: React.FC = () => {
 
   // Search filter inside month table
   const [searchTerm, setSearchTerm] = useState<string>('');
-
-  // PDF Preview / Print Modal
-  const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
 
   // Active analyst object:
   // QUEM NÃO FOR GESTOR E NEM CEO NUNCA CONSEGUE VER O FINANCEIRO DE OUTRA PESSOA
@@ -202,48 +192,21 @@ export const FinanceiroView: React.FC = () => {
     updateExpenseItem(id, { [field]: value });
   };
 
-  // Trigger browser print usando janela separada para garantir 1 folha limpa sem borda preta
-  const handlePrint = () => {
-    const printContent = document.getElementById('relatorio-reembolso-print');
-    if (!printContent) return;
-    const printWindow = window.open('', '_blank', 'width=850,height=1200');
-    if (!printWindow) return;
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html lang="pt-BR">
-      <head>
-        <meta charset="UTF-8" />
-        <title>Relatório de Reembolso - ${activeAnalyst.name} - ${monthLabel}</title>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            color: #111827;
-            background: white;
-            width: 210mm;
-            max-width: 210mm;
-          }
-          @page {
-            size: A4 portrait;
-            margin: 12mm 14mm 12mm 14mm;
-          }
-          @media print {
-            html, body { width: 210mm; height: 297mm; overflow: hidden; }
-            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          }
-        </style>
-      </head>
-      <body>
-        ${printContent.innerHTML}
-      </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 400);
+  // Status unificado do mês selecionado
+  const monthStatus: ExpenseStatus = useMemo(() => {
+    if (analystExpenses.length === 0) return 'Pendente';
+    const allPaid = analystExpenses.every(e => e.status === 'Pago');
+    if (allPaid) return 'Pago';
+    const allApproved = analystExpenses.every(e => e.status === 'Aprovado' || e.status === 'Pago');
+    if (allApproved) return 'Aprovado';
+    return 'Pendente';
+  }, [analystExpenses]);
+
+  // Alterar status de todas as despesas do mês em lote
+  const handleBatchChangeStatus = (newStatus: ExpenseStatus) => {
+    if (analystExpenses.length === 0) return;
+    const ids = analystExpenses.map(e => e.id);
+    updateExpensesBatch(ids, { status: newStatus });
   };
 
   return (
@@ -303,7 +266,7 @@ export const FinanceiroView: React.FC = () => {
                   </span>
                 </div>
                 <p className={`text-sm mt-1 ${isLight ? 'text-gray-600' : 'text-[#8d90a0]'}`}>
-                  Controle de despesas com alimentação, viagens e combustível com cálculo automático e relatório oficial em PDF.
+                  Controle de despesas com alimentação, viagens e combustível com cálculo automático e aprovação unificada.
                 </p>
               </div>
             </div>
@@ -317,17 +280,77 @@ export const FinanceiroView: React.FC = () => {
                 <Plus className="w-4 h-4" />
                 Adicionar Despesa
               </button>
-              <button
-                onClick={() => setIsPrintModalOpen(true)}
-                className={`inline-flex items-center gap-2 px-4 py-2.5 font-semibold rounded-xl text-sm transition-all shadow-sm active:scale-95 cursor-pointer ${
-                  isLight
-                    ? 'bg-gray-900 hover:bg-gray-800 text-white'
-                    : 'bg-white hover:bg-gray-100 text-gray-900'
-                }`}
-              >
-                <FileText className="w-4 h-4" />
-                Gerar Relatório PDF
-              </button>
+
+              {/* Botão de Status Único Mensal */}
+              <div className="relative inline-flex items-center">
+                <div
+                  className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border text-sm font-semibold transition-all shadow-sm ${
+                    monthStatus === 'Aprovado'
+                      ? isLight
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                        : 'bg-emerald-950/40 text-emerald-300 border-emerald-500/40'
+                      : monthStatus === 'Pago'
+                      ? isLight
+                        ? 'bg-blue-50 text-blue-800 border-blue-300'
+                        : 'bg-blue-950/40 text-blue-300 border-blue-500/40'
+                      : isLight
+                      ? 'bg-amber-50 text-amber-800 border-amber-300'
+                      : 'bg-amber-950/40 text-amber-300 border-amber-500/40'
+                  }`}
+                >
+                  {monthStatus === 'Aprovado' ? (
+                    <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+                  ) : monthStatus === 'Pago' ? (
+                    <CheckCircle className="w-4 h-4 text-blue-500 shrink-0" />
+                  ) : (
+                    <Clock className="w-4 h-4 text-amber-500 shrink-0" />
+                  )}
+
+                  <span className="text-xs uppercase tracking-wider opacity-75 font-medium">Status:</span>
+
+                  <select
+                    value={monthStatus}
+                    onChange={e => handleBatchChangeStatus(e.target.value as ExpenseStatus)}
+                    disabled={analystExpenses.length === 0}
+                    title="Alterar o status de todas as despesas deste mês"
+                    className="bg-transparent font-bold text-sm focus:outline-none cursor-pointer pr-1"
+                  >
+                    <option value="Pendente" className={isLight ? 'bg-white text-gray-900' : 'bg-[#18181b] text-white'}>
+                      Pendente
+                    </option>
+                    <option value="Aprovado" className={isLight ? 'bg-white text-gray-900' : 'bg-[#18181b] text-white'}>
+                      Aprovado (Aprovar Todos)
+                    </option>
+                    <option value="Pago" className={isLight ? 'bg-white text-gray-900' : 'bg-[#18181b] text-white'}>
+                      Pago (Reembolso Efetuado)
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Botão de Ação Rápida: Aprovar todas se estiver pendente */}
+              {monthStatus === 'Pendente' && analystExpenses.length > 0 && (
+                <button
+                  onClick={() => handleBatchChangeStatus('Aprovado')}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm transition-all shadow-sm hover:shadow active:scale-95 cursor-pointer"
+                  title="Aprovar todas as despesas lançadas neste mês"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Aprovar Todas
+                </button>
+              )}
+
+              {/* Botão de Ação Rápida: Marcar como pago se estiver aprovado */}
+              {monthStatus === 'Aprovado' && analystExpenses.length > 0 && (
+                <button
+                  onClick={() => handleBatchChangeStatus('Pago')}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-all shadow-sm hover:shadow active:scale-95 cursor-pointer"
+                  title="Marcar todas as despesas deste mês como pagas"
+                >
+                  <DollarSign className="w-4 h-4" />
+                  Marcar como Pago
+                </button>
+              )}
             </div>
           </div>
 
@@ -504,42 +527,74 @@ export const FinanceiroView: React.FC = () => {
             </div>
           </div>
 
-          {/* Pendentes */}
+          {/* Status do Mês Unificado */}
           <div className={`${isLight ? 'bg-white border-gray-200 shadow-xs' : 'bg-[#18181b] border-[#27272a] shadow-sm'} border rounded-2xl p-5`}>
             <div className="flex items-center justify-between">
               <span className={`text-xs font-semibold uppercase tracking-wider ${isLight ? 'text-gray-500' : 'text-[#8d90a0]'}`}>
-                Despesas Pendentes
+                Status do Mês
               </span>
-              <div className="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-500 flex items-center justify-center">
-                <Clock className="w-4 h-4" />
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                monthStatus === 'Aprovado'
+                  ? 'bg-emerald-500/15 text-emerald-500'
+                  : monthStatus === 'Pago'
+                  ? 'bg-blue-500/15 text-blue-500'
+                  : 'bg-amber-500/15 text-amber-500'
+              }`}>
+                {monthStatus === 'Aprovado' ? (
+                  <CheckCircle className="w-4 h-4" />
+                ) : monthStatus === 'Pago' ? (
+                  <CheckCircle className="w-4 h-4" />
+                ) : (
+                  <Clock className="w-4 h-4" />
+                )}
               </div>
             </div>
             <div className="mt-3">
-              <h3 className="text-2xl sm:text-3xl font-extrabold text-amber-500 tracking-tight">
-                {analystExpenses.filter(e => e.status === 'Pendente').length}
+              <h3 className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${
+                monthStatus === 'Aprovado'
+                  ? 'text-emerald-500'
+                  : monthStatus === 'Pago'
+                  ? 'text-blue-500'
+                  : 'text-amber-500'
+              }`}>
+                {analystExpenses.length === 0 ? 'Sem Itens' : monthStatus.toUpperCase()}
               </h3>
               <p className={`text-xs mt-1 ${isLight ? 'text-gray-500' : 'text-[#8d90a0]'}`}>
-                Aguardando conferência da gestão
+                {monthStatus === 'Aprovado'
+                  ? 'Todas as despesas aprovadas'
+                  : monthStatus === 'Pago'
+                  ? 'Reembolso do mês efetuado'
+                  : 'Aguardando aprovação no final do mês'}
               </p>
             </div>
           </div>
 
-          {/* Aprovadas / Pagas */}
+          {/* Situação Geral */}
           <div className={`${isLight ? 'bg-white border-gray-200 shadow-xs' : 'bg-[#18181b] border-[#27272a] shadow-sm'} border rounded-2xl p-5`}>
             <div className="flex items-center justify-between">
               <span className={`text-xs font-semibold uppercase tracking-wider ${isLight ? 'text-gray-500' : 'text-[#8d90a0]'}`}>
-                Aprovadas / Pagas
+                Situação Geral
               </span>
               <div className="w-8 h-8 rounded-lg bg-purple-500/15 text-purple-500 flex items-center justify-center">
-                <CheckCircle className="w-4 h-4" />
+                <DollarSign className="w-4 h-4" />
               </div>
             </div>
             <div className="mt-3">
-              <h3 className="text-2xl sm:text-3xl font-extrabold text-purple-500 tracking-tight">
-                {analystExpenses.filter(e => ['Aprovado', 'Pago'].includes(e.status)).length}
+              <h3 className="text-xl sm:text-2xl font-extrabold text-purple-500 tracking-tight">
+                {analystExpenses.length === 0
+                  ? 'Sem Lançamentos'
+                  : monthStatus === 'Pago'
+                  ? 'Pago / Quitado'
+                  : monthStatus === 'Aprovado'
+                  ? 'Pronto p/ Pagamento'
+                  : 'Pendente Fechamento'}
               </h3>
               <p className={`text-xs mt-1 ${isLight ? 'text-gray-500' : 'text-[#8d90a0]'}`}>
-                Validadas para reembolso
+                {monthStatus === 'Pago'
+                  ? 'Reembolso liquidado com sucesso'
+                  : monthStatus === 'Aprovado'
+                  ? 'Liberado pela gestão para pagamento'
+                  : 'Aguardando conferência no fim do mês'}
               </p>
             </div>
           </div>
@@ -601,14 +656,13 @@ export const FinanceiroView: React.FC = () => {
                   <th className="py-3 px-3 w-64">Finalidade / Categoria</th>
                   <th className="py-3 px-3">Nome / Descrição da Despesa</th>
                   <th className="py-3 px-3 w-44 text-right">Valor (R$)</th>
-                  <th className="py-3 px-3 w-36 text-center">Status</th>
                   <th className="py-3 px-3 w-16 text-center">Ações</th>
                 </tr>
               </thead>
               <tbody className={`divide-y text-sm ${isLight ? 'divide-gray-200' : 'divide-[#27272a]'}`}>
                 {displayedExpenses.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center">
+                    <td colSpan={6} className="py-12 text-center">
                       <div className="max-w-sm mx-auto flex flex-col items-center">
                         <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${
                           isLight ? 'bg-emerald-50 text-emerald-600' : 'bg-[#45dfa4]/10 text-[#45dfa4]'
@@ -713,45 +767,6 @@ export const FinanceiroView: React.FC = () => {
                         </div>
                       </td>
 
-                      {/* Status: Apenas GESTOR ou CEO podem alterar status */}
-                      <td className="py-2.5 px-3 text-center">
-                        {isGestorOrCeo ? (
-                          <select
-                            value={item.status}
-                            onChange={e => handleFieldChange(item.id, 'status', e.target.value as ExpenseStatus)}
-                            className={`text-xs font-semibold rounded-lg px-2 py-1.5 border focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer ${
-                              item.status === 'Aprovado'
-                                ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-400/30'
-                                : item.status === 'Pago'
-                                ? 'bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-400/30'
-                                : item.status === 'Rejeitado'
-                                ? 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-400/30'
-                                : 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-400/30'
-                            }`}
-                          >
-                            <option value="Pendente">Pendente</option>
-                            <option value="Aprovado">Aprovado</option>
-                            <option value="Pago">Pago</option>
-                            <option value="Rejeitado">Rejeitado</option>
-                          </select>
-                        ) : (
-                          <span
-                            title="Apenas o Gestor ou CEO podem alterar o status do reembolso"
-                            className={`inline-block text-xs font-semibold rounded-lg px-2.5 py-1 border select-none ${
-                              item.status === 'Aprovado'
-                                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-400/30'
-                                : item.status === 'Pago'
-                                ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-400/30'
-                                : item.status === 'Rejeitado'
-                                ? 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-400/30'
-                                : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-400/30'
-                            }`}
-                          >
-                            {item.status}
-                          </span>
-                        )}
-                      </td>
-
                       {/* Actions */}
                       <td className="py-2.5 px-3 text-center">
                         <button
@@ -783,7 +798,7 @@ export const FinanceiroView: React.FC = () => {
                   }`}>
                     {formatBRL(totalAmount)}
                   </td>
-                  <td colSpan={2} className={`py-3 px-3 text-center text-xs font-normal ${
+                  <td colSpan={1} className={`py-3 px-3 text-center text-xs font-normal ${
                     isLight ? 'text-gray-500' : 'text-[#8d90a0]'
                   }`}>
                     {analystExpenses.length} itens calculados
@@ -811,8 +826,8 @@ export const FinanceiroView: React.FC = () => {
 
             <span className={`text-xs ${isLight ? 'text-gray-500' : 'text-[#8d90a0]'}`}>
               {isGestorOrCeo
-                ? 'Modo Gestão: Você pode alterar os status de despesa e auditar qualquer analista.'
-                : 'Dica: Digite o valor com vírgula ou ponto. O status de aprovação é controlado pela gestão.'}
+                ? 'Modo Gestão: Todas as despesas do mês são aprovadas em conjunto pelo botão de status único.'
+                : 'Dica: Digite o valor com vírgula ou ponto. As despesas são aprovadas em conjunto no final do mês ou quando o reembolso for pago.'}
             </span>
           </div>
 
@@ -830,197 +845,6 @@ export const FinanceiroView: React.FC = () => {
             <option value="Outros" />
           </datalist>
         </div>
-
-        {/* Printable PDF Report Modal */}
-        {isPrintModalOpen && (
-          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto print:bg-white print:p-0 print:m-0 print:static print:overflow-visible">
-            <div className={`border rounded-2xl max-w-4xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:border-none print:shadow-none print:rounded-none ${
-              isLight ? 'bg-white border-gray-200' : 'bg-[#18181b] border-[#27272a]'
-            }`}>
-              {/* Modal Header (Ocultado ao imprimir) */}
-              <div className="p-4 bg-gray-900 text-white flex items-center justify-between print:hidden">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-emerald-400" />
-                  <h3 className="font-bold text-base">
-                    Pré-visualização do Relatório de Reembolso (PDF)
-                  </h3>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handlePrint}
-                    className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs transition-colors cursor-pointer shadow"
-                  >
-                    <Printer className="w-4 h-4" />
-                    Imprimir / Salvar PDF
-                  </button>
-                  <button
-                    onClick={() => setIsPrintModalOpen(false)}
-                    className="p-1.5 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors cursor-pointer"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Document Body (Printable Area - 1 ÚNICA FOLHA A4 LIMPA SEM BORDAS ESCURAS) */}
-              <div className="p-6 overflow-y-auto bg-white text-gray-900 print:p-0 print:m-0 print:overflow-visible" id="relatorio-reembolso-print">
-                {/* Document Header */}
-                <div className="flex items-start justify-between border-b-2 border-emerald-600 pb-3">
-                  <div>
-                    <div className="mb-1">
-                      <img
-                        src="/logo-geral-preta.png"
-                        alt="GoDesc"
-                        className="h-10 max-h-11 w-auto object-contain !filter-none"
-                        onError={(e) => {
-                          e.currentTarget.src = '/Logo/logo geral - preta.png';
-                        }}
-                      />
-                    </div>
-                    <h1 className="text-base font-bold text-gray-900 mt-1 tracking-tight">
-                      RELATÓRIO MENSAL DE REEMBOLSO DE DESPESAS
-                    </h1>
-                  </div>
-
-                  <div className="text-right">
-                    <span className="inline-block px-2.5 py-0.5 bg-gray-100 text-gray-700 text-[11px] font-mono font-bold rounded">
-                      PROTOCOLO: REEMB-{selectedMonth.replace('-', '')}-{activeAnalyst.id.slice(-4).toUpperCase()}
-                    </span>
-                    <p className="text-[11px] text-gray-500 mt-1">
-                      Emissão: {new Date().toLocaleDateString('pt-BR')} às {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                    <p className="text-xs font-bold text-emerald-700 mt-0.5 capitalize">
-                      Mês de Referência: {monthLabel}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Employee Data Grid */}
-                <div className="mt-3 p-2.5 bg-gray-50 rounded-lg border border-gray-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
-                  <div>
-                    <span className="font-semibold text-gray-500 uppercase text-[10px] block">Funcionário / Analista:</span>
-                    <span className="font-bold text-gray-900 text-xs">{activeAnalyst.name}</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-gray-500 uppercase text-[10px] block">E-mail Corporativo:</span>
-                    <span className="font-medium text-gray-900 text-xs">{activeAnalyst.email}</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-gray-500 uppercase text-[10px] block">Função / Nível:</span>
-                    <span className="font-bold text-gray-900 uppercase text-xs">{activeAnalyst.role}</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-gray-500 uppercase text-[10px] block">Total de Lançamentos:</span>
-                    <span className="font-bold text-gray-900 text-xs">{analystExpenses.length} despesas</span>
-                  </div>
-                </div>
-
-                {/* Itemized Table (Sem coluna de número de comprovante) */}
-                <div className="mt-3">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-gray-100 border-y border-gray-300 font-bold text-gray-700 uppercase text-[10px]">
-                        <th className="py-1.5 px-2 w-8 text-center">#</th>
-                        <th className="py-1.5 px-2 w-24">Data</th>
-                        <th className="py-1.5 px-2 w-56">Finalidade / Categoria</th>
-                        <th className="py-1.5 px-2">Nome / Descrição da Despesa</th>
-                        <th className="py-1.5 px-2 w-28 text-right">Valor</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {analystExpenses.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="py-4 text-center text-gray-400 italic text-xs">
-                            Nenhuma despesa registrada para este mês.
-                          </td>
-                        </tr>
-                      ) : (
-                        analystExpenses.map((exp, idx) => (
-                          <tr key={exp.id} className="text-gray-800">
-                            <td className="py-1.5 px-2 text-center font-mono text-gray-400 font-bold text-[11px]">{idx + 1}</td>
-                            <td className="py-1.5 px-2 font-mono text-[11px]">
-                              {new Date(exp.date + 'T00:00:00').toLocaleDateString('pt-BR')}
-                            </td>
-                            <td className="py-1.5 px-2 font-semibold text-[11px]">{exp.category}</td>
-                            <td className="py-1.5 px-2 text-[11px]">{exp.description || 'Despesa sem descrição'}</td>
-                            <td className="py-1.5 px-2 text-right font-mono font-bold text-[11px]">
-                              {formatBRL(exp.amount)}
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                    <tfoot>
-                      <tr className="border-t-2 border-emerald-600 bg-gray-50 font-bold">
-                        <td colSpan={4} className="py-2 px-2 text-right uppercase text-gray-700 text-xs">
-                          VALOR TOTAL A REEMBOLSAR:
-                        </td>
-                        <td className="py-2 px-2 text-right font-mono text-xs text-emerald-700 font-black">
-                          {formatBRL(totalAmount)}
-                        </td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-
-                {/* Legal Declaration */}
-                <div className="mt-2.5 p-2 bg-gray-50 rounded-lg border border-gray-200 text-[10px] text-gray-600 leading-tight">
-                  <p>
-                    <strong>Declaração do Solicitante:</strong> Declaro para os devidos fins que as despesas acima discriminadas foram realizadas exclusivamente no exercício de minhas atividades profissionais a serviço da empresa, correspondendo à verdade dos fatos e amparadas por seus comprovantes fiscais anexos.
-                  </p>
-                </div>
-
-                {/* Signatures Block */}
-                <div className="mt-4 pt-3 border-t border-gray-200 grid grid-cols-2 gap-8 text-center text-xs">
-                  <div>
-                    <div className="border-b border-gray-400 pb-0.5 mb-1 h-7 flex items-end justify-center">
-                      <span className="font-semibold text-gray-800 text-xs">{activeAnalyst.name}</span>
-                    </div>
-                    <p className="font-bold text-gray-700 text-xs">Assinatura do Funcionário / Solicitante</p>
-                    <p className="text-gray-400 text-[10px]">Data: _____/_____/2026</p>
-                  </div>
-
-                  <div>
-                    <div className="border-b border-gray-400 pb-0.5 mb-1 h-7 flex items-end justify-center">
-                      <span className="font-semibold text-gray-800 text-xs">Gestão de T.I / Controladoria</span>
-                    </div>
-                    <p className="font-bold text-gray-700 text-xs">Aprovação da Gestão / Financeiro</p>
-                    <p className="text-gray-400 text-[10px]">Data: _____/_____/2026</p>
-                  </div>
-                </div>
-
-                {/* Footer */}
-                <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-[9px] text-gray-400">
-                  <span>GoDesc 360 Enterprise • Sistema de Gestão de T.I e Atendimento</span>
-                  <span>Documento emitido eletronicamente via plataforma GoDesc 360</span>
-                </div>
-              </div>
-
-              {/* Modal Bottom Actions (Ocultado ao imprimir) */}
-              <div className={`p-4 border-t flex items-center justify-end gap-3 print:hidden ${
-                isLight ? 'bg-gray-50 border-gray-200' : 'bg-[#151c25] border-[#27272a]'
-              }`}>
-                <button
-                  onClick={() => setIsPrintModalOpen(false)}
-                  className={`px-4 py-2 font-semibold rounded-xl text-xs transition-colors cursor-pointer ${
-                    isLight
-                      ? 'bg-gray-200 hover:bg-gray-300 text-gray-800'
-                      : 'bg-[#27272a] hover:bg-[#323238] text-gray-200'
-                  }`}
-                >
-                  Fechar
-                </button>
-                <button
-                  onClick={handlePrint}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs transition-colors cursor-pointer shadow"
-                >
-                  <Printer className="w-4 h-4" />
-                  Imprimir / Gerar PDF
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
