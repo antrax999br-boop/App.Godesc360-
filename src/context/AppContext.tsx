@@ -2636,99 +2636,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAttendanceContacts(prev => prev.filter(c => c.id !== id));
   };
 
-  const DEFAULT_INITIAL_CONVERSATIONS: AttendanceConversation[] = [
-    {
-      id: 'conv-demo-1',
-      companyId: 'default-company',
-      contactName: 'Carlos Eduardo',
-      contactPhone: '+55 11 98765-4321',
-      status: 'WAITING',
-      queueId: 'queue-suporte',
-      queueName: 'Suporte Técnico',
-      botActive: false,
-      unreadCount: 1,
-      lastMessageText: 'Olá, preciso de suporte para acessar o sistema ERP.',
-      lastMessageTimestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-      createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-      updatedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString()
-    },
-    {
-      id: 'conv-demo-2',
-      companyId: 'default-company',
-      contactName: 'Mariana Silva',
-      contactPhone: '+55 11 99887-1122',
-      status: 'WAITING',
-      queueId: 'queue-comercial',
-      queueName: 'Comercial',
-      botActive: false,
-      unreadCount: 2,
-      lastMessageText: 'Gostaria de saber os valores para novos usuários.',
-      lastMessageTimestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-      createdAt: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
-      updatedAt: new Date(Date.now() - 15 * 60 * 1000).toISOString()
-    },
-    {
-      id: 'conv-demo-3',
-      companyId: 'default-company',
-      contactName: 'Roberto Almeida',
-      contactPhone: '+55 21 97654-3210',
-      status: 'IN_PROGRESS',
-      queueId: 'queue-financeiro',
-      queueName: 'Financeiro',
-      assignedUser: 't.i',
-      assignedUserName: 'Analista T.I.',
-      botActive: false,
-      unreadCount: 0,
-      lastMessageText: 'Perfeito, aguardo a emissão da segunda via.',
-      lastMessageTimestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-      createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-      updatedAt: new Date(Date.now() - 2 * 60 * 1000).toISOString()
-    }
-  ];
+  const DEFAULT_INITIAL_CONVERSATIONS: AttendanceConversation[] = [];
 
-  const DEFAULT_INITIAL_MESSAGES: AttendanceMessage[] = [
-    {
-      id: 'msg-demo-1',
-      conversationId: 'conv-demo-1',
-      senderType: 'CLIENT',
-      content: 'Olá, preciso de suporte para acessar o sistema ERP.',
-      timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-      status: 'DELIVERED'
-    },
-    {
-      id: 'msg-demo-2',
-      conversationId: 'conv-demo-2',
-      senderType: 'CLIENT',
-      content: 'Gostaria de saber os valores para novos usuários.',
-      timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-      status: 'DELIVERED'
-    },
-    {
-      id: 'msg-demo-3a',
-      conversationId: 'conv-demo-3',
-      senderType: 'CLIENT',
-      content: 'Preciso da segunda via do boleto mensal.',
-      timestamp: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-      status: 'READ'
-    },
-    {
-      id: 'msg-demo-3b',
-      conversationId: 'conv-demo-3',
-      senderType: 'AGENT',
-      senderName: 'Analista T.I.',
-      content: 'Olá Roberto! Estou gerando a segunda via para você agora.',
-      timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-      status: 'READ'
-    },
-    {
-      id: 'msg-demo-3c',
-      conversationId: 'conv-demo-3',
-      senderType: 'CLIENT',
-      content: 'Perfeito, aguardo a emissão da segunda via.',
-      timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-      status: 'READ'
-    }
-  ];
+  const DEFAULT_INITIAL_MESSAGES: AttendanceMessage[] = [];
 
   // Conversas ativas persistidas no localStorage — CLOSED não são salvas
   const [attendanceConversations, setAttendanceConversations] = useState<AttendanceConversation[]>(() => {
@@ -2752,7 +2662,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (saved) {
         const parsed: AttendanceConversation[] = JSON.parse(saved);
         const filtered = parsed
-          .filter(c => c.status !== 'CLOSED')
+          .filter(c => c.status !== 'CLOSED' && !c.id.startsWith('conv-demo-') && c.contactName !== 'Carlos Eduardo' && c.contactName !== 'Mariana Silva' && c.contactName !== 'Roberto Almeida')
           .map(c => ({
             ...c,
             // Normaliza SEMPRE — remove letras e formata corretamente
@@ -2761,7 +2671,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (filtered.length > 0) return filtered;
       }
     } catch (e) {}
-    return DEFAULT_INITIAL_CONVERSATIONS;
+    return [];
   });
 
   // Mensagens persistidas no localStorage — apenas de conversas ativas
@@ -2770,10 +2680,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const saved = localStorage.getItem('godesc_attendance_messages');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.filter(m => !m.id.startsWith('msg-demo-') && !m.conversationId.startsWith('conv-demo-'));
+        }
       }
     } catch (e) {}
-    return DEFAULT_INITIAL_MESSAGES;
+    return [];
   });
 
   // Persiste apenas conversas ativas (não CLOSED) ao alterar o estado
