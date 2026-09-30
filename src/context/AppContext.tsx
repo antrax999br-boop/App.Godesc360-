@@ -3231,16 +3231,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               };
 
               // PRÉ-COMPUTA convId usando o ref (sempre atualizado) — ANTES de qualquer setState
-              // Isso é crítico: setAttendanceMessages precisa do convId correto AGORA
+              // Garante que convId seja sempre o ID da conversa existente, nunca duplicando
               const existingConvNow = attendanceConversationsRef.current.find(matchConv);
-              let convId: string;
-              if (existingConvNow && existingConvNow.status === 'CLOSED') {
-                convId = `conv-${rawPhone}-${Date.now()}`;
-              } else if (existingConvNow) {
-                convId = existingConvNow.id;
-              } else {
-                convId = baseConvId;
-              }
+              const convId = existingConvNow ? existingConvNow.id : baseConvId;
 
               setAttendanceConversations(cPrev => {
                 // Re-busca em cPrev para garantia atômica (cPrev é sempre o estado mais recente)
@@ -3251,25 +3244,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   const lowerContent = incMsg.content.trim().toLowerCase();
                   const isMenuCmd = ['menu', 'início', 'inicio', '#', 'voltar', 'opções', 'opcoes', 'ajuda', 'começar', 'comecar'].includes(lowerContent);
 
-                  // Se conversa estava CLOSED: abre uma NOVA conversa com ID único para não misturar histórico
+                  // Se conversa estava CLOSED: REABRE a mesma conversa limpa para nova triagem (SEM DUPLICAR)
                   if (existing.status === 'CLOSED') {
-                    const newConv: AttendanceConversation = {
-                      id: convId, // usa o convId pré-computado
-                      companyId: 'default-company',
-                      contactId: `cnt-${rawPhone}`,
-                      contactName: (existing.contactName && existing.contactName !== existing.contactPhone) ? existing.contactName : contactName,
-                      contactPhone: displayPhone,
-                      contactJid,
-                      status: 'BOT',
-                      queueName: 'Triagem Automática',
-                      lastMessageText: incMsg.content,
-                      lastMessageAt: timeStr,
-                      unreadCount: 1,
-                      botActive: true,
-                      priority: 'Média',
-                      startedAt: incMsg.timestamp
-                    };
-                    return [newConv, ...cPrev];
+                    return cPrev.map(c => {
+                      if (c.id === existing.id) {
+                        return {
+                          ...c,
+                          status: 'BOT',
+                          botActive: true,
+                          queueName: 'Triagem Automática',
+                          queueId: undefined,
+                          assignedUserId: undefined,
+                          assignedUserName: undefined,
+                          lastMessageText: incMsg.content,
+                          lastMessageAt: timeStr,
+                          unreadCount: c.unreadCount + 1,
+                          closedAt: undefined,
+                          updatedAt: new Date().toISOString()
+                        };
+                      }
+                      return c;
+                    });
                   }
 
                   // Só ativa o bot se a conversa NÃO está em atendimento humano ativo
@@ -3577,6 +3572,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const fullDigits = (phoneDigits.length === 10 || phoneDigits.length === 11) && !phoneDigits.startsWith('55')
       ? `55${phoneDigits}`
       : phoneDigits;
+
+    // Se já existe conversa com este contato/número, reabre e assume ela sem duplicar
+    const existing = attendanceConversations.find(c => {
+      const cDigits = c.contactPhone.replace(/\D/g, '');
+      if (cDigits && phoneDigits && (cDigits === phoneDigits || (cDigits.length >= 8 && phoneDigits.length >= 8 && cDigits.slice(-8) === phoneDigits.slice(-8)))) {
+        return true;
+      }
+      if (c.contactName.trim().toLowerCase() === contactName.trim().toLowerCase() && contactName.trim() !== '') {
+        return true;
+      }
+      return false;
+    });
+
+    if (existing) {
+      setAttendanceConversations(prev =>
+        prev.map(c => {
+          if (c.id === existing.id) {
+            return {
+              ...c,
+              status: 'IN_PROGRESS',
+              botActive: false,
+              assignedUserId: userSession.username || 'ti_user',
+              assignedUserName: userSession.name || 'Analista T.I.',
+              queueId: queueId || c.queueId,
+              queueName: queueName || c.queueName,
+              updatedAt: now.toISOString()
+            };
+          }
+          return c;
+        })
+      );
+      return existing;
+    }
+
     const newConv: AttendanceConversation = {
       id: `manual-conv-${Date.now()}`,
       contactName: contactName.trim(),

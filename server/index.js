@@ -34,6 +34,8 @@ let isStarting = false;
 
 // Armazenamento em memória das conversas e mensagens recebidas do celular real
 const incomingQueue = [];
+// Cache em memória para mapear dígitos/telefones para seus JIDs reais (LID ou PNJID)
+const jidCache = new Map();
 
 async function startBaileys() {
   if (isStarting) return;
@@ -119,9 +121,6 @@ async function startBaileys() {
         isStarting = false;
       }
     });
-
-// Cache em memória para mapear dígitos/telefones para seus JIDs reais (LID ou PNJID)
-const jidCache = new Map();
 
     sock.ev.on('messages.upsert', async (m) => {
       try {
