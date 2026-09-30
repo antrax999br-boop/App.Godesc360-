@@ -3209,6 +3209,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               const displayPhone = formatPhone(rawPhone);
               const contactName = (rawName && !rawName.includes('@') && rawName !== rawPhone && rawName !== incMsg.phone) ? rawName : displayPhone;
               const contactJid = incMsg.jid || `${rawPhone}@s.whatsapp.net`;
+              const altJid = (incMsg as any).altJid;
               // Últimos 8 dígitos para match robusto independente de DDI
               const rawPhoneLast8 = rawPhone.slice(-8);
 
@@ -3217,6 +3218,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               const normalizeJidDigits = (jid: string) => jid.split(':')[0].split('@')[0].replace(/\D/g, '');
               const strip55 = (d: string) => d.startsWith('55') && d.length > 11 ? d.slice(2) : d;
               const incomingJidDigits = normalizeJidDigits(contactJid);
+              const altJidDigits = altJid ? normalizeJidDigits(altJid) : '';
 
               const matchConv = (c: AttendanceConversation): boolean => {
                 if (c.id === baseConvId) return true;
@@ -3224,10 +3226,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   const sj = normalizeJidDigits(c.contactJid);
                   if (sj === incomingJidDigits) return true;
                   if (strip55(sj) === strip55(incomingJidDigits)) return true;
+                  if (altJidDigits && (sj === altJidDigits || strip55(sj) === strip55(altJidDigits))) return true;
                 }
                 const sd = c.contactPhone.replace(/\D/g, '');
                 if (sd === rawPhone) return true;
                 if (rawPhone.length >= 8 && sd.length >= 8 && sd.slice(-8) === rawPhoneLast8) return true;
+                if (altJidDigits && sd.length >= 8 && altJidDigits.length >= 8 && sd.slice(-8) === altJidDigits.slice(-8)) return true;
                 return false;
               };
 
@@ -3504,6 +3508,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
         .then(async res => {
           const data = await res.json().catch(() => ({}));
+          if (data.lid) {
+            setAttendanceConversations(prev =>
+              prev.map(c => c.id === conversationId ? { ...c, contactJid: data.lid } : c)
+            );
+          }
           if (!res.ok || data.error) {
             const errorMsg = data.error || 'WhatsApp não respondeu no servidor';
             console.error('Falha no envio de mensagem WhatsApp:', errorMsg);
@@ -3639,6 +3648,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedAt: now.toISOString()
     };
     setAttendanceConversations(prev => [...prev, newConv]);
+
+    // Dispara resolução proativa do LID WhatsApp no servidor para mapear previamente o cliente
+    if (whatsappServerUrl && fullDigits) {
+      fetch(`${whatsappServerUrl}/api/resolve-phone?phone=${fullDigits}`)
+        .then(async res => {
+          const data = await res.json().catch(() => ({}));
+          if (data && data.lid) {
+            setAttendanceConversations(prev =>
+              prev.map(c => c.id === newConv.id ? { ...c, contactJid: data.lid } : c)
+            );
+          }
+        })
+        .catch(() => {});
+    }
+
     // Mensagem inicial de sistema
     const initMsg: AttendanceMessage = {
       id: `msg-manual-${Date.now()}`,

@@ -136,23 +136,57 @@ async function startBaileys() {
           const senderJid = msg.key.remoteJid;
           if (!senderJid || senderJid.endsWith('@g.us') || senderJid === 'status@broadcast') continue;
 
+          // 1. Baileys v7+ fornece remoteJidAlt / participantPn / senderPn com o PNJID real
+          const altJid = msg.key.remoteJidAlt || msg.key.participantPn || msg.key.senderPn || null;
           const senderDigits = senderJid.split('@')[0].replace(/\D/g, '');
-          jidCache.set(senderDigits, senderJid);
-          jidCache.set(senderJid, senderJid);
+          const altDigits = altJid ? altJid.split('@')[0].replace(/\D/g, '') : null;
 
-          // Tenta mapear o número real de telefone caso seja um LID (@lid)
           let realPhone = null;
-          if (senderJid.endsWith('@lid') && sock?.signalRepository?.lidMapping?.getPNForLID) {
+          // Se altJid tiver o número de telefone (10 a 13 dígitos)
+          if (altDigits && altDigits.length <= 13 && !altDigits.endsWith('lid')) {
+            realPhone = altDigits;
+          }
+
+          // Se senderJid já for um número de telefone com @s.whatsapp.net
+          if (!realPhone && senderJid.endsWith('@s.whatsapp.net') && senderDigits.length <= 13) {
+            realPhone = senderDigits;
+          }
+
+          // Se ainda não temos o número real, procura no jidCache
+          if (!realPhone && jidCache.has(senderDigits)) {
+            const cached = jidCache.get(senderDigits);
+            if (cached && String(cached).length <= 13) {
+              realPhone = String(cached).replace(/\D/g, '');
+            }
+          }
+          if (!realPhone && jidCache.has(senderJid)) {
+            const cached = jidCache.get(senderJid);
+            if (cached && String(cached).length <= 13) {
+              realPhone = String(cached).replace(/\D/g, '');
+            }
+          }
+
+          // Tenta mapear o número real de telefone caso seja um LID (@lid) via signalRepository
+          if (!realPhone && senderJid.endsWith('@lid') && sock?.signalRepository?.lidMapping?.getPNForLID) {
             try {
-              realPhone = await sock.signalRepository.lidMapping.getPNForLID(senderDigits);
-              if (realPhone) {
-                const realDigits = realPhone.replace(/\D/g, '');
-                jidCache.set(realDigits, senderJid);
+              const pn = await sock.signalRepository.lidMapping.getPNForLID(senderDigits);
+              if (pn) {
+                realPhone = pn.replace(/\D/g, '');
               }
             } catch (e) {}
           }
 
-          const senderPhone = realPhone ? realPhone.replace(/\D/g, '') : senderDigits;
+          // Salva no cache bidirecional
+          if (realPhone) {
+            jidCache.set(senderDigits, realPhone);
+            jidCache.set(senderJid, realPhone);
+            jidCache.set(realPhone, senderJid);
+          } else {
+            jidCache.set(senderDigits, senderJid);
+            jidCache.set(senderJid, senderJid);
+          }
+
+          const senderPhone = realPhone || senderDigits;
           const pushName = msg.pushName || '';
           const displayName = pushName.trim() || `Cliente (+${senderPhone})`;
 
@@ -245,6 +279,7 @@ async function startBaileys() {
             id: msg.key.id || `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             phone: senderPhone,
             jid: senderJid,
+            altJid: altJid || undefined,
             name: displayName,
             content: text || (mediaType === 'IMAGE' ? '📷 Foto recebida' : '📎 Anexo'),
             mediaUrl: mediaUrl,
@@ -344,23 +379,35 @@ async function resolveJid(destination) {
 
   try {
     // Usa o JID já construído como primário para o onWhatsApp check
-    const onWa = await sock.onWhatsApp(clean);
+    let onWa = await sock.onWhatsApp(clean);
+    if ((!onWa || !onWa.length || !onWa[0]?.exists) && clean.startsWith('55') && clean.length === 13 && clean[4] === '9') {
+      const without9 = clean.slice(0, 4) + clean.slice(5);
+      onWa = await sock.onWhatsApp(without9);
+    }
     if (onWa && onWa.length > 0 && onWa[0].exists && onWa[0].jid) {
+      if (onWa[0].lid) {
+        const lidDigits = onWa[0].lid.split('@')[0].replace(/\D/g, '');
+        jidCache.set(clean, onWa[0].lid);
+        jidCache.set(onWa[0].lid, clean);
+        jidCache.set(lidDigits, clean);
+        jidCache.set(onWa[0].jid, onWa[0].lid);
+        console.log(`🔗 [resolveJid] Mapeado PN -> LID: ${clean} <-> ${onWa[0].lid}`);
+      }
       return jidNormalizedUser(onWa[0].jid);
     }
 
-    if (clean.startsWith('55') && clean.length === 13 && clean[4] === '9') {
-      // Tenta sem o 9º dígito
-      const without9 = clean.slice(0, 4) + clean.slice(5);
-      const onWaAlt = await sock.onWhatsApp(without9);
-      if (onWaAlt && onWaAlt.length > 0 && onWaAlt[0].exists && onWaAlt[0].jid) {
-        return jidNormalizedUser(onWaAlt[0].jid);
-      }
-    } else if (clean.startsWith('55') && clean.length === 12) {
+    if (clean.startsWith('55') && clean.length === 12) {
       // Tenta com o 9º dígito
       const with9 = clean.slice(0, 4) + '9' + clean.slice(4);
       const onWaAlt = await sock.onWhatsApp(with9);
       if (onWaAlt && onWaAlt.length > 0 && onWaAlt[0].exists && onWaAlt[0].jid) {
+        if (onWaAlt[0].lid) {
+          const lidDigits = onWaAlt[0].lid.split('@')[0].replace(/\D/g, '');
+          jidCache.set(clean, onWaAlt[0].lid);
+          jidCache.set(with9, onWaAlt[0].lid);
+          jidCache.set(onWaAlt[0].lid, clean);
+          jidCache.set(lidDigits, clean);
+        }
         return jidNormalizedUser(onWaAlt[0].jid);
       }
     }
@@ -372,6 +419,37 @@ async function resolveJid(destination) {
   console.log(`📲 Usando JID direto: ${targetJid}`);
   return targetJid;
 }
+
+// Endpoint para resolver e mapear número de telefone para JID e LID WhatsApp
+app.get('/api/resolve-phone', async (req, res) => {
+  const { phone } = req.query;
+  if (!phone || !sock) return res.json({ jid: null, lid: null });
+  let clean = String(phone).replace(/\D/g, '');
+  if (clean.length <= 11 && !clean.startsWith('55')) clean = '55' + clean;
+  try {
+    let onWa = await sock.onWhatsApp(clean);
+    if ((!onWa || !onWa.length || !onWa[0]?.exists) && clean.startsWith('55') && clean.length === 13 && clean[4] === '9') {
+      const without9 = clean.slice(0, 4) + clean.slice(5);
+      onWa = await sock.onWhatsApp(without9);
+    }
+    if (onWa && onWa.length > 0 && onWa[0].exists) {
+      const lid = onWa[0].lid || null;
+      const jid = onWa[0].jid || null;
+      if (lid) {
+        const lidDigits = lid.split('@')[0].replace(/\D/g, '');
+        jidCache.set(clean, lid);
+        jidCache.set(lid, clean);
+        jidCache.set(lidDigits, clean);
+        if (jid) jidCache.set(jid, lid);
+        console.log(`🔗 [resolve-phone] Mapeado com sucesso: ${clean} <-> ${lid}`);
+      }
+      return res.json({ jid, lid });
+    }
+  } catch (e) {
+    console.warn('Erro ao resolver telefone WhatsApp:', e);
+  }
+  res.json({ jid: null, lid: null });
+});
 
 // Endpoint para enviar mensagem do atendente ou chatbot para o cliente (texto ou mídia)
 app.post('/api/send-message', async (req, res) => {
@@ -399,9 +477,30 @@ app.post('/api/send-message', async (req, res) => {
       return res.status(400).json({ error: 'Número de telefone ou JID inválido' });
     }
 
-    // Registra mapeamento no cache bidirecional
+    // Tenta obter o LID associado ao PN via Baileys lidMapping ou onWhatsApp
+    let resolvedLid = null;
     const cleanDigits = String(destination).replace(/\D/g, '');
-    if (cleanDigits) {
+    if (sock && cleanDigits.length <= 13) {
+      try {
+        if (sock.signalRepository?.lidMapping?.getLIDForPN) {
+          resolvedLid = await sock.signalRepository.lidMapping.getLIDForPN(cleanDigits);
+        }
+        if (!resolvedLid && cleanDigits.length >= 10) {
+          const onWa = await sock.onWhatsApp(cleanDigits);
+          if (onWa && onWa[0] && onWa[0].lid) {
+            resolvedLid = onWa[0].lid;
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (resolvedLid) {
+      const lidDigits = resolvedLid.split('@')[0].replace(/\D/g, '');
+      jidCache.set(cleanDigits, resolvedLid);
+      jidCache.set(resolvedLid, cleanDigits);
+      jidCache.set(lidDigits, cleanDigits);
+      console.log(`🔗 Mapeado PN -> LID: ${cleanDigits} <-> ${resolvedLid}`);
+    } else if (cleanDigits) {
       jidCache.set(cleanDigits, targetJid);
       jidCache.set(targetJid, cleanDigits);
     }
@@ -441,7 +540,7 @@ app.post('/api/send-message', async (req, res) => {
       console.log(`📤 Mensagem de texto enviada com sucesso para [${targetJid}]: ${text}`);
     }
 
-    res.json({ success: true, messageId: sent?.key?.id, jid: targetJid });
+    res.json({ success: true, messageId: sent?.key?.id, jid: targetJid, lid: resolvedLid || undefined });
   } catch (err) {
     console.error('Erro ao enviar mensagem via Baileys:', err);
     res.status(500).json({ error: err.message || 'Falha ao enviar mensagem pelo WhatsApp' });
