@@ -2509,7 +2509,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return {
       id: 'bh-1',
       companyId: 'default-company',
-      enabled: true,
+      enabled: false, // Inicia desativado para permitir testes e atendimento 24h sem bloquear o menu do chatbot
       outOfHoursMessage: 'Olá! Nosso horário de atendimento é de segunda a sexta-feira, das 08:00 às 18:00.',
       schedules: [
         { day: 'Segunda-feira', enabled: true, openTime: '08:00', closeTime: '18:00', hasLunchBreak: false },
@@ -3183,8 +3183,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 processedMsgIds.current.delete(firstKey);
               }
 
-              // Extrai apenas dígitos do telefone, ignorando sufixo JID como @s.whatsapp.net
-              const rawPhone = (incMsg.jid || incMsg.phone).split('@')[0].replace(/\D/g, '');
+              // Extrai telefone: prefere phone real (se tiver menos de 14 dígitos e não for LID), caso contrário usa JID
+              const isLid = incMsg.jid && incMsg.jid.endsWith('@lid');
+              const phoneFromMsg = incMsg.phone ? incMsg.phone.split('@')[0].replace(/\D/g, '') : '';
+              const jidDigits = incMsg.jid ? incMsg.jid.split('@')[0].replace(/\D/g, '') : '';
+              const rawPhone = (phoneFromMsg && phoneFromMsg.length <= 13 && !phoneFromMsg.endsWith('lid'))
+                ? phoneFromMsg
+                : (jidDigits || phoneFromMsg);
+
               // Sanitiza o nome: se o nome vier com @, JID ou for igual ao phone bruto, usa apenas o número formatado
               const rawName = (incMsg.name && incMsg.name.trim()) ? incMsg.name.trim() : '';
               // Formata o número para exibição — remove DDI 55 de números BR e formata
@@ -3365,19 +3371,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     return [...mp, botMsgObj];
                   });
 
-                  // Envia ao WhatsApp — prefere JID (DDI correto) sobre contactPhone
-                  const botJidDigits = (targetConv.contactJid || '').split('@')[0].replace(/\D/g, '');
-                  const botPhoneDigits = (targetConv.contactPhone || '').replace(/\D/g, '');
-                  const botToPhone = botJidDigits || botPhoneDigits;
-                  console.log('[Bot] Enviando para:', botToPhone, '| JID:', targetConv.contactJid, '| Phone:', targetConv.contactPhone);
+                  // Envia ao WhatsApp — PRESERVA O JID COMPLETO (@lid ou @s.whatsapp.net) para garantir entrega imediata
+                  const botDestination = targetConv.contactJid || targetConv.contactPhone;
+                  console.log('[Bot] Enviando para destino:', botDestination, '| JID:', targetConv.contactJid, '| Phone:', targetConv.contactPhone);
                   fetch(`${whatsappServerUrl}/api/send-message`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ toPhone: botToPhone, text: botResult.replyMessage })
+                    body: JSON.stringify({
+                      toPhone: targetConv.contactPhone,
+                      jid: targetConv.contactJid,
+                      text: botResult.replyMessage
+                    })
                   }).then(async res => {
                     const data = await res.json().catch(() => ({}));
                     if (!res.ok || data.error) console.warn('[Bot] Falha no envio:', data.error || res.status);
-                    else console.log('[Bot] Enviado com sucesso para', botToPhone);
+                    else console.log('[Bot] Enviado com sucesso para', botDestination);
                   }).catch(err => console.warn('[Bot] Send failed:', err));
                 }
 
@@ -3473,16 +3481,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const textToSend = senderType === 'AGENT'
         ? `*${userSession.name || 'Atendente'}:* ${content}`
         : content;
-      // Usa dígitos do contactJid (vem direto do WhatsApp, DDI correto garantido)
-      // Fallback para contactPhone se JID não disponível
-      const jidDigits = (conv.contactJid || '').split('@')[0].replace(/\D/g, '');
-      const phoneDigits = (conv.contactPhone || '').replace(/\D/g, '');
-      // Prefere JID (DDI correto), se não tiver usa phone (servidor adiciona DDI)
-      const rawPhone = jidDigits || phoneDigits;
+
+      console.log('[Chat] Enviando mensagem de atendente para:', conv.contactJid || conv.contactPhone);
       fetch(`${whatsappServerUrl}/api/send-message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ toPhone: rawPhone, text: textToSend })
+        body: JSON.stringify({
+          toPhone: conv.contactPhone,
+          jid: conv.contactJid,
+          text: textToSend
+        })
       })
         .then(async res => {
           const data = await res.json().catch(() => ({}));

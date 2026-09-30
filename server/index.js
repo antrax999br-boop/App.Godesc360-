@@ -120,6 +120,9 @@ async function startBaileys() {
       }
     });
 
+// Cache em memória para mapear dígitos/telefones para seus JIDs reais (LID ou PNJID)
+const jidCache = new Map();
+
     sock.ev.on('messages.upsert', async (m) => {
       try {
         if (!m.messages || !m.messages.length) return;
@@ -133,7 +136,23 @@ async function startBaileys() {
           const senderJid = msg.key.remoteJid;
           if (!senderJid || senderJid.endsWith('@g.us') || senderJid === 'status@broadcast') continue;
 
-          const senderPhone = senderJid.split('@')[0];
+          const senderDigits = senderJid.split('@')[0].replace(/\D/g, '');
+          jidCache.set(senderDigits, senderJid);
+          jidCache.set(senderJid, senderJid);
+
+          // Tenta mapear o número real de telefone caso seja um LID (@lid)
+          let realPhone = null;
+          if (senderJid.endsWith('@lid') && sock?.signalRepository?.lidMapping?.getPNForLID) {
+            try {
+              realPhone = await sock.signalRepository.lidMapping.getPNForLID(senderDigits);
+              if (realPhone) {
+                const realDigits = realPhone.replace(/\D/g, '');
+                jidCache.set(realDigits, senderJid);
+              }
+            } catch (e) {}
+          }
+
+          const senderPhone = realPhone ? realPhone.replace(/\D/g, '') : senderDigits;
           const pushName = msg.pushName || '';
           const displayName = pushName.trim() || `Cliente (+${senderPhone})`;
 
@@ -159,7 +178,7 @@ async function startBaileys() {
 
           if (!text) continue;
 
-          console.log(`📩 Nova mensagem real do WhatsApp de [${displayName} - ${senderPhone}]: ${text}`);
+          console.log(`📩 Nova mensagem real do WhatsApp de [${displayName} - ${senderJid}]: ${text}`);
 
           const timestampNum = msg.messageTimestamp 
             ? (typeof msg.messageTimestamp === 'number' ? msg.messageTimestamp : msg.messageTimestamp.low || Date.now() / 1000)
@@ -230,19 +249,32 @@ app.get('/api/sync-messages', (req, res) => {
   res.json({ messages });
 });
 
-// Helper para obter JID válido do WhatsApp considerando 9º dígito BR
-async function resolveJid(toPhone) {
-  if (!toPhone) return null;
+// Helper para obter JID válido do WhatsApp (suporta tanto JID direto @lid/@s.whatsapp.net quanto número de telefone)
+async function resolveJid(destination) {
+  if (!destination) return null;
 
-  // Se já for o JID exato recebido do WhatsApp (ex: 5545999887766@s.whatsapp.net), normaliza removendo device ID
-  if (typeof toPhone === 'string' && toPhone.includes('@')) {
-    return jidNormalizedUser(toPhone);
+  // 1. Se já for um JID completo com @ (@lid, @s.whatsapp.net), normaliza e usa direto!
+  if (typeof destination === 'string' && destination.includes('@')) {
+    return jidNormalizedUser(destination);
   }
-  let clean = toPhone.replace(/\D/g, '');
+
+  let clean = String(destination).replace(/\D/g, '');
   if (!clean) return null;
 
-  // Se o número já tem DDI (12+ dígitos), usa direto sem adicionar 55
-  // Se tiver 10 ou 11 dígitos e não começar com 55 (DDI Brasil), adiciona 55
+  // 2. Se estiver no cache de JIDs reais recebidos do WhatsApp (garante entrega para LIDs)
+  if (jidCache.has(clean)) {
+    const cached = jidCache.get(clean);
+    console.log(`📲 Encontrado no cache de JIDs: ${clean} -> ${cached}`);
+    return jidNormalizedUser(cached);
+  }
+
+  // 3. Se tiver 14+ dígitos (típico de LID WhatsApp do Baileys), assume @lid
+  if (clean.length >= 14) {
+    console.log(`📲 Número longo detectado (possível LID): ${clean}@lid`);
+    return jidNormalizedUser(`${clean}@lid`);
+  }
+
+  // 4. Se tiver 10 ou 11 dígitos e não começar com 55 (DDI Brasil), adiciona 55
   if (clean.length <= 11 && !clean.startsWith('55')) {
     clean = '55' + clean;
   }
@@ -276,17 +308,18 @@ async function resolveJid(toPhone) {
     console.warn('⚠️ Verification onWhatsApp failed, using default JID:', e);
   }
 
-  // Fallback: usa o JID já construído — o WhatsApp vai entregar se o número existir
-  console.log(`📲 Usando JID direto (sem verificação onWhatsApp): ${targetJid}`);
+  // Fallback: usa o JID construído
+  console.log(`📲 Usando JID direto: ${targetJid}`);
   return targetJid;
 }
 
 // Endpoint para enviar mensagem do atendente ou chatbot para o cliente
 app.post('/api/send-message', async (req, res) => {
-  const { toPhone, text } = req.body;
+  const { toPhone, jid, text } = req.body;
+  const destination = jid || toPhone;
 
-  if (!toPhone || !text) {
-    return res.status(400).json({ error: 'Parâmetros toPhone e text são obrigatórios.' });
+  if (!destination || !text) {
+    return res.status(400).json({ error: 'Parâmetros toPhone/jid e text são obrigatórios.' });
   }
 
   // Se a conexão estiver reconectando, aguarda até 5s
@@ -301,14 +334,14 @@ app.post('/api/send-message', async (req, res) => {
   }
 
   try {
-    const targetJid = await resolveJid(toPhone);
+    const targetJid = await resolveJid(destination);
     if (!targetJid) {
-      return res.status(400).json({ error: 'Número de telefone inválido' });
+      return res.status(400).json({ error: 'Número de telefone ou JID inválido' });
     }
 
     const sent = await sock.sendMessage(targetJid, { text });
     console.log(`📤 Mensagem enviada com sucesso para [${targetJid}]: ${text}`);
-    res.json({ success: true, messageId: sent.key.id, jid: targetJid });
+    res.json({ success: true, messageId: sent?.key?.id, jid: targetJid });
   } catch (err) {
     console.error('Erro ao enviar mensagem via Baileys:', err);
     res.status(500).json({ error: err.message || 'Falha ao enviar mensagem pelo WhatsApp' });

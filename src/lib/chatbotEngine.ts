@@ -119,22 +119,6 @@ export class ChatbotEngine {
     businessHours?: BusinessHoursConfig,
     queues: AttendanceQueue[] = []
   ): ChatbotProcessingResult {
-    // 1. Check Operating Hours with Brazil timezone
-    const hoursCheck = this.isWithinBusinessHours(businessHours);
-    if (!hoursCheck.isWorking) {
-      return {
-        replyMessage: hoursCheck.outMessage || 'Olá! Nosso horário de atendimento é de segunda a sexta-feira, das 08:00 às 18:00.',
-        updateConversationStatus: 'WAITING',
-        targetQueueName: 'Fora do Expediente',
-        botActive: false
-      };
-    }
-
-    // If bot is paused (human attendant engaged and not waiting), bot should not intercept
-    if (!conversation.botActive && conversation.status === 'IN_PROGRESS') {
-      return {};
-    }
-
     const trimmed = incomingText.trim();
     const lowerTrimmed = trimmed.toLowerCase();
 
@@ -148,6 +132,22 @@ export class ChatbotEngine {
 
     // Build welcome message from rootNode message if present, or default fallback
     const welcomeMsg = (rootNode && rootNode.message) ? rootNode.message : `Olá! Tudo bem? 👋\n\nBem-vindo à Central de Atendimento GoDesc 360.\n\nPara direcionarmos seu atendimento à equipe correta, por favor digite o número da opção desejada:\n\n1 - 💼 Comercial\n2 - 🛠️ Suporte Técnico\n3 - 💳 Financeiro\n4 - 🎫 Abrir Ticket Chamado\n5 - 👤 Falar com Atendente\n\n_(A qualquer momento, digite *#* ou *menu* para retornar ao início)_`;
+
+    // 1. Check Operating Hours with Brazil timezone
+    const hoursCheck = this.isWithinBusinessHours(businessHours);
+    if (!hoursCheck.isWorking && !isMenuRestart && !conversation.assignedUserId && conversation.status !== 'IN_PROGRESS') {
+      return {
+        replyMessage: `${hoursCheck.outMessage || 'Olá! No momento estamos fora do nosso expediente comercial.'}\n\n${welcomeMsg}`,
+        updateConversationStatus: 'WAITING',
+        targetQueueName: 'Fora do Expediente',
+        botActive: true
+      };
+    }
+
+    // If bot is paused (human attendant engaged and not waiting), bot should not intercept
+    if (!conversation.botActive && conversation.status === 'IN_PROGRESS') {
+      return {};
+    }
 
     // Se o cliente digitar comando de reinício, reseta para o menu principal
     if (isMenuRestart) {
