@@ -33,7 +33,11 @@ import {
   ArrowLeft,
   RefreshCw,
   LogOut,
-  Layers
+  Layers,
+  FileText,
+  Download,
+  Image as ImageIcon,
+  X
 } from 'lucide-react';
 
 export const AttendanceChatView: React.FC = () => {
@@ -76,12 +80,59 @@ export const AttendanceChatView: React.FC = () => {
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [targetQueueId, setTargetQueueId] = useState('');
   const [targetUserId, setTargetUserId] = useState('');
+  const [selectedFile, setSelectedFile] = useState<{
+    file: File;
+    preview: string;
+    type: 'IMAGE' | 'DOCUMENT';
+  } | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const activeConv = attendanceConversations.find(c => c.id === selectedConvId);
 
   const activeMessages = activeConv
     ? attendanceMessages.filter(m => m.conversationId === activeConv.id)
     : [];
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const isImg = file.type.startsWith('image/');
+    const reader = new FileReader();
+    reader.onload = (loadEv) => {
+      setSelectedFile({
+        file,
+        preview: loadEv.target?.result as string,
+        type: isImg ? 'IMAGE' : 'DOCUMENT'
+      });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (e.clipboardData && e.clipboardData.items) {
+      const items = e.clipboardData.items;
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            const reader = new FileReader();
+            reader.onload = (loadEv) => {
+              setSelectedFile({
+                file,
+                preview: loadEv.target?.result as string,
+                type: 'IMAGE'
+              });
+            };
+            reader.readAsDataURL(file);
+            break;
+          }
+        }
+      }
+    }
+  };
 
   const isPrivileged = userSession.role === 'ceo' || userSession.role === 'admin' || userSession.role === 'gestor';
   const isMine = (c: AttendanceConversation) =>
@@ -125,8 +176,24 @@ export const AttendanceChatView: React.FC = () => {
   });
 
   const handleSendMessage = () => {
-    if (!inputText.trim() || !activeConv) return;
-    sendAttendanceMessage(activeConv.id, inputText.trim(), 'AGENT');
+    if ((!inputText.trim() && !selectedFile) || !activeConv) return;
+    
+    if (selectedFile) {
+      sendAttendanceMessage(
+        activeConv.id,
+        inputText.trim(),
+        'AGENT',
+        {
+          mediaUrl: selectedFile.preview,
+          mediaType: selectedFile.type,
+          fileName: selectedFile.file.name,
+          mimetype: selectedFile.file.type
+        }
+      );
+      setSelectedFile(null);
+    } else {
+      sendAttendanceMessage(activeConv.id, inputText.trim(), 'AGENT');
+    }
     setInputText('');
   };
 
@@ -618,7 +685,51 @@ export const AttendanceChatView: React.FC = () => {
                           }</span>
                         </div>
 
-                        <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                        {/* Renderização de Imagem / Foto / Print */}
+                        {msg.mediaUrl && (msg.messageType === 'IMAGE' || (!msg.messageType && msg.mediaUrl.startsWith('data:image/'))) && (
+                          <div className="mt-1.5 overflow-hidden rounded-xl border border-[#27272a] max-w-sm">
+                            <img
+                              src={msg.mediaUrl}
+                              alt="Foto"
+                              className="max-h-72 w-full object-cover cursor-pointer hover:opacity-95 transition-opacity"
+                              onClick={() => {
+                                const w = window.open('');
+                                if (w) {
+                                  w.document.write(`<body style="margin:0; background:#000; display:flex; align-items:center; justify-content:center; height:100vh;"><img src="${msg.mediaUrl}" style="max-width:100%; max-height:100%; object-fit:contain;" /></body>`);
+                                }
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        {/* Renderização de Documento */}
+                        {msg.mediaUrl && msg.messageType === 'DOCUMENT' && (
+                          <div className="mt-1.5 p-2.5 bg-[#141416] border border-[#27272a] rounded-xl flex items-center justify-between gap-3 max-w-xs">
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              <FileText className="w-5 h-5 text-[#45dfa4] shrink-0" />
+                              <span className="text-xs text-white truncate font-mono">{msg.content.replace(/^📄 Documento:\s*/, '') || 'documento'}</span>
+                            </div>
+                            <a
+                              href={msg.mediaUrl}
+                              download={msg.content.replace(/^📄 Documento:\s*/, '') || 'documento'}
+                              className="p-1.5 hover:bg-[#27272a] text-[#45dfa4] rounded-lg transition-all"
+                              title="Baixar arquivo"
+                            >
+                              <Download className="w-4 h-4" />
+                            </a>
+                          </div>
+                        )}
+
+                        {/* Renderização de Áudio */}
+                        {msg.mediaUrl && msg.messageType === 'AUDIO' && (
+                          <div className="mt-1.5">
+                            <audio controls src={msg.mediaUrl} className="max-w-xs h-9" />
+                          </div>
+                        )}
+
+                        {(!msg.mediaUrl || (msg.content && !msg.content.startsWith('📷 Foto') && !msg.content.startsWith('📄 Documento'))) && (
+                          <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                        )}
                       </div>
                     </div>
                   );
@@ -627,22 +738,72 @@ export const AttendanceChatView: React.FC = () => {
 
               {/* Message Composer */}
               <div className="p-3 border-t border-[#27272a] bg-[#141416]">
+                {/* Preview de anexo / print antes de enviar */}
+                {selectedFile && (
+                  <div className="p-2 mb-2 bg-[#1e1e24] border border-[#27272a] rounded-xl flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 overflow-hidden">
+                      {selectedFile.type === 'IMAGE' ? (
+                        <img src={selectedFile.preview} alt="Preview" className="w-12 h-12 object-cover rounded-lg border border-[#323238]" />
+                      ) : (
+                        <div className="w-10 h-10 bg-[#27272a] rounded-lg flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-[#45dfa4]" />
+                        </div>
+                      )}
+                      <div className="overflow-hidden">
+                        <p className="text-xs text-white font-medium truncate">{selectedFile.file.name}</p>
+                        <p className="text-[10px] text-[#8d90a0]">{(selectedFile.file.size / 1024).toFixed(1)} KB • Pronto para enviar</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedFile(null)}
+                      className="p-1.5 hover:bg-[#27272a] text-red-400 hover:text-red-300 rounded-lg transition-all cursor-pointer"
+                      title="Remover anexo"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
                 <div className="flex items-end gap-2 bg-[#1e1e24] border border-[#27272a] rounded-xl p-2 focus-within:border-[#45dfa4]">
+                  {/* Input invisível de arquivos */}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                    className="hidden"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-2 text-[#8d90a0] hover:text-[#45dfa4] hover:bg-[#27272a] rounded-lg transition-all cursor-pointer"
+                    title="Anexar imagem, print ou documento (ou use Ctrl+V para colar um print)"
+                  >
+                    <Paperclip className="w-4 h-4" />
+                  </button>
+
                   <textarea
                     rows={2}
-                    placeholder="Digite sua mensagem (Enter para enviar)..."
+                    placeholder="Digite sua mensagem (Enter para enviar, ou cole um print com Ctrl+V)..."
                     value={inputText}
                     onChange={e => setInputText(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    className="flex-1 bg-transparent text-xs text-white placeholder-[#8d90a0] resize-none focus:outline-none"
+                    onPaste={handlePaste}
+                    className="flex-1 bg-transparent text-xs text-white placeholder-[#8d90a0] resize-none focus:outline-none leading-relaxed"
                   />
 
                   <div className="flex items-center gap-1">
                     <button
                       onClick={handleSendMessage}
-                      className="px-4 py-2 bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 rounded-lg font-bold text-xs transition-all cursor-pointer shadow-md flex items-center gap-2"
+                      disabled={!inputText.trim() && !selectedFile}
+                      className={`px-4 py-2 rounded-lg font-bold text-xs transition-all flex items-center gap-2 shadow-md ${
+                        (!inputText.trim() && !selectedFile)
+                          ? 'bg-[#27272a] text-[#8d90a0] cursor-not-allowed'
+                          : 'bg-[#45dfa4] hover:bg-[#00bd85] text-gray-950 cursor-pointer shadow-[#45dfa4]/20'
+                      }`}
                     >
-                      <Send className="w-4 h-4 text-gray-950" />
+                      <Send className="w-4 h-4" />
                       Enviar
                     </button>
                   </div>

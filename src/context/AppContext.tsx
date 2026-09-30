@@ -28,6 +28,7 @@ import {
   ChatbotFlow,
   BusinessHoursConfig,
   SenderType,
+  MessageType,
   ExpenseItem
 } from '../types';
 import {
@@ -127,7 +128,7 @@ interface AppContextType {
   businessHours: BusinessHoursConfig;
   connectWhatsApp: () => Promise<void>;
   disconnectWhatsApp: () => Promise<void>;
-  sendAttendanceMessage: (conversationId: string, content: string, senderType?: SenderType) => void;
+  sendAttendanceMessage: (conversationId: string, content: string, senderType?: SenderType, media?: { mediaUrl: string; mediaType: MessageType; fileName?: string; mimetype?: string }) => void;
   assignConversation: (conversationId: string, userId: string, userName: string) => void;
   transferConversation: (conversationId: string, targetQueueId?: string, targetQueueName?: string, targetUserName?: string) => void;
   returnConversationToQueue: (conversationId: string) => void;
@@ -3174,7 +3175,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (res.ok) {
           const data = await res.json();
           if (data.messages && data.messages.length > 0) {
-            data.messages.forEach((incMsg: { id: string; phone: string; jid?: string; name: string; content: string; timestamp: string }) => {
+            data.messages.forEach((incMsg: { id: string; phone: string; jid?: string; name: string; content: string; timestamp: string; mediaUrl?: string; mediaType?: string; fileName?: string }) => {
               const msgKey = incMsg.id || `${incMsg.phone}-${incMsg.timestamp}-${incMsg.content}`;
               if (processedMsgIds.current.has(msgKey)) return;
               processedMsgIds.current.add(msgKey);
@@ -3231,13 +3232,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               };
 
               // PRÉ-COMPUTA convId usando o ref (sempre atualizado) — ANTES de qualquer setState
-              // Garante que convId seja sempre o ID da conversa existente, nunca duplicando
-              const existingConvNow = attendanceConversationsRef.current.find(matchConv);
+              // Se houver mais de uma conversa compatível, prioriza a que está EM ATENDIMENTO (IN_PROGRESS)
+              const matchedConvs = attendanceConversationsRef.current.filter(matchConv);
+              const existingConvNow = matchedConvs.find(c => c.status === 'IN_PROGRESS') || matchedConvs[0];
               const convId = existingConvNow ? existingConvNow.id : baseConvId;
 
               setAttendanceConversations(cPrev => {
                 // Re-busca em cPrev para garantia atômica (cPrev é sempre o estado mais recente)
-                const existing = cPrev.find(matchConv);
+                const matchedList = cPrev.filter(matchConv);
+                const existing = matchedList.find(c => c.status === 'IN_PROGRESS') || matchedList[0];
                 const timeStr = new Date(incMsg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                 if (existing) {
@@ -3318,8 +3321,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 conversationId: convId, // convId pode ter sido atualizado acima (nova conversa de CLOSED)
                 senderType: 'CUSTOMER',
                 senderName: contactName,
-                messageType: 'TEXT',
+                messageType: (incMsg.mediaType as MessageType) || 'TEXT',
                 content: incMsg.content,
+                mediaUrl: incMsg.mediaUrl,
                 status: 'DELIVERED',
                 createdAt: incMsg.timestamp
               };
@@ -3433,7 +3437,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => clearInterval(interval);
   }, [whatsappServerUrl, chatbotFlow, businessHours, attendanceQueues]);
 
-  const sendAttendanceMessage = (conversationId: string, content: string, senderType: SenderType = 'AGENT') => {
+  const sendAttendanceMessage = (
+    conversationId: string,
+    content: string,
+    senderType: SenderType = 'AGENT',
+    media?: { mediaUrl: string; mediaType: MessageType; fileName?: string; mimetype?: string }
+  ) => {
     const conv = attendanceConversations.find(c => c.id === conversationId);
     if (!conv) return;
 
@@ -3445,8 +3454,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       conversationId,
       senderType,
       senderName: senderType === 'AGENT' ? (userSession.name || 'Atendente T.I.') : (senderType === 'BOT' ? 'Assistente Virtual' : conv.contactName),
-      messageType: 'TEXT',
-      content,
+      messageType: media ? media.mediaType : 'TEXT',
+      content: content || (media?.mediaType === 'IMAGE' ? '📷 Foto enviada' : '📎 Documento'),
+      mediaUrl: media ? media.mediaUrl : undefined,
       status: 'SENT',
       createdAt: now.toISOString()
     };
@@ -3456,9 +3466,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAttendanceConversations(prev =>
       prev.map(c => {
         if (c.id === conversationId) {
+          const summaryText = content || (media?.mediaType === 'IMAGE' ? '📷 Foto enviada' : '📎 Documento');
           return {
             ...c,
-            lastMessageText: `${senderType === 'AGENT' ? 'Você: ' : (senderType === 'BOT' ? 'Robô: ' : '')}${content}`,
+            lastMessageText: `${senderType === 'AGENT' ? 'Você: ' : (senderType === 'BOT' ? 'Robô: ' : '')}${summaryText}`,
             lastMessageAt: timeStr,
             unreadCount: senderType === 'CUSTOMER' ? c.unreadCount + 1 : 0,
             // Desativa robô e assume conversa quando atendente humano digita
@@ -3472,8 +3483,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Envia mensagem real para o celular do cliente via API do Baileys
     if (senderType === 'AGENT' || senderType === 'BOT') {
-      // Prefixo do analista em negrito para o cliente identificar quem está falando
-      const textToSend = senderType === 'AGENT'
+      // Prefixo do analista em negrito para o cliente identificar quem está falando (apenas se houver texto)
+      const textToSend = senderType === 'AGENT' && content
         ? `*${userSession.name || 'Atendente'}:* ${content}`
         : content;
 
@@ -3484,7 +3495,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         body: JSON.stringify({
           toPhone: conv.contactPhone,
           jid: conv.contactJid,
-          text: textToSend
+          text: textToSend,
+          mediaBase64: media ? media.mediaUrl : undefined,
+          mediaType: media ? media.mediaType : undefined,
+          fileName: media ? media.fileName : undefined,
+          mimetype: media ? media.mimetype : undefined
         })
       })
         .then(async res => {

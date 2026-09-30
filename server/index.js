@@ -6,7 +6,7 @@ const express = require('express');
 const cors = require('cors');
 const QRCode = require('qrcode');
 const fs = require('fs');
-const { makeWASocket, useMultiFileAuthState, DisconnectReason, jidNormalizedUser } = require('@whiskeysockets/baileys');
+const { makeWASocket, useMultiFileAuthState, DisconnectReason, jidNormalizedUser, downloadMediaMessage } = require('@whiskeysockets/baileys');
 const emailService = require('./emailService');
 
 
@@ -22,7 +22,8 @@ app.use((req, res, next) => {
   }
   next();
 });
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const PORT = process.env.PORT || 10000;
 
@@ -162,22 +163,79 @@ async function startBaileys() {
             || msg.message?.documentWithCaptionMessage?.message
             || msg.message;
 
-          if (!actualMessage) continue;
+          let mediaUrl = null;
+          let mediaType = 'TEXT';
+          let docFileName = undefined;
+
+          // Processamento e download de fotos
+          if (actualMessage?.imageMessage) {
+            mediaType = 'IMAGE';
+            try {
+              const buffer = await downloadMediaMessage(
+                msg,
+                'buffer',
+                {},
+                { reuploadRequest: sock?.updateMediaMessage }
+              );
+              if (buffer) {
+                const mime = actualMessage.imageMessage.mimetype || 'image/jpeg';
+                mediaUrl = `data:${mime};base64,${buffer.toString('base64')}`;
+              }
+            } catch (err) {
+              console.warn('⚠️ Falha ao baixar imagem do WhatsApp:', err?.message);
+            }
+          } else if (actualMessage?.documentMessage) {
+            mediaType = 'DOCUMENT';
+            docFileName = actualMessage.documentMessage.fileName || 'documento';
+            try {
+              const buffer = await downloadMediaMessage(
+                msg,
+                'buffer',
+                {},
+                { reuploadRequest: sock?.updateMediaMessage }
+              );
+              if (buffer) {
+                const mime = actualMessage.documentMessage.mimetype || 'application/pdf';
+                mediaUrl = `data:${mime};base64,${buffer.toString('base64')}`;
+              }
+            } catch (err) {
+              console.warn('⚠️ Falha ao baixar documento do WhatsApp:', err?.message);
+            }
+          } else if (actualMessage?.audioMessage) {
+            mediaType = 'AUDIO';
+            try {
+              const buffer = await downloadMediaMessage(
+                msg,
+                'buffer',
+                {},
+                { reuploadRequest: sock?.updateMediaMessage }
+              );
+              if (buffer) {
+                const mime = actualMessage.audioMessage.mimetype || 'audio/ogg';
+                mediaUrl = `data:${mime};base64,${buffer.toString('base64')}`;
+              }
+            } catch (err) {}
+          }
+
+          const caption = actualMessage?.imageMessage?.caption 
+            || actualMessage?.videoMessage?.caption 
+            || actualMessage?.documentMessage?.caption 
+            || '';
 
           const text = actualMessage?.conversation 
             || actualMessage?.extendedTextMessage?.text 
-            || actualMessage?.imageMessage?.caption 
-            || actualMessage?.videoMessage?.caption 
-            || actualMessage?.documentMessage?.caption
+            || caption
+            || (actualMessage?.imageMessage ? '📷 Foto recebida' : null)
+            || (actualMessage?.documentMessage ? `📄 Documento: ${docFileName || 'arquivo'}` : null)
             || (actualMessage?.audioMessage ? '🎵 Mensagem de Áudio' : null)
             || (actualMessage?.stickerMessage ? '🎨 Figurinha' : null)
             || (actualMessage?.contactMessage ? '👤 Contato' : null)
             || (actualMessage?.locationMessage ? '📍 Localização' : null)
             || null;
 
-          if (!text) continue;
+          if (!text && !mediaUrl) continue;
 
-          console.log(`📩 Nova mensagem real do WhatsApp de [${displayName} - ${senderJid}]: ${text}`);
+          console.log(`📩 Nova mensagem real do WhatsApp de [${displayName} - ${senderJid}]: ${text || mediaType}`);
 
           const timestampNum = msg.messageTimestamp 
             ? (typeof msg.messageTimestamp === 'number' ? msg.messageTimestamp : msg.messageTimestamp.low || Date.now() / 1000)
@@ -188,7 +246,10 @@ async function startBaileys() {
             phone: senderPhone,
             jid: senderJid,
             name: displayName,
-            content: text,
+            content: text || (mediaType === 'IMAGE' ? '📷 Foto recebida' : '📎 Anexo'),
+            mediaUrl: mediaUrl,
+            mediaType: mediaType,
+            fileName: docFileName,
             timestamp: new Date(timestampNum * 1000).toISOString()
           });
         }
@@ -312,13 +373,13 @@ async function resolveJid(destination) {
   return targetJid;
 }
 
-// Endpoint para enviar mensagem do atendente ou chatbot para o cliente
+// Endpoint para enviar mensagem do atendente ou chatbot para o cliente (texto ou mídia)
 app.post('/api/send-message', async (req, res) => {
-  const { toPhone, jid, text } = req.body;
+  const { toPhone, jid, text, mediaBase64, mediaType, fileName, mimetype } = req.body;
   const destination = jid || toPhone;
 
-  if (!destination || !text) {
-    return res.status(400).json({ error: 'Parâmetros toPhone/jid e text são obrigatórios.' });
+  if (!destination || (!text && !mediaBase64)) {
+    return res.status(400).json({ error: 'Parâmetro de destino e conteúdo/mídia são obrigatórios.' });
   }
 
   // Se a conexão estiver reconectando, aguarda até 5s
@@ -338,8 +399,48 @@ app.post('/api/send-message', async (req, res) => {
       return res.status(400).json({ error: 'Número de telefone ou JID inválido' });
     }
 
-    const sent = await sock.sendMessage(targetJid, { text });
-    console.log(`📤 Mensagem enviada com sucesso para [${targetJid}]: ${text}`);
+    // Registra mapeamento no cache bidirecional
+    const cleanDigits = String(destination).replace(/\D/g, '');
+    if (cleanDigits) {
+      jidCache.set(cleanDigits, targetJid);
+      jidCache.set(targetJid, cleanDigits);
+    }
+
+    let sent;
+    if (mediaBase64) {
+      // Remove prefixo data:...;base64, se presente
+      const cleanB64 = mediaBase64.replace(/^data:[^;]+;base64,/, '');
+      const buffer = Buffer.from(cleanB64, 'base64');
+
+      if (mediaType === 'IMAGE' || (mimetype && mimetype.startsWith('image/'))) {
+        sent = await sock.sendMessage(targetJid, {
+          image: buffer,
+          caption: text || '',
+          mimetype: mimetype || 'image/jpeg'
+        });
+        console.log(`📤 Imagem enviada com sucesso para [${targetJid}]`);
+      } else if (mediaType === 'AUDIO' || (mimetype && mimetype.startsWith('audio/'))) {
+        sent = await sock.sendMessage(targetJid, {
+          audio: buffer,
+          mimetype: mimetype || 'audio/mp4',
+          ptt: true
+        });
+        console.log(`📤 Áudio enviado com sucesso para [${targetJid}]`);
+      } else {
+        // Documento ou arquivo geral
+        sent = await sock.sendMessage(targetJid, {
+          document: buffer,
+          mimetype: mimetype || 'application/pdf',
+          fileName: fileName || 'documento.pdf',
+          caption: text || ''
+        });
+        console.log(`📤 Documento enviado com sucesso para [${targetJid}]: ${fileName || 'documento'}`);
+      }
+    } else {
+      sent = await sock.sendMessage(targetJid, { text });
+      console.log(`📤 Mensagem de texto enviada com sucesso para [${targetJid}]: ${text}`);
+    }
+
     res.json({ success: true, messageId: sent?.key?.id, jid: targetJid });
   } catch (err) {
     console.error('Erro ao enviar mensagem via Baileys:', err);
