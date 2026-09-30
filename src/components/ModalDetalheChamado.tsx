@@ -227,7 +227,7 @@ export const TicketDetailModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-[#0f1318] border border-[#1e2430] rounded-2xl w-full max-w-6xl max-h-[96vh] flex flex-col shadow-2xl overflow-hidden">
+      <div id="modal-detalhe-chamado" className="modal-detalhe-chamado-root bg-[#0f1318] border border-[#1e2430] rounded-2xl w-full max-w-6xl max-h-[96vh] flex flex-col shadow-2xl overflow-hidden">
 
         {/* HEADER */}
         <div className="flex items-center justify-between px-5 py-3.5 bg-[#111827] border-b border-[#1e2430] shrink-0">
@@ -791,7 +791,7 @@ export const TicketDetailModal: React.FC = () => {
       {/* MODAL: Transferir Fila */}
       {showQueueTransferModal && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-          <div className="bg-[#181c22] border border-[#7c3aed]/40 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5">
+          <div className="modal-ticket-submodal bg-[#181c22] border border-[#7c3aed]/40 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5">
             <div className="flex items-center justify-between border-b border-[#7c3aed]/20 pb-3">
               <div className="flex items-center gap-2">
                 <ArrowRightLeft className="w-5 h-5 text-[#a78bfa]" />
@@ -847,7 +847,7 @@ export const TicketDetailModal: React.FC = () => {
       {/* MODAL: Mensagem de Resolucao */}
       {showResolvePrompt && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-          <div className="bg-[#181c22] border border-[#45dfa4]/30 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+          <div className="modal-ticket-submodal bg-[#181c22] border border-[#45dfa4]/30 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center gap-3 border-b border-[#45dfa4]/20 pb-3">
               <CheckCircle2 className="w-5 h-5 text-[#45dfa4]" />
               <h3 className="text-base font-bold text-white">Resolver Chamado</h3>
@@ -871,7 +871,7 @@ export const TicketDetailModal: React.FC = () => {
       {/* MODAL: Confirmacao */}
       {showConfirmModal && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-          <div className="bg-[#181c22] border border-[#45dfa4]/30 rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center space-y-4">
+          <div className="modal-ticket-submodal bg-[#181c22] border border-[#45dfa4]/30 rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center space-y-4">
             <div className="w-14 h-14 rounded-full bg-[#45dfa4]/10 border border-[#45dfa4]/30 flex items-center justify-center mx-auto">
               <CheckCircle2 className="w-7 h-7 text-[#45dfa4]" />
             </div>

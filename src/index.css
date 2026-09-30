@@ -413,6 +413,239 @@ body.theme-light img[src*="logo-geral.png"] {
 }
 
 /* ========================================================
+   MODAL DETALHE CHAMADO - TEMA CLARO PERFEITO
+   ======================================================== */
+html.light #modal-detalhe-chamado,
+body.theme-light #modal-detalhe-chamado,
+.theme-light #modal-detalhe-chamado {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25) !important;
+}
+
+/* Header superior */
+html.light #modal-detalhe-chamado > div:first-child,
+body.theme-light #modal-detalhe-chamado > div:first-child {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+html.light #modal-detalhe-chamado > div:first-child h2,
+body.theme-light #modal-detalhe-chamado > div:first-child h2 {
+  color: #0f172a !important;
+}
+
+/* Coluna esquerda de conteúdo */
+html.light #modal-detalhe-chamado .flex-1.flex.flex-col,
+body.theme-light #modal-detalhe-chamado .flex-1.flex.flex-col {
+  background-color: #f8fafc !important;
+}
+
+/* Cards gerais dentro do modal (Descrição, Histórico, Status) */
+html.light #modal-detalhe-chamado .bg-\[\#111827\],
+body.theme-light #modal-detalhe-chamado .bg-\[\#111827\] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Barras de título/cabeçalho dos cards internos (ex: "Descrição do Problema", "Histórico de Atividades") */
+html.light #modal-detalhe-chamado div[class*="bg-[#0f1318]"],
+body.theme-light #modal-detalhe-chamado div[class*="bg-[#0f1318]"],
+html.light #modal-detalhe-chamado .bg-\[\#0f1318\],
+body.theme-light #modal-detalhe-chamado .bg-\[\#0f1318\] {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light #modal-detalhe-chamado div[class*="bg-[#0f1318]"] h4,
+body.theme-light #modal-detalhe-chamado div[class*="bg-[#0f1318]"] h4,
+html.light #modal-detalhe-chamado div[class*="bg-[#0f1318]"] h3,
+body.theme-light #modal-detalhe-chamado div[class*="bg-[#0f1318]"] h3 {
+  color: #334155 !important;
+}
+
+/* Textos principais e secundários do chamado */
+html.light #modal-detalhe-chamado p.text-white,
+body.theme-light #modal-detalhe-chamado p.text-white,
+html.light #modal-detalhe-chamado span.text-white,
+body.theme-light #modal-detalhe-chamado span.text-white,
+html.light #modal-detalhe-chamado h2.text-white,
+body.theme-light #modal-detalhe-chamado h2.text-white,
+html.light #modal-detalhe-chamado h3.text-white,
+body.theme-light #modal-detalhe-chamado h3.text-white {
+  color: #0f172a !important;
+}
+
+html.light #modal-detalhe-chamado .text-\[\#dfe2eb\],
+body.theme-light #modal-detalhe-chamado .text-\[\#dfe2eb\],
+html.light #modal-detalhe-chamado .text-\[\#c3c6d7\],
+body.theme-light #modal-detalhe-chamado .text-\[\#c3c6d7\] {
+  color: #1e293b !important;
+}
+
+html.light #modal-detalhe-chamado .text-\[\#8d90a0\],
+body.theme-light #modal-detalhe-chamado .text-\[\#8d90a0\] {
+  color: #64748b !important;
+}
+
+/* Card NOTAS INTERNAS T.I. */
+html.light #modal-detalhe-chamado .border-\[\#7c3aed\]\/40,
+body.theme-light #modal-detalhe-chamado .border-\[\#7c3aed\]\/40 {
+  background-color: #faf5ff !important;
+  border-color: #d8b4fe !important;
+}
+
+html.light #modal-detalhe-chamado .bg-\[\#0a0d13\],
+body.theme-light #modal-detalhe-chamado .bg-\[\#0a0d13\] {
+  background-color: #f3e8ff !important;
+  border-color: #d8b4fe !important;
+}
+
+html.light #modal-detalhe-chamado .bg-\[\#13102a\],
+body.theme-light #modal-detalhe-chamado .bg-\[\#13102a\] {
+  background-color: #ffffff !important;
+  border-color: #e9d5ff !important;
+}
+
+html.light #modal-detalhe-chamado .bg-\[\#13102a\] input,
+body.theme-light #modal-detalhe-chamado .bg-\[\#13102a\] input {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+html.light #modal-detalhe-chamado input[placeholder*="Nota interna"],
+body.theme-light #modal-detalhe-chamado input[placeholder*="Nota interna"] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #d8b4fe !important;
+}
+
+/* Botões inativos de Status do Chamado */
+html.light #modal-detalhe-chamado button.bg-\[\#181c22\],
+body.theme-light #modal-detalhe-chamado button.bg-\[\#181c22\] {
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+}
+html.light #modal-detalhe-chamado button.bg-\[\#181c22\]:hover,
+body.theme-light #modal-detalhe-chamado button.bg-\[\#181c22\]:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* Histórico de Mensagens / Timeline */
+html.light #modal-detalhe-chamado .bg-\[\#1a1e28\],
+body.theme-light #modal-detalhe-chamado .bg-\[\#1a1e28\] {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+html.light #modal-detalhe-chamado .bg-\[\#1a1e28\] p,
+body.theme-light #modal-detalhe-chamado .bg-\[\#1a1e28\] p {
+  color: #334155 !important;
+}
+
+html.light #modal-detalhe-chamado .bg-\[\#151c25\],
+body.theme-light #modal-detalhe-chamado .bg-\[\#151c25\] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+html.light #modal-detalhe-chamado .bg-\[\#151c25\] p,
+body.theme-light #modal-detalhe-chamado .bg-\[\#151c25\] p {
+  color: #1e293b !important;
+}
+
+/* Mensagens do TI */
+html.light #modal-detalhe-chamado .bg-\[\#45dfa4\]\/5,
+body.theme-light #modal-detalhe-chamado .bg-\[\#45dfa4\]\/5 {
+  background-color: #ecfdf5 !important;
+  border-color: #a7f3d0 !important;
+}
+html.light #modal-detalhe-chamado .bg-\[\#45dfa4\]\/5 p,
+body.theme-light #modal-detalhe-chamado .bg-\[\#45dfa4\]\/5 p {
+  color: #064e3b !important;
+}
+
+/* Footer / Caixa de resposta inferior */
+html.light #modal-detalhe-chamado .border-t.border-\[\#1e2430\].shrink-0,
+body.theme-light #modal-detalhe-chamado .border-t.border-\[\#1e2430\].shrink-0 {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light #modal-detalhe-chamado input[placeholder*="Escreva uma resposta"],
+body.theme-light #modal-detalhe-chamado input[placeholder*="Escreva uma resposta"] {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Sidebar Direita (Informações do Chamado) */
+html.light #modal-detalhe-chamado .border-l.border-\[\#1e2430\],
+body.theme-light #modal-detalhe-chamado .border-l.border-\[\#1e2430\] {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light #modal-detalhe-chamado .border-l.border-\[\#1e2430\] .bg-\[\#111827\],
+body.theme-light #modal-detalhe-chamado .border-l.border-\[\#1e2430\] .bg-\[\#111827\] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+html.light #modal-detalhe-chamado .border-l.border-\[\#1e2430\] select,
+body.theme-light #modal-detalhe-chamado .border-l.border-\[\#1e2430\] select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+html.light #modal-detalhe-chamado .border-l.border-\[\#1e2430\] select option,
+body.theme-light #modal-detalhe-chamado .border-l.border-\[\#1e2430\] select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* Sub-modais (Transferir Fila, Confirmar Resolução) */
+html.light .modal-ticket-submodal,
+body.theme-light .modal-ticket-submodal {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25) !important;
+}
+
+html.light .modal-ticket-submodal select,
+body.theme-light .modal-ticket-submodal select,
+html.light .modal-ticket-submodal textarea,
+body.theme-light .modal-ticket-submodal textarea,
+html.light .modal-ticket-submodal input,
+body.theme-light .modal-ticket-submodal input {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+html.light .modal-ticket-submodal select option,
+body.theme-light .modal-ticket-submodal select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+html.light .modal-ticket-submodal .bg-\[\#111827\],
+body.theme-light .modal-ticket-submodal .bg-\[\#111827\] {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light .modal-ticket-submodal h3.text-white,
+body.theme-light .modal-ticket-submodal h3.text-white,
+html.light .modal-ticket-submodal p.text-white,
+body.theme-light .modal-ticket-submodal p.text-white {
+  color: #0f172a !important;
+}
+
+/* ========================================================
    PRINT STYLES FOR REIMBURSEMENT REPORT (PDF)
    Garante 1 ÚNICA FOLHA A4 limpa sem bordas pretas
    ======================================================== */
