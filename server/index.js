@@ -241,8 +241,9 @@ async function resolveJid(toPhone) {
   let clean = toPhone.replace(/\D/g, '');
   if (!clean) return null;
 
-  // Se o número tiver 10 ou 11 dígitos e não começar com 55 (DDI Brasil), adiciona 55
-  if ((clean.length === 10 || clean.length === 11) && !clean.startsWith('55')) {
+  // Se o número já tem DDI (12+ dígitos), usa direto sem adicionar 55
+  // Se tiver 10 ou 11 dígitos e não começar com 55 (DDI Brasil), adiciona 55
+  if (clean.length <= 11 && !clean.startsWith('55')) {
     clean = '55' + clean;
   }
 
@@ -250,6 +251,7 @@ async function resolveJid(toPhone) {
   if (!sock) return targetJid;
 
   try {
+    // Usa o JID já construído como primário para o onWhatsApp check
     const onWa = await sock.onWhatsApp(clean);
     if (onWa && onWa.length > 0 && onWa[0].exists && onWa[0].jid) {
       return jidNormalizedUser(onWa[0].jid);
@@ -274,6 +276,8 @@ async function resolveJid(toPhone) {
     console.warn('⚠️ Verification onWhatsApp failed, using default JID:', e);
   }
 
+  // Fallback: usa o JID já construído — o WhatsApp vai entregar se o número existir
+  console.log(`📲 Usando JID direto (sem verificação onWhatsApp): ${targetJid}`);
   return targetJid;
 }
 

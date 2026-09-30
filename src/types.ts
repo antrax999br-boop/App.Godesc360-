@@ -281,6 +281,27 @@ export interface TicketAttachment {
   url?: string;
 }
 
+// Evento de timeline do ticket — registra todo movimento do chamado
+export type TicketEventType =
+  | 'CREATED'        // chamado aberto
+  | 'STATUS_CHANGED' // mudança de status
+  | 'TRANSFERRED'    // transferido para outra fila
+  | 'ASSIGNED'       // atribuído a um operador
+  | 'UNASSIGNED'     // removido do operador
+  | 'FIELD_CHANGED'  // campo editado (categoria, prioridade etc.)
+  | 'NOTE_ADDED';    // nota interna adicionada
+
+export interface TicketEvent {
+  id: string;
+  type: TicketEventType;
+  timestamp: string;
+  actorName: string;       // quem fez a ação
+  actorRole: string;
+  description: string;     // texto legível do evento
+  oldValue?: string;       // valor anterior (opcional)
+  newValue?: string;       // valor novo (opcional)
+}
+
 // Nota interna de TI — NUNCA enviada por e-mail, nunca visível ao cliente
 export interface TIInternalNote {
   id: string;
@@ -325,6 +346,8 @@ export interface Ticket {
   messages: TicketMessage[];
   // Notas internas do T.I. — NÃO visíveis ao cliente, NÃO geram e-mail
   tiInternalNotes?: TIInternalNote[];
+  // Timeline de eventos do ticket (aberto, status, transferências, edições)
+  events?: TicketEvent[];
 }
 
 export interface SystemNotification {

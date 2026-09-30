@@ -51,7 +51,8 @@ export const AttendanceChatView: React.FC = () => {
     attendanceQueues,
     userAccounts,
     chatbotFlow,
-    setCurrentScreen
+    setCurrentScreen,
+    whatsappConnection
   } = useApp();
 
   // Lê a conversa pré-selecionada via localStorage (definido ao aceitar da fila)
@@ -557,11 +558,35 @@ export const AttendanceChatView: React.FC = () => {
                 </div>
               </div>
 
+              {/* Banner: conversa manual sem WhatsApp conectado */}
+              {activeConv.id.startsWith('manual-conv-') && whatsappConnection.status !== 'CONNECTED' && (
+                <div className="px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-2">
+                  <span className="text-amber-400 text-[10px] font-mono">⚠️</span>
+                  <p className="text-[10px] text-amber-400 font-mono">
+                    <strong>WhatsApp desconectado</strong> — Mensagens salvas localmente. Conecte um número em{' '}
+                    <span className="underline cursor-pointer" onClick={() => setCurrentScreen('attendance_whatsapp')}>Conexão WhatsApp</span>{' '}
+                    para que o cliente receba.
+                  </p>
+                </div>
+              )}
+
               {/* Messages Feed */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#18181b]">
                 {activeMessages.map(msg => {
                   const isCustomer = msg.senderType === 'CUSTOMER';
                   const isBot = msg.senderType === 'BOT';
+                  const isSystem = msg.senderType === 'SYSTEM';
+
+                  // Mensagens de sistema: linha centralizada
+                  if (isSystem) {
+                    return (
+                      <div key={msg.id} className="flex items-center justify-center py-1">
+                        <span className="px-3 py-1.5 bg-[#27272a] border border-[#323238] rounded-full text-[10px] text-[#8d90a0] font-mono text-center max-w-md">
+                          {msg.content}
+                        </span>
+                      </div>
+                    );
+                  }
 
                   return (
                     <div

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
   ScreenView,
   Ticket,
+  TicketEvent,
   SystemNotification,
   UserSession,
   TicketPriority,
@@ -65,6 +66,8 @@ interface AppContextType {
   addTicketMessage: (ticketId: string, text: string, role: 'client' | 'ti', attachments?: TicketAttachment[]) => void;
   // Nota interna TI — visível apenas ao T.I., nunca envia e-mail
   addTicketInternalNote: (ticketId: string, text: string, attachments?: TicketAttachment[]) => void;
+  // Editar campos do ticket (categoria, subcategoria, prioridade, título, empresa etc.)
+  updateTicketFields: (ticketId: string, updates: Partial<Pick<Ticket, 'title' | 'category' | 'subcategory' | 'priority' | 'company' | 'requesterName' | 'requesterEmail' | 'machineName' | 'description'>>) => void;
   notifications: SystemNotification[];
   unreadNotificationCount: number;
   markNotificationAsRead: (id: string) => void;
@@ -117,6 +120,9 @@ interface AppContextType {
   attendanceMessages: AttendanceMessage[];
   attendanceQueues: AttendanceQueue[];
   attendanceContacts: AttendanceContact[];
+  saveContact: (contact: Omit<AttendanceContact, 'id' | 'firstContactAt' | 'lastContactAt' | 'totalAttendances'>) => AttendanceContact;
+  updateContact: (id: string, updates: Partial<AttendanceContact>) => void;
+  deleteContact: (id: string) => void;
   chatbotFlow: ChatbotFlow;
   businessHours: BusinessHoursConfig;
   connectWhatsApp: () => Promise<void>;
@@ -131,6 +137,7 @@ interface AppContextType {
   publishChatbotFlow: (flow: ChatbotFlow) => void;
   updateBusinessHours: (config: Partial<BusinessHoursConfig>) => void;
   saveAttendanceQueue: (queue: AttendanceQueue) => void;
+  createManualConversation: (contactName: string, contactPhone: string, queueId?: string, queueName?: string) => AttendanceConversation;
   // Configurações & Notificações de E-mail (Gmail / SMTP)
   getEmailConfig: () => Promise<any>;
   saveEmailConfig: (config: any) => Promise<any>;
@@ -1598,7 +1605,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedAt: nowFormatted,
       status: 'Novo',
       queue: ticketData.queue || 'N1',
-      messages: [initialMsg]
+      messages: [initialMsg],
+      events: [{
+        id: `ev-${Date.now()}`,
+        type: 'CREATED',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        actorName: ticketData.requesterName,
+        actorRole: 'client',
+        description: `Chamado aberto via Portal do Cliente por ${ticketData.requesterName}.`
+      }]
     };
 
     setTickets(prev => [newTicket, ...prev]);
@@ -1679,11 +1694,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     }
 
+    const newStatusEvent: TicketEvent = {
+      id: `ev-${Date.now()}`,
+      type: 'STATUS_CHANGED',
+      timestamp: nowFormatted,
+      actorName: userSession.name || 'Tecnico TI',
+      actorRole: userSession.role || 'technician',
+      oldValue: currentTicket?.status,
+      newValue: status,
+      description: `Status alterado para "${status}" por ${userSession.name || 'Tecnico TI'}.`
+    };
+
     const updatedTicket: Ticket = currentTicket ? {
       ...currentTicket,
       status,
       updatedAt: `Hoje às ${nowFormatted}`,
-      messages: updatedMessages
+      messages: updatedMessages,
+      events: [...(currentTicket.events || []), newStatusEvent]
     } : {
       id: ticketId,
       ticketNumber: `#${ticketId}`,
@@ -1770,12 +1797,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               timestamp: nowFormatted
             });
           }
+          const evType = (queue !== undefined && queue !== tk.queue) ? 'TRANSFERRED' as const
+            : assignedTo ? 'ASSIGNED' as const : 'UNASSIGNED' as const;
+          const evDesc = (queue !== undefined && queue !== tk.queue)
+            ? `Chamado transferido para Fila ${queue}${assignedTo ? ' e atribuido a ' + assignedTo : ''} por ${userSession.name || 'Tecnico TI'}.`
+            : assignedTo
+              ? `Chamado atribuido a ${assignedTo} por ${userSession.name || 'Tecnico TI'}.`
+              : `Chamado removido do operador por ${userSession.name || 'Tecnico TI'}.`;
+          const reassignEvent: TicketEvent = {
+            id: `ev-${Date.now()}`,
+            type: evType,
+            timestamp: nowFormatted,
+            actorName: userSession.name || 'Tecnico TI',
+            actorRole: userSession.role || 'technician',
+            oldValue: queue !== undefined ? (tk.queue || 'N1') : (tk.assignedTo || 'Sem Operador'),
+            newValue: queue !== undefined ? (queue || 'N1') : (assignedTo || 'Sem Operador'),
+            description: evDesc
+          };
           updatedTicketObj = {
             ...tk,
             queue: queue !== undefined ? queue : (tk.queue || 'N1'),
             assignedTo: assignedTo !== undefined ? assignedTo : tk.assignedTo,
             updatedAt: `Hoje às ${nowFormatted}`,
-            messages: updatedMessages
+            messages: updatedMessages,
+            events: [...(tk.events || []), reassignEvent]
           };
           return updatedTicketObj;
         }
@@ -1800,7 +1845,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           queue: queue !== undefined ? queue : (prev.queue || 'N1'),
           assignedTo: assignedTo !== undefined ? assignedTo : prev.assignedTo,
           updatedAt: `Hoje às ${nowFormatted}`,
-          messages: updatedMessages
+          messages: updatedMessages,
+          events: updatedTicketObj ? updatedTicketObj.events : prev.events
         };
       }
       return prev;
@@ -1999,6 +2045,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }).eq('id', ticketId).then(({ error }) => {
       if (error) console.warn('Supabase internal note update error:', error);
     });
+  };
+
+  // Editar campos do ticket (categoria, subcategoria, prioridade, titulo etc.) — apenas TI
+  const updateTicketFields = (
+    ticketId: string,
+    updates: Partial<Pick<Ticket, 'title' | 'category' | 'subcategory' | 'priority' | 'company' | 'requesterName' | 'requesterEmail' | 'machineName' | 'description'>>
+  ) => {
+    const nowFormatted = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const actorName = userSession.name || 'Tecnico TI';
+    const actorRole = userSession.role || 'technician';
+    const currentTicket = tickets.find(tk => tk.id === ticketId) || selectedTicket;
+    const fieldLabels: Record<string, string> = {
+      title: 'Titulo', category: 'Categoria', subcategory: 'Subcategoria',
+      priority: 'Prioridade', company: 'Empresa', requesterName: 'Solicitante',
+      requesterEmail: 'E-mail', machineName: 'Maquina', description: 'Descricao'
+    };
+    const newEvents: TicketEvent[] = Object.entries(updates).map(([key, newVal], i) => ({
+      id: `ev-${Date.now()}-${i}`,
+      type: 'FIELD_CHANGED' as const,
+      timestamp: nowFormatted,
+      actorName,
+      actorRole,
+      oldValue: String((currentTicket as any)?.[key] ?? ''),
+      newValue: String(newVal ?? ''),
+      description: `Campo "${fieldLabels[key] || key}" alterado de "${(currentTicket as any)?.[key] ?? ''}" para "${newVal ?? ''}" por ${actorName}.`
+    }));
+    setTickets(prev => prev.map(tk => {
+      if (tk.id !== ticketId) return tk;
+      return { ...tk, ...updates, updatedAt: `Hoje às ${nowFormatted}`, events: [...(tk.events || []), ...newEvents] };
+    }));
+    setSelectedTicket(prev => {
+      if (!prev || prev.id !== ticketId) return prev;
+      return { ...prev, ...updates, updatedAt: `Hoje às ${nowFormatted}`, events: [...(prev.events || []), ...newEvents] };
+    });
+    supabase.from('tickets').update({ ...updates, updated_at: `Hoje às ${nowFormatted}` }).eq('id', ticketId)
+      .then(({ error }) => { if (error) console.warn('Supabase updateTicketFields error:', error); });
   };
 
   const markNotificationAsRead = (id: string) => {
@@ -2483,32 +2565,75 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('godesc_chatbot_flow', JSON.stringify(chatbotFlow));
   }, [chatbotFlow]);
 
-  const [attendanceContacts, setAttendanceContacts] = useState<AttendanceContact[]>([
-    {
-      id: 'cnt-1',
-      companyId: 'default-company',
-      name: 'João Silva',
-      phone: '+55 11 99988-7766',
-      email: 'joao.silva@empresa.com.br',
-      companyName: 'Tech Solutions LTDA',
-      tags: ['Prospect', 'Comercial'],
-      firstContactAt: '10/08/2026',
-      lastContactAt: '20/08/2026',
-      totalAttendances: 3
-    },
-    {
-      id: 'cnt-2',
-      companyId: 'default-company',
-      name: 'Maria Oliveira',
-      phone: '+55 11 98877-6655',
-      email: 'maria@oliveira.com.br',
-      companyName: 'Oliveira & Associados',
-      tags: ['Cliente', 'Urgente'],
-      firstContactAt: '01/08/2026',
-      lastContactAt: '20/08/2026',
-      totalAttendances: 7
+  const [attendanceContacts, setAttendanceContacts] = useState<AttendanceContact[]>(() => {
+    try {
+      const saved = localStorage.getItem('godesc_attendance_contacts');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [
+      {
+        id: 'cnt-1',
+        companyId: 'default-company',
+        name: 'João Silva',
+        phone: '(11) 99988-7766',
+        email: 'joao.silva@empresa.com.br',
+        companyName: 'Tech Solutions LTDA',
+        tags: ['Prospect', 'Comercial'],
+        firstContactAt: '10/08/2026',
+        lastContactAt: '20/08/2026',
+        totalAttendances: 3
+      },
+      {
+        id: 'cnt-2',
+        companyId: 'default-company',
+        name: 'Maria Oliveira',
+        phone: '(11) 98877-6655',
+        email: 'maria@oliveira.com.br',
+        companyName: 'Oliveira & Associados',
+        tags: ['Cliente', 'Urgente'],
+        firstContactAt: '01/08/2026',
+        lastContactAt: '20/08/2026',
+        totalAttendances: 7
+      }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('godesc_attendance_contacts', JSON.stringify(attendanceContacts));
+  }, [attendanceContacts]);
+
+  const saveContact = (contactData: Omit<AttendanceContact, 'id' | 'firstContactAt' | 'lastContactAt' | 'totalAttendances'>): AttendanceContact => {
+    const now = new Date().toLocaleDateString('pt-BR');
+    // Checa se já existe contato com esse telefone
+    const phoneDigits = contactData.phone.replace(/\D/g, '');
+    const existing = attendanceContacts.find(c => c.phone.replace(/\D/g, '') === phoneDigits);
+    if (existing) {
+      // Atualiza nome e dados do existente
+      const updated = { ...existing, ...contactData, lastContactAt: now };
+      setAttendanceContacts(prev => prev.map(c => c.id === existing.id ? updated : c));
+      return updated;
     }
-  ]);
+    const newContact: AttendanceContact = {
+      ...contactData,
+      id: `cnt-${Date.now()}`,
+      firstContactAt: now,
+      lastContactAt: now,
+      totalAttendances: 0
+    };
+    setAttendanceContacts(prev => [newContact, ...prev]);
+    return newContact;
+  };
+
+  const updateContact = (id: string, updates: Partial<AttendanceContact>) => {
+    setAttendanceContacts(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+  };
+
+  const deleteContact = (id: string) => {
+    setAttendanceContacts(prev => prev.filter(c => c.id !== id));
+  };
 
   const DEFAULT_INITIAL_CONVERSATIONS: AttendanceConversation[] = [
     {
@@ -2606,11 +2731,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Conversas ativas persistidas no localStorage — CLOSED não são salvas
   const [attendanceConversations, setAttendanceConversations] = useState<AttendanceConversation[]>(() => {
+    // Normaliza qualquer número de telefone: extrai só dígitos e formata como BR
+    const normalizePhone = (phone: string): string => {
+      // Remove TUDO que não é dígito (inclusive letras de JID hex como 'B')
+      const digits = phone.replace(/\D/g, '');
+      let local = digits;
+      // Remove DDI 55 de números BR com 12-13 dígitos
+      if (local.startsWith('55') && (local.length === 12 || local.length === 13)) {
+        local = local.slice(2);
+      }
+      if (local.length === 11) return `(${local.slice(0,2)}) ${local.slice(2,7)}-${local.slice(7)}`;
+      if (local.length === 10) return `(${local.slice(0,2)}) ${local.slice(2,6)}-${local.slice(6)}`;
+      if (digits.length > 0) return `+${digits}`; // internacional
+      return phone;
+    };
+
     try {
       const saved = localStorage.getItem('godesc_attendance_conversations');
       if (saved) {
         const parsed: AttendanceConversation[] = JSON.parse(saved);
-        const filtered = parsed.filter(c => c.status !== 'CLOSED');
+        const filtered = parsed
+          .filter(c => c.status !== 'CLOSED')
+          .map(c => ({
+            ...c,
+            // Normaliza SEMPRE — remove letras e formata corretamente
+            contactPhone: normalizePhone(c.contactPhone)
+          }));
         if (filtered.length > 0) return filtered;
       }
     } catch (e) {}
@@ -3015,6 +3161,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Sync incoming real WhatsApp messages from Baileys Server
   const processedMsgIds = React.useRef<Set<string>>(new Set());
+  // Ref sempre atualizado com o estado mais recente das conversas (resolve stale closure no setInterval)
+  const attendanceConversationsRef = React.useRef<AttendanceConversation[]>(attendanceConversations);
+  React.useEffect(() => {
+    attendanceConversationsRef.current = attendanceConversations;
+  }, [attendanceConversations]);
 
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -3036,21 +3187,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               const rawPhone = (incMsg.jid || incMsg.phone).split('@')[0].replace(/\D/g, '');
               // Sanitiza o nome: se o nome vier com @, JID ou for igual ao phone bruto, usa apenas o número formatado
               const rawName = (incMsg.name && incMsg.name.trim()) ? incMsg.name.trim() : '';
-              const contactName = (rawName && !rawName.includes('@') && rawName !== rawPhone && rawName !== incMsg.phone) ? rawName : `+${rawPhone}`;
+              // Formata o número para exibição — remove DDI 55 de números BR e formata
+              const formatPhone = (digits: string): string => {
+                // Remove DDI 55 se número BR com 12-13 dígitos
+                let local = digits;
+                if (local.startsWith('55') && (local.length === 12 || local.length === 13)) {
+                  local = local.slice(2);
+                }
+                // Formata: (DDD) 9XXXX-XXXX ou (DDD) XXXX-XXXX
+                if (local.length === 11) return `(${local.slice(0,2)}) ${local.slice(2,7)}-${local.slice(7)}`;
+                if (local.length === 10) return `(${local.slice(0,2)}) ${local.slice(2,6)}-${local.slice(6)}`;
+                return `+${digits}`; // internacional: mantém com +
+              };
+              const displayPhone = formatPhone(rawPhone);
+              const contactName = (rawName && !rawName.includes('@') && rawName !== rawPhone && rawName !== incMsg.phone) ? rawName : displayPhone;
               const contactJid = incMsg.jid || `${rawPhone}@s.whatsapp.net`;
+              // Últimos 8 dígitos para match robusto independente de DDI
+              const rawPhoneLast8 = rawPhone.slice(-8);
 
-              // Busca conversa existente pelo convId padrão
+              // ── HELPER: normaliza JID para comparação ──
               const baseConvId = `conv-${rawPhone}`;
-              
-              // Determina o convId a usar — se a conversa existente estiver CLOSED, cria uma nova com timestamp
-              let convId = baseConvId;
+              const normalizeJidDigits = (jid: string) => jid.split(':')[0].split('@')[0].replace(/\D/g, '');
+              const strip55 = (d: string) => d.startsWith('55') && d.length > 11 ? d.slice(2) : d;
+              const incomingJidDigits = normalizeJidDigits(contactJid);
+
+              const matchConv = (c: AttendanceConversation): boolean => {
+                if (c.id === baseConvId) return true;
+                if (c.contactJid) {
+                  const sj = normalizeJidDigits(c.contactJid);
+                  if (sj === incomingJidDigits) return true;
+                  if (strip55(sj) === strip55(incomingJidDigits)) return true;
+                }
+                const sd = c.contactPhone.replace(/\D/g, '');
+                if (sd === rawPhone) return true;
+                if (rawPhone.length >= 8 && sd.length >= 8 && sd.slice(-8) === rawPhoneLast8) return true;
+                return false;
+              };
+
+              // PRÉ-COMPUTA convId usando o ref (sempre atualizado) — ANTES de qualquer setState
+              // Isso é crítico: setAttendanceMessages precisa do convId correto AGORA
+              const existingConvNow = attendanceConversationsRef.current.find(matchConv);
+              let convId: string;
+              if (existingConvNow && existingConvNow.status === 'CLOSED') {
+                convId = `conv-${rawPhone}-${Date.now()}`;
+              } else if (existingConvNow) {
+                convId = existingConvNow.id;
+              } else {
+                convId = baseConvId;
+              }
 
               setAttendanceConversations(cPrev => {
-                const existing = cPrev.find(c => 
-                  c.id === baseConvId || 
-                  c.contactPhone.replace(/\D/g, '') === rawPhone ||
-                  (rawPhone.length >= 8 && c.contactPhone.replace(/\D/g, '').endsWith(rawPhone.slice(-8)))
-                );
+                // Re-busca em cPrev para garantia atômica (cPrev é sempre o estado mais recente)
+                const existing = cPrev.find(matchConv);
                 const timeStr = new Date(incMsg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                 if (existing) {
@@ -3059,13 +3247,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
                   // Se conversa estava CLOSED: abre uma NOVA conversa com ID único para não misturar histórico
                   if (existing.status === 'CLOSED') {
-                    convId = `conv-${rawPhone}-${Date.now()}`;
                     const newConv: AttendanceConversation = {
-                      id: convId,
+                      id: convId, // usa o convId pré-computado
                       companyId: 'default-company',
                       contactId: `cnt-${rawPhone}`,
                       contactName: (existing.contactName && existing.contactName !== existing.contactPhone) ? existing.contactName : contactName,
-                      contactPhone: `+${rawPhone}`,
+                      contactPhone: displayPhone,
                       contactJid,
                       status: 'BOT',
                       queueName: 'Triagem Automática',
@@ -3078,14 +3265,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     };
                     return [newConv, ...cPrev];
                   }
-                  
-                  const shouldStartBot = existing.status === 'BOT' || 
-                    existing.status !== 'IN_PROGRESS' || 
-                    !existing.assignedUserName || 
-                    isMenuCmd;
 
-                  // Mantém o mesmo convId da conversa existente
-                  convId = existing.id;
+                  // Só ativa o bot se a conversa NÃO está em atendimento humano ativo
+                  const shouldStartBot = (existing.status === 'BOT' ||
+                    existing.status === 'WAITING' ||
+                    existing.status === 'TRANSFERRED' ||
+                    isMenuCmd) && !existing.assignedUserName;
 
                   return cPrev.map(c => {
                     if (c.id === existing.id) {
@@ -3108,11 +3293,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   });
                 } else {
                   const newConv: AttendanceConversation = {
-                    id: convId,
+                    id: convId, // usa o convId pré-computado
                     companyId: 'default-company',
                     contactId: `cnt-${rawPhone}`,
                     contactName,
-                    contactPhone: `+${rawPhone}`,
+                    contactPhone: displayPhone,
                     contactJid,
                     status: 'BOT',
                     queueName: 'Triagem Automática',
@@ -3145,81 +3330,95 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
               playNotificationSound();
 
-              // Processa resposta do Chatbot
+              // Processa resposta do Chatbot — side effects FORA do setState updater
               setTimeout(() => {
-                setAttendanceConversations(currentConvs => {
-                  const targetConv = currentConvs.find(c => c.id === convId || c.contactPhone.replace(/\D/g, '') === rawPhone);
-                  if (targetConv && (targetConv.botActive || targetConv.status === 'BOT')) {
-                    const botResult = ChatbotEngine.processIncomingMessage(
-                      incMsg.content,
-                      targetConv,
-                      chatbotFlow,
-                      businessHours,
-                      attendanceQueues
-                    );
+                // Usa ref para ter o estado mais atualizado das conversas
+                const targetConv = attendanceConversationsRef.current.find(
+                  c => c.id === convId || (c.contactJid && normalizeJidDigits(c.contactJid) === incomingJidDigits)
+                );
 
-                    if (botResult.replyMessage) {
-                      const botMsgObj: AttendanceMessage = {
-                        id: `msg-bot-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-                        conversationId: targetConv.id,
-                        senderType: 'BOT',
-                        senderName: 'Assistente Virtual',
-                        messageType: 'TEXT',
-                        content: botResult.replyMessage,
-                        status: 'READ',
-                        createdAt: new Date().toISOString()
+                if (!targetConv || (!targetConv.botActive && targetConv.status !== 'BOT')) return;
+
+                const botResult = ChatbotEngine.processIncomingMessage(
+                  incMsg.content,
+                  targetConv,
+                  chatbotFlow,
+                  businessHours,
+                  attendanceQueues
+                );
+
+                // Adiciona mensagem do bot ao sistema
+                if (botResult.replyMessage) {
+                  const botMsgObj: AttendanceMessage = {
+                    id: `msg-bot-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                    conversationId: targetConv.id,
+                    senderType: 'BOT',
+                    senderName: 'Assistente Virtual',
+                    messageType: 'TEXT',
+                    content: botResult.replyMessage,
+                    status: 'READ',
+                    createdAt: new Date().toISOString()
+                  };
+                  // setState fora do updater — executa uma vez, sem side effect aninhado
+                  setAttendanceMessages(mp => {
+                    if (mp.some(m => m.id === botMsgObj.id)) return mp;
+                    return [...mp, botMsgObj];
+                  });
+
+                  // Envia ao WhatsApp — prefere JID (DDI correto) sobre contactPhone
+                  const botJidDigits = (targetConv.contactJid || '').split('@')[0].replace(/\D/g, '');
+                  const botPhoneDigits = (targetConv.contactPhone || '').replace(/\D/g, '');
+                  const botToPhone = botJidDigits || botPhoneDigits;
+                  console.log('[Bot] Enviando para:', botToPhone, '| JID:', targetConv.contactJid, '| Phone:', targetConv.contactPhone);
+                  fetch(`${whatsappServerUrl}/api/send-message`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ toPhone: botToPhone, text: botResult.replyMessage })
+                  }).then(async res => {
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok || data.error) console.warn('[Bot] Falha no envio:', data.error || res.status);
+                    else console.log('[Bot] Enviado com sucesso para', botToPhone);
+                  }).catch(err => console.warn('[Bot] Send failed:', err));
+                }
+
+                // Abertura automática de chamado
+                if (botResult.createTicketData) {
+                  addTicket({
+                    title: botResult.createTicketData.title,
+                    description: botResult.createTicketData.description,
+                    requesterName: targetConv.contactName,
+                    requesterEmail: `${rawPhone}@whatsapp.user`,
+                    company: 'Atendimento WhatsApp',
+                    machineName: 'WhatsApp',
+                    onlyMeOnComputer: false,
+                    category: botResult.createTicketData.category || 'Suporte Geral',
+                    subcategory: 'Atendimento Automatizado',
+                    priority: 'Média',
+                    status: 'Novo',
+                    attachments: []
+                  });
+                }
+
+                // Atualiza status da conversa (somente se necessário)
+                if (botResult.updateConversationStatus || botResult.botActive !== undefined || botResult.targetQueueId) {
+                  setAttendanceConversations(currentConvs =>
+                    currentConvs.map(c => {
+                      if (c.id !== targetConv.id) return c;
+                      const nextStatus = botResult.updateConversationStatus || c.status;
+                      const isWaitingOrBot = nextStatus === 'WAITING' || nextStatus === 'BOT';
+                      return {
+                        ...c,
+                        status: nextStatus,
+                        queueId: botResult.targetQueueId || (nextStatus === 'BOT' ? undefined : c.queueId),
+                        queueName: botResult.targetQueueName || (nextStatus === 'BOT' ? 'Triagem Automática' : c.queueName),
+                        botActive: botResult.botActive !== undefined ? botResult.botActive : c.botActive,
+                        assignedUserId: isWaitingOrBot ? undefined : c.assignedUserId,
+                        assignedUserName: isWaitingOrBot ? undefined : c.assignedUserName
                       };
-                      setAttendanceMessages(mp => [...mp, botMsgObj]);
-
-                      // Envia resposta do bot para o celular do cliente
-                      fetch(`${whatsappServerUrl}/api/send-message`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ toPhone: targetConv.contactJid || targetConv.contactPhone, text: botResult.replyMessage })
-                      }).catch(err => console.warn('Send bot reply failed:', err));
-                    }
-
-                    // Abertura automática de chamado no sistema se a opção selecionada for Ticket
-                    if (botResult.createTicketData) {
-                      addTicket({
-                        title: botResult.createTicketData.title,
-                        description: botResult.createTicketData.description,
-                        requesterName: targetConv.contactName,
-                        requesterEmail: `${rawPhone}@whatsapp.user`,
-                        company: 'Atendimento WhatsApp',
-                        machineName: 'WhatsApp',
-                        onlyMeOnComputer: false,
-                        category: botResult.createTicketData.category || 'Suporte Geral',
-                        subcategory: 'Atendimento Automatizado',
-                        priority: 'Média',
-                        status: 'Novo',
-                        attachments: []
-                      });
-                    }
-
-                    // Atualiza o estado da conversa (Fila, Status WAITING/BOT, e desativação do bot)
-                    return currentConvs.map(c => {
-                      if (c.id === targetConv.id) {
-                        const nextStatus = botResult.updateConversationStatus || c.status;
-                        const isWaitingOrBot = nextStatus === 'WAITING' || nextStatus === 'BOT';
-
-                        return {
-                          ...c,
-                          status: nextStatus,
-                          queueId: botResult.targetQueueId || (nextStatus === 'BOT' ? undefined : c.queueId),
-                          queueName: botResult.targetQueueName || (nextStatus === 'BOT' ? 'Triagem Automática' : c.queueName),
-                          botActive: botResult.botActive !== undefined ? botResult.botActive : c.botActive,
-                          // Se estiver no BOT ou aguardando analista (WAITING), limpa atendente para os analistas aceitarem
-                          assignedUserId: isWaitingOrBot ? undefined : c.assignedUserId,
-                          assignedUserName: isWaitingOrBot ? undefined : c.assignedUserName
-                        };
-                      }
-                      return c;
-                    });
-                  }
-                  return currentConvs;
-                });
-              }, 600);
+                    })
+                  );
+                }
+              }, 700);
             });
           }
         }
@@ -3274,10 +3473,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const textToSend = senderType === 'AGENT'
         ? `*${userSession.name || 'Atendente'}:* ${content}`
         : content;
+      // Usa dígitos do contactJid (vem direto do WhatsApp, DDI correto garantido)
+      // Fallback para contactPhone se JID não disponível
+      const jidDigits = (conv.contactJid || '').split('@')[0].replace(/\D/g, '');
+      const phoneDigits = (conv.contactPhone || '').replace(/\D/g, '');
+      // Prefere JID (DDI correto), se não tiver usa phone (servidor adiciona DDI)
+      const rawPhone = jidDigits || phoneDigits;
       fetch(`${whatsappServerUrl}/api/send-message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ toPhone: conv.contactJid || conv.contactPhone, text: textToSend })
+        body: JSON.stringify({ toPhone: rawPhone, text: textToSend })
       })
         .then(async res => {
           const data = await res.json().catch(() => ({}));
@@ -3354,6 +3559,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return c;
       })
     );
+  };
+
+  const createManualConversation = (contactName: string, contactPhone: string, queueId?: string, queueName?: string): AttendanceConversation => {
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    // Extrai dígitos e GARANTE DDI 55 para números BR
+    const phoneDigits = contactPhone.replace(/\D/g, '');
+    const fullDigits = (phoneDigits.length === 10 || phoneDigits.length === 11) && !phoneDigits.startsWith('55')
+      ? `55${phoneDigits}`
+      : phoneDigits;
+    const newConv: AttendanceConversation = {
+      id: `manual-conv-${Date.now()}`,
+      contactName: contactName.trim(),
+      contactPhone: contactPhone.trim(),
+      contactJid: `${fullDigits}@s.whatsapp.net`, // JID com DDI 55
+      queueId: queueId,
+      queueName: queueName,
+      assignedUserId: userSession.username || 'ti_user',
+      assignedUserName: userSession.name || 'Analista T.I.',
+      status: 'IN_PROGRESS',
+      botActive: false,
+      unreadCount: 0,
+      lastMessageText: 'Conversa iniciada manualmente',
+      lastMessageAt: timeStr,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString()
+    };
+    setAttendanceConversations(prev => [...prev, newConv]);
+    // Mensagem inicial de sistema
+    const initMsg: AttendanceMessage = {
+      id: `msg-manual-${Date.now()}`,
+      conversationId: newConv.id,
+      senderType: 'SYSTEM',
+      senderName: 'Sistema',
+      messageType: 'SYSTEM',
+      content: `Conversa criada manualmente por ${userSession.name || 'Analista T.I.'} • Contato: ${contactName.trim()} • Número: ${contactPhone.trim()}`,
+      status: 'READ',
+      createdAt: now.toISOString()
+    };
+    setAttendanceMessages(prev => [...prev, initMsg]);
+    return newConv;
   };
 
   const closeConversation = (conversationId: string) => {
@@ -3453,6 +3699,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteTicket,
         addTicketMessage,
         addTicketInternalNote,
+        updateTicketFields,
         notifications,
         unreadNotificationCount,
         markNotificationAsRead,
@@ -3510,6 +3757,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         attendanceMessages,
         attendanceQueues,
         attendanceContacts,
+        saveContact,
+        updateContact,
+        deleteContact,
         chatbotFlow,
         businessHours,
         connectWhatsApp,
@@ -3519,6 +3769,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         transferConversation,
         returnConversationToQueue,
         closeConversation,
+        createManualConversation,
         toggleBotState,
         saveChatbotFlow,
         publishChatbotFlow,
